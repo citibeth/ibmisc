@@ -28,8 +28,14 @@ find_package(Blitz++ REQUIRED)
 find_package(NetCDF4_C REQUIRED)
 find_package(NetCDF4_CXX REQUIRED)
 
+
+include_directories(
+	${PROJECT_SOURCE_DIR}/slib
+	${NETCDF4_C_INCLUDE_DIR}
+	${NETCDF4_CXX_INCLUDE_DIR})
+
 # -------- Process subdirectories of the build
 add_subdirectory(slib)
 #add_subdirectory(bin)
-#add_subdirectory(test)
+add_subdirectory(test)
 

@@ -1,7 +1,3 @@
-include_directories(
-	${PROJECT_SOURCE_DIR}/slib
-	${NETCDF4_C_INCLUDE_DIR}
-	${NETCDF4_CXX_INCLUDE_DIR})
 
 
 # ----------- ibmisc_c

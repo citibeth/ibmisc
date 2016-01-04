@@ -10,14 +10,11 @@ namespace ibmisc {
 /** Gets or creates an unlimited size dimension */
 netCDF::NcDim getOrAddDim(netCDF::NcGroup &nc, std::string const &dim_name)
 {
-	NcDim dim;
 	bool err = false;
 
-	try {
+	NcDim dim = nc.getDim(dim_name);
+	if (dim.isNull()){
 		// Look for the dim already existing
-		dim = nc.getDim(dim_name);
-	} catch(exceptions::NcBadDim) {
-		// No existing dim, must create it.
 		return nc.addDim(dim_name);
 	}
 
@@ -34,11 +31,8 @@ netCDF::NcDim getOrAddDim(netCDF::NcGroup &nc, std::string const &dim_name)
 
 netCDF::NcDim getOrAddDim(netCDF::NcGroup &nc, std::string const &dim_name, size_t dim_size)
 {
-	NcDim dim;
-	try {
-		// Look for the dim already existing
-		dim = nc.getDim(dim_name);
-	} catch(exceptions::NcBadDim) {
+	NcDim dim = nc.getDim(dim_name);
+	if (dim.isNull()){
 		// Must create the new dim
 		return nc.addDim(dim_name, dim_size);
 	}
