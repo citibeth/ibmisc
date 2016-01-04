@@ -25,6 +25,8 @@ include (setup_rpath)
 
 find_package(gtest REQUIRED)
 find_package(Blitz++ REQUIRED)
+find_package(NetCDF4_C REQUIRED)
+find_package(NetCDF4_CXX REQUIRED)
 
 # -------- Process subdirectories of the build
 add_subdirectory(slib)

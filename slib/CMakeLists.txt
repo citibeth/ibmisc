@@ -1,4 +1,7 @@
-include_directories(${PROJECT_SOURCE_DIR}/slib)
+include_directories(
+	${PROJECT_SOURCE_DIR}/slib
+	${NETCDF4_C_INCLUDE_DIR}
+	${NETCDF4_CXX_INCLUDE_DIR})
 
 
 # ----------- ibmisc_c
@@ -8,7 +11,11 @@ add_library(ibmisc SHARED
 	${EVERYTRACE_REFADDR}	# Blank if not USE_EVERYTRACE
 	${IBMISC_SOURCE})
 
-target_link_libraries(ibmisc ${EVERYTRACE_C_LIBRARY})
+target_link_libraries(ibmisc
+	${EVERYTRACE_C_LIBRARY}
+	${NETCDF4_C_LIBRARY}
+	${NETCDF4_CXX_LIBRARY})
+
 install(TARGETS ibmisc DESTINATION lib)
 
 # ------------ Header Files

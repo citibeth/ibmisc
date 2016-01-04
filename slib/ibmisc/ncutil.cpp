@@ -1,41 +1,59 @@
 #include <string>
+#include <netcdf>
+#include <sstream>
+
 
 using namespace netCDF;
 
-namespace giss {
+namespace ibmisc {
 
-netCDF::NcDim getOrAddDim(netCDF::NcFile &nc, std::string const &dim_name, size_t dim_size = UNLIMITED)
+/** Gets or creates an unlimited size dimension */
+netCDF::NcDim getOrAddDim(netCDF::NcGroup &nc, std::string const &dim_name)
+{
+	NcDim dim;
+	bool err = false;
+
+	try {
+		// Look for the dim already existing
+		dim = nc.getDim(dim_name);
+	} catch(exceptions::NcBadDim) {
+		// No existing dim, must create it.
+		return nc.addDim(dim_name);
+	}
+
+	// Make sure existing dimension is unlimited
+	if (!dim.isUnlimited()) {
+		std::stringstream msg;
+		msg << "Attempt in NcGroup::getOrAddDim to change size from " <<
+			dim.getSize() << " to unlimited";
+		throw exceptions::NcBadDim(msg.str(), __FILE__, __LINE__);
+	}
+
+	return dim;
+}
+
+netCDF::NcDim getOrAddDim(netCDF::NcGroup &nc, std::string const &dim_name, size_t dim_size)
 {
 	NcDim dim;
 	try {
 		// Look for the dim already existing
 		dim = nc.getDim(dim_name);
-
-		// Check that our request matches the existing dimension
-		if (dim_size == UNLIMITED) {
-			// Make sure existing dimension is unlimited
-			if (!isUnlimited()) {
-				std::string msg <<
-					"Attempt in NcGroup::getOrAddDim to change size from " <<
-					dim.getSize() << " to unlimited";
-				throw NcBadDim(msg.c_str(), __FILE__, __LINE__);
-			}
-		} else {
-			size_t existing_size = dim.getSize();
-			if (existing_size != dim_size) {
-				std::string msg <<
-					"Attempt in NcGroup::getOrAddDim to change size from " <<
-					existing_size << " to " << dim_size;
-				throw NcBadDim(msg.c_str(), __FILE__, __LINE__);
-			}
-		}
-	} except exceptions::NcBadDim {
+	} catch(exceptions::NcBadDim) {
 		// Must create the new dim
-		dim = nc.addDim(dim_name, dim_size);
+		return nc.addDim(dim_name, dim_size);
+	}
+
+	if (dim.getSize() != dim_size) {
+		std::stringstream msg;
+		msg << "Attempt in NcGroup::getOrAddDim to change size from " <<
+			dim.getSize() << " to " << dim_size;
+		throw exceptions::NcBadDim(msg.str(), __FILE__, __LINE__);
 	}
 
 	return dim;
 }
+
+
 
 }	// Namespace
 
