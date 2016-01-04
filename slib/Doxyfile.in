@@ -1,0 +1,5 @@
+# https://majewsky.wordpress.com/2010/08/14/tip-of-the-day-cmake-and-doxygen/
+
+PROJECT_NAME=SpSparse
+INPUT = @SPSPARSE_HEADERS_SPACES@
+#OUTPUT_DIRECTORY = @CMAKE_CURRENT_BINARY_DIR@/apidoc
