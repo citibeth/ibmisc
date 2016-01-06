@@ -23,7 +23,7 @@ netCDF::NcDim getOrAddDim(netCDF::NcGroup &nc, std::string const &dim_name)
 		std::stringstream msg;
 		msg << "Attempt in NcGroup::getOrAddDim to change size from " <<
 			dim.getSize() << " to unlimited";
-		throw exceptions::NcBadDim(msg.str(), __FILE__, __LINE__);
+		throw exceptions::NcBadDim(msg.str().c_str(), __FILE__, __LINE__);
 	}
 
 	return dim;
@@ -41,7 +41,7 @@ netCDF::NcDim getOrAddDim(netCDF::NcGroup &nc, std::string const &dim_name, size
 		std::stringstream msg;
 		msg << "Attempt in NcGroup::getOrAddDim to change size from " <<
 			dim.getSize() << " to " << dim_size;
-		throw exceptions::NcBadDim(msg.str(), __FILE__, __LINE__);
+		throw exceptions::NcBadDim(msg.str().c_str(), __FILE__, __LINE__);
 	}
 
 	return dim;

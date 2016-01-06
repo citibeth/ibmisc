@@ -2,6 +2,7 @@
 #define IBMISC_NCUTIL_HPP
 
 #include <netcdf>
+#include <functional>
 
 namespace ibmisc {
 
@@ -22,7 +23,19 @@ else checks that the existing dimension has unlimited size.
 */
 netCDF::NcDim getOrAddDim(netCDF::NcGroup &nc, std::string const &dim_name);
 
+/** Used to keep track of future writes on NcDefine */
+class NcWrites {
+	std::vector<std::function<void ()>> _writes;
+public:
+	void operator+=(std::function<void ()> const &fn)
+		{ _writes.push_back(fn); }
 
+	void operator()()
+	{
+		for (auto ii=_writes.begin(); ii != _writes.end(); ++ii) (*ii)();
+		_writes.clear();
+	}
+};
 
 }	// Namespace
 #endif	// Guard
