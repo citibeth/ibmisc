@@ -16,7 +16,8 @@ endif()
 # -----------------------------------------------------
 #https://cmake.org/pipermail/cmake/2007-February/012796.html
 FIND_PACKAGE(Doxygen)
-
+FIND_PACKAGE(gtest)
+find_package(blitz++ REQUIRED)
 # ----------------------------------------------------------
 
 include (setup_rpath)
@@ -32,7 +33,9 @@ find_package(NetCDF4_CXX REQUIRED)
 include_directories(
 	${PROJECT_SOURCE_DIR}/slib
 	${NETCDF4_C_INCLUDE_DIR}
-	${NETCDF4_CXX_INCLUDE_DIR})
+	${NETCDF4_CXX_INCLUDE_DIR}
+    ${BLITZ++_INCLUDE_DIR})
+
 
 # -------- Process subdirectories of the build
 add_subdirectory(slib)

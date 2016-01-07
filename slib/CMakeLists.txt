@@ -1,7 +1,9 @@
 
 
 # ----------- ibmisc_c
-set(IBMISC_SOURCE ibmisc/ncutil.cpp)
+set(IBMISC_SOURCE
+	ibmisc/ibmisc.cpp
+	ibmisc/netcdf.cpp)
 
 add_library(ibmisc SHARED
 	${EVERYTRACE_REFADDR}	# Blank if not USE_EVERYTRACE
