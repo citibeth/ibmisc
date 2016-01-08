@@ -108,7 +108,11 @@ TEST_F(NetcdfTest, blitz)
 	ibmisc::ncio_blitz(ncio, B2, true, "B", netCDF::ncDouble, dims);
 	ncio.close();
 
-	std::cout << "A2" << A2 << std::endl;
+	for (int i=0; i<A.extent(0); ++i) {
+	for (int j=0; j<A.extent(1); ++j) {
+		EXPECT_EQ(A(i,j), A2(i,j));
+	}}
+//	std::cout << "A2" << A2 << std::endl;
 
 
 

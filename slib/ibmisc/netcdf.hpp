@@ -1,8 +1,9 @@
-#ifndef IBMISC_NCUTIL_HPP
-#define IBMISC_NCUTIL_HPP
+#ifndef IBMISC_NETCDF_HPP
+#define IBMISC_NETCDF_HPP
 
 #include <netcdf>
 #include <functional>
+#include <tuple>
 #include <memory>
 #include <ibmisc/ibmisc.hpp>
 #include <ibmisc/blitz.hpp>
@@ -78,33 +79,60 @@ netCDF::NcDim get_or_add_dim(NcIO &ncio, std::string const &dim_name);
 /** Convert dimensions from strings to NcDim */
 extern std::vector<netCDF::NcDim> get_dims(
 	NcIO &ncio,
-	std::vector<std::string> const &sdims);
+	std::vector<std::string> const &dim_names);
 
 extern std::vector<netCDF::NcDim> get_or_add_dims(
 	NcIO &ncio,
-	std::vector<std::tuple<std::string, size_t>> const &ssdims);
+	std::vector<std::string> const &dim_names,
+	std::vector<size_t> const &dim_lens);
 
 // ---------------------------------------------------------
 template<class TypeT, int RANK>
 std::vector<netCDF::NcDim> get_or_add_dims(
 	NcIO &ncio,
 	blitz::Array<TypeT, RANK> &val,
-	std::array<std::string, RANK> const &sdims);
+	std::vector<std::string> const &dim_names);
 
 template<class TypeT, int RANK>
 std::vector<netCDF::NcDim> get_or_add_dims(
 	NcIO &ncio,
 	blitz::Array<TypeT, RANK> &val,
-	std::array<std::string, RANK> const &sdims)
+	std::vector<std::string> const &dim_names)
 {
-	std::vector<std::tuple<std::string, size_t>> ssdims(RANK);
-	for (int k=0; k<RANK; ++k) {
-		std::get<0>(ssdims[k]) = sdims[k];
-		std::get<1>(ssdims[k]) = val.extent(k);
-	}
-	return get_or_add_dims(ncio, ssdims);
+	std::vector<size_t> dim_sizes(RANK);
+	for (int k=0; k<RANK; ++k) dim_sizes[k] = val.extent(k);
+	return get_or_add_dims(ncio, dim_names, dim_sizes);
 }
 
+// ===========================================================
+// Variable Wrangling
+netCDF::NcVar get_or_add_var(
+	NcIO &ncio,
+	std::string const &vname,
+	netCDF::NcType const &nc_type,
+	std::vector<netCDF::NcDim> const &dims);
+
+template<class TypeT>
+void get_or_put_var(netCDF::NcVar &ncvar, char rw,
+	std::vector<size_t> const &startp,
+	std::vector<size_t> const &endp,
+	TypeT *dataValues);
+
+template<class TypeT>
+void get_or_put_var(netCDF::NcVar &ncvar, char rw,
+	std::vector<size_t> const &startp,
+	std::vector<size_t> const &endp,
+	TypeT *dataValues)
+{
+	switch(rw) {
+		case 'r' :
+			ncvar.getVar(startp, endp, dataValues);
+		break;
+		case 'w' :
+			ncvar.putVar(startp, endp, dataValues);
+		break;
+	}
+}
 // ========================================================
 // ---------------------------------------------------
 template<class TypeT, int RANK>
@@ -184,12 +212,7 @@ void ncio_blitz(
 		val.resize(shape);
 	}
 
-	netCDF::NcVar ncvar;
-	if (ncio.define) {
-		ncvar = ncio.nc->addVar(vname, nc_type, dims);
-	} else {
-		ncvar = ncio.nc->getVar(vname);
-	}
+	netCDF::NcVar ncvar = get_or_add_var(ncio, vname, nc_type, dims);
 	_check_blitz(ncvar, val, ncio.rw);
 
 	// const_cast allows us to re-use nc_rw_blitz for read and write
@@ -206,12 +229,11 @@ template<class TypeT>
 void std::vector<netCDF::NcDim> get_or_add_dims(
 	netCDF::NcGroup *nc,
 	std::vector<TypeT> &val,
-	std::array<std::string, 1> const &sdims)
+	std::array<std::string, 1> const &dim_names)
 {
-	std::vector<std::tuple<std::string, size_t>> ssdims(RANK);
-	std::get<0>(ssdims[0]) = sdims[0];
-	std::get<1>(ssdims[0]) = val.extent(k);
-	return get_or_add_dims(nc, val, ssdims);
+	std::vector<size_t> dim_sizes(RANK);
+	dim_sizes[k] = val.extent(k);
+	return get_or_add_dims(nc, val, dim_names, dim_sizes);
 }
 
 /** Define and write a std::vector. */

@@ -64,27 +64,57 @@ std::vector<netCDF::NcDim> get_dims(
 {
 	size_t RANK = sdims.size();
 	std::vector<netCDF::NcDim> ret(RANK);
-	for (int k=0; k<RANK; ++k) ret[k] = ncio.nc->getDim(sdims[k]);
+	for (int k=0; k<RANK; ++k) {
+		ret[k] = ncio.nc->getDim(sdims[k]);
+		if (ret[k].isNull()) {
+			(*ibmisc_error)(-1,
+				"Dimension %s does not exit!", sdims[k].c_str());
+		}
+	}
 	return ret;
 }
 
 std::vector<netCDF::NcDim> get_or_add_dims(
 	NcIO &ncio,
-	std::vector<std::tuple<std::string, size_t>> const &sdims)
+	std::vector<std::string> const &dim_names,
+	std::vector<size_t> const &dim_sizes)
 {
-	size_t RANK = sdims.size();
+	if (dim_names.size() != dim_sizes.size()) {
+		(*ibmisc_error)(-1,
+			"get_or_add_dims() requires dim_names[%ld] and dim_sizes[%ld] be of same length.",
+			dim_names.size(), dim_sizes.size());
+	}
+
+	size_t RANK = dim_names.size();
 	std::vector<netCDF::NcDim> ret(RANK);
 	for (int k=0; k<RANK; ++k) {
-		std::string const &dim_name(std::get<0>(sdims[k]));
-		size_t const dim_size(std::get<1>(sdims[k]));
-
-		if (dim_size < 0) {
-			ret[k] = get_or_add_dim(ncio, dim_name);
+		if (dim_sizes[k] < 0) {
+			ret[k] = get_or_add_dim(ncio, dim_names[k]);
 		} else {
-			ret[k] = get_or_add_dim(ncio, dim_name, dim_size);
+			ret[k] = get_or_add_dim(ncio, dim_names[k], dim_sizes[k]);
 		}
 	}
 	return ret;
+}
+// ====================================================
+/** Error if var doesn't exist. */
+netCDF::NcVar get_or_add_var(
+	NcIO &ncio,
+	std::string const &vname,
+	netCDF::NcType const &nc_type,
+	std::vector<netCDF::NcDim> const &dims)
+{
+	netCDF::NcVar ncvar;
+	if (ncio.define) {
+		ncvar = ncio.nc->addVar(vname, nc_type, dims);
+	} else {
+		ncvar = ncio.nc->getVar(vname);
+		if (ncvar.isNull()) {
+			(*ibmisc_error)(-1,
+				"Variable %s required but not found", vname.c_str());
+		}
+	}
+	return ncvar;
 }
 
 
