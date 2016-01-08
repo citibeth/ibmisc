@@ -1,18 +1,28 @@
-
-
 # ----------- ibmisc_c
 set(IBMISC_SOURCE
-	ibmisc/ibmisc.cpp
-	ibmisc/netcdf.cpp)
+	ibmisc/ibmisc.cpp)
+
+if (USE_PROJ4)
+	list(APPEND IBMISC_SOURCE ibmisc/Proj2.cpp)
+endif()
+
+if (USE_BOOST)
+	if (USE_NETCDF)
+		list(APPEND IBMISC_SOURCE
+			ibmisc/netcdf.cpp)
+	endif()
+endif()
+
+if (USE_UDUNITS2)
+	list(APPEND IBMISC_SOURCE
+		ibmisc/udunits2.cpp)
+endif()
 
 add_library(ibmisc SHARED
 	${EVERYTRACE_REFADDR}	# Blank if not USE_EVERYTRACE
 	${IBMISC_SOURCE})
 
-target_link_libraries(ibmisc
-	${EVERYTRACE_C_LIBRARY}
-	${NETCDF4_C_LIBRARY}
-	${NETCDF4_CXX_LIBRARY})
+target_link_libraries(ibmisc ${EXTERNAL_LIBS})
 
 install(TARGETS ibmisc DESTINATION lib)
 
@@ -49,3 +59,27 @@ IF (DOXYGEN_FOUND)
 #  WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR})
 
 ENDIF (DOXYGEN_FOUND)
+
+
+
+# Optional Items in libraries:
+#USE_PROJ4
+#  Proj2.cpp
+#  Proj.hpp Proj2.hpp
+#
+#USE_BLITZ
+#   f90blitz_f.f90
+#  VarTransformer.hpp blitz.hpp f90blitz.hpp f90blitz_f.h
+#
+#USE_BOOST
+#  boost/enum/*.hpp boost/enum.hpp
+#
+#USE_NETCDF && USE_BOOST
+#  netcdf.cpp
+#  netcdf.hpp
+#
+#USE_UDUNITS2
+#  udunits2.hpp
+#  udunits2.cpp
+#
+#

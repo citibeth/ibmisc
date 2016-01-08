@@ -6,11 +6,19 @@ enable_testing()
 find_package(GTest REQUIRED)
 include_directories(${GTEST_INCLUDE_DIRS} ${PROJECT_SOURCE_DIR}/slib)
 
-SET(ALL_LIBS ${GTEST_BOTH_LIBRARIES} ${EVERYTRACE_C_LIBRARY} ibmisc)
+SET(ALL_LIBS ${GTEST_BOTH_LIBRARIES} ${EXTERNAL_LIBS} ibmisc)
 
-add_executable(test_netcdf test_netcdf.cpp)
-target_link_libraries(test_netcdf ${ALL_LIBS})
-add_test(AllTests test_netcdf)
+
+foreach(TEST netcdf compact_map)
+	add_executable(test_${TEST} test_${TEST}.cpp)
+	target_link_libraries(test_${TEST} ${ALL_LIBS})
+	add_test(AllTests test_${TEST})
+endforeach()
+
+
+#add_executable(test_netcdf test_netcdf.cpp)
+#target_link_libraries(test_netcdf ${ALL_LIBS})
+#add_test(AllTests test_netcdf)
 
 #add_executable(test_array test_array.cpp)
 #target_link_libraries(test_array ${ALL_LIBS})

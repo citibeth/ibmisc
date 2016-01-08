@@ -14,7 +14,7 @@ namespace ibmisc {
 /** Used to keep track of future writes on NcDefine */
 class NcIO {
 	std::vector<std::function<void ()>> _io;
-	std::unique_ptr<netCDF::NcFile> _mync;  // NcFile lacks proper move constructor
+	netCDF::NcFile _mync;  // NcFile lacks proper move constructor
 	bool own_nc;
 public:
 	netCDF::NcGroup * const nc;
@@ -32,9 +32,9 @@ public:
 		define(_mode == 'd') {}
 
 	NcIO(std::string const &filePath, netCDF::NcFile::FileMode fMode) :
-		_mync(new netCDF::NcFile(filePath, fMode)),
+		_mync(filePath, fMode),
 		own_nc(true),
-		nc(_mync.get()),
+		nc(&_mync),
 		rw(fMode == netCDF::NcFile::FileMode::read ? 'r' : 'w'),
 		define(rw == 'w') {}
 
@@ -49,7 +49,7 @@ public:
 	void close() {
 		if (own_nc) {
 			(*this)();
-			_mync->close();
+			_mync.close();
 		} else {
 			(*ibmisc_error)(-1, "NcIO::close() only valid on NcGroups it owns.");
 		}
