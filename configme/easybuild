@@ -1,4 +1,3 @@
-BLITZ_ROOT=$EB_ROOT/software/blitz/0.10-GCC-4.9.3
 GCC_BIN=$HOME/macports/mpgompi-4.9.3/bin
 cmake -DCMAKE_INSTALL_PREFIX:PATH=$EB_ROOT/software/ibmisc/devel \
 	-DCMAKE_CXX_COMPILER=$GCC_BIN/g++ -DCMAKE_CXX_FLAGS="-g" \
@@ -6,8 +5,7 @@ cmake -DCMAKE_INSTALL_PREFIX:PATH=$EB_ROOT/software/ibmisc/devel \
 	-DCMAKE_Fortran_COMPILER=$GCC_BIN/gfortran -DCMAKE_FORTRAN_FLAGS="-g" \
 	\
 	-DEVERYTRACE_ROOT=$EB_ROOT/software/everytrace/devel-mpgompi-4.9.3 \
-	-DBLITZ++_PKGCONF_INCLUDE_DIRS=$BLITZ_ROOT/include \
-	-DBLITZ++_PKGCONF_LIBRARY_DIRS=$BLITZ_ROOT/lib \
+	-DBLITZ_ROOT=$EB_ROOT/software/blitz/0.10-GCC-4.9.3 \
 	-DNETCDF4_C_ROOT=$EB_ROOT/software/netCDF/4.3.2-mpgompi-4.9.3 \
 	-DNETCDF4_CXX_ROOT=$EB_ROOT/software/netCDF-C++4/ecdf914-mpgompi-4.9.3 \
 	-DPROJ_ROOT=$EB_ROOT/software/PROJ/4.9.2-GCC-4.9.3 \

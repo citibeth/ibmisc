@@ -1609,6 +1609,6 @@ bool RTREE_QUAL::Search(Node* a_node, Rect* a_rect, int& a_foundCount, RTree::Ca
 
 #undef RTREE_TEMPLATE
 #undef RTREE_QUAL
-}	// namespace giss
+}	// namespace ibmisc
 
 #endif //RTREE_H

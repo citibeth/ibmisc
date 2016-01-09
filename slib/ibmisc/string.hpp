@@ -1,7 +1,7 @@
 #include <algorithm>
 #include <string>
 
-namespace giss {
+namespace ibmisc {
 
 inline void toupper(std::string &str) {
 	std::transform(str.begin(), str.end(), str.begin(), ::toupper);

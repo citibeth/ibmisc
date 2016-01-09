@@ -1,6 +1,6 @@
-#include <giss/VarTransformer.hpp>
+#include <ibmisc/VarTransformer.hpp>
 
-namespace giss {
+namespace ibmisc {
 
 void VarTransformer::allocate()
 {
@@ -199,4 +199,4 @@ std::ostream &operator<<(std::ostream &out, VarTransformer const &vt)
 	return out;
 }
 
-}	// namespace giss
+}	// namespace ibmisc

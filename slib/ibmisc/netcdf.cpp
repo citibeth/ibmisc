@@ -68,7 +68,7 @@ std::vector<netCDF::NcDim> get_dims(
 		ret[k] = ncio.nc->getDim(sdims[k]);
 		if (ret[k].isNull()) {
 			(*ibmisc_error)(-1,
-				"Dimension %s does not exit!", sdims[k].c_str());
+				"Dimension %s does not exist!", sdims[k].c_str());
 		}
 	}
 	return ret;

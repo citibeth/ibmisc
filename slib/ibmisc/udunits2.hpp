@@ -3,7 +3,7 @@
 #include <udunits2.h>
 #include <iostream>
 
-namespace giss {
+namespace ibmisc {
 
 class UTSystem;
 

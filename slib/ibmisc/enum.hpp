@@ -19,15 +19,16 @@
 #pragma once
 
 #include <boost/enum.hpp>
+#include <ibmisc/ibmisc.hpp>
 
-namespace giss {
+namespace ibmisc {
 
 template<class T>
 inline T parse_enum(char const *str) {
 	auto ret = T::get_by_name(str);
 	if (!ret) {
-		fprintf(stderr, "Error converting from string '%s' for boost::enum type %s\n", str, typeid(T).name());
-		giss::exit(1);
+		(*ibmisc_error)(-1,
+			"Error converting from string '%s' for boost::enum type %s\n", str, typeid(T).name());
 	}
 	return *ret;
 }

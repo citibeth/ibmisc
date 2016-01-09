@@ -2,7 +2,7 @@
 
 #include <vector>
 #include <blitz/array.h>
-#include <giss/DynamicEnum.hpp>
+#include <ibmisc/DynamicEnum.hpp>
 
 namespace ibmisc {
 

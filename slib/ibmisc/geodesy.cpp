@@ -16,9 +16,9 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-#include <giss/constant.hpp>
+#include <ibmisc/constant.hpp>
 
-namespace giss {
+namespace ibmisc {
 
 inline double sqr(double x) { return x*x; }
 

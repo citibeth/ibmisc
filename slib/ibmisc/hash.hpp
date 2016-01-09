@@ -20,7 +20,7 @@
 
 #include <functional>
 
-namespace giss {
+namespace ibmisc {
 
 /** Utility class to hash std::pair, which was left out of std::hash.
 Used to construct std::unordered_maps where std::pair is used as the

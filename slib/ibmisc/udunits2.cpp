@@ -1,10 +1,10 @@
 #include <cstdio>
 #include <cstring>
 #include <exception>
-#include <giss/udunits2.hpp>
-#include <giss/exit.hpp>
+#include <ibmisc/udunits2.hpp>
+#include <ibmisc/ibmisc.hpp>
 
-namespace giss {
+namespace ibmisc {
 
 	std::string UTUnit::format(unsigned opts) const {
 		char buf[1000];
@@ -28,16 +28,18 @@ namespace giss {
 
 		switch(ut_get_status()) {
 			case UT_SUCCESS :
-				fprintf(stderr,"UTUnit::get_unit_by_name(): Name %s doesn't map to a unit in the unit system.\n", name.c_str());
+				(*ibmisc_error)(-1,
+				"UTUnit::get_unit_by_name(): Name %s doesn't map to a unit in the unit system.\n", name.c_str());
 			break;
 			case UT_BAD_ARG :
-				fprintf(stderr, "UTUnit::get_unit_by_name(): UT_BAD_ARG, system or symbol is null.  This should not happen in C++ wrapper.\n");
+				(*ibmisc_error)(-1,
+				 "UTUnit::get_unit_by_name(): UT_BAD_ARG, system or symbol is null.  This should not happen in C++ wrapper.\n");
 			break;
 			default :
-				fprintf(stderr, "UTUnit::get_unit_by_name(): Unknown error\n");
+				(*ibmisc_error)(-1,
+				 "UTUnit::get_unit_by_name(): Unknown error\n");
 			break;
 		}
-		giss::exit(1);
 	}
 
 	UTUnit UTSystem::get_unit_by_symbol(std::string const &symbol) const
@@ -47,16 +49,18 @@ namespace giss {
 
 		switch(ut_get_status()) {
 			case UT_SUCCESS :
-				fprintf(stderr, "UTSystem::get_unit_by_system(): Symbol '%s' doesn't map to a unit in the unit system.\n", symbol.c_str());
+				(*ibmisc_error)(-1,
+					"UTSystem::get_unit_by_system(): Symbol '%s' doesn't map to a unit in the unit system.\n", symbol.c_str());
 			break;
 			case UT_BAD_ARG :
-				fprintf(stderr, "UTSystem::get_unit_by_system(): UT_BAD_ARG, system or symbol is null.  This should not happen in C++ wrapper.\n");
+				(*ibmisc_error)(-1,
+					"UTSystem::get_unit_by_system(): UT_BAD_ARG, system or symbol is null.  This should not happen in C++ wrapper.\n");
 			break;
 			default :
-				fprintf(stderr, "UTSystem::get_unit_by_system(): Unknown error\n");
+				(*ibmisc_error)(-1,
+					"UTSystem::get_unit_by_system(): Unknown error\n");
 			break;
 		}
-		giss::exit(1);
 	}
 
 	UTUnit UTSystem::get_dimensionless_unit_one() const
@@ -73,22 +77,26 @@ namespace giss {
 
 		switch(ut_get_status()) {
 			case UT_BAD_ARG :
-				fprintf(stderr, "UTSystem::parse(): UT_BAD_ARG, system or str is null.  This should not happen in C++ wrapper.\n");
+				(*ibmisc_error)(-1,
+				 "UTSystem::parse(): UT_BAD_ARG, system or str is null.  This should not happen in C++ wrapper.\n");
 			break;
 			case UT_SYNTAX :
-				fprintf(stderr, "UTSystem::parse(): UT_SYNTAX error in '%s'\n", str.c_str());
+				(*ibmisc_error)(-1,
+				 "UTSystem::parse(): UT_SYNTAX error in '%s'\n", str.c_str());
 			break;
 			case UT_UNKNOWN :
-				fprintf(stderr, "UTSystem::parse(): String '%s' contains an unknown identifier", str.c_str());
+				(*ibmisc_error)(-1,
+				 "UTSystem::parse(): String '%s' contains an unknown identifier", str.c_str());
 			break;
 			case UT_OS :
-				fprintf(stderr, "UTSystem::parse(): UT_OS\n");
+				(*ibmisc_error)(-1,
+				 "UTSystem::parse(): UT_OS\n");
 			break;
 			default :
-				fprintf(stderr, "UTSystem::parse(): Unknown error\n");
+				(*ibmisc_error)(-1,
+				 "UTSystem::parse(): Unknown error\n");
 			break;
 		}
-		giss::exit(1);
 
 	}
 
@@ -101,20 +109,24 @@ namespace giss {
 
 		switch(ut_get_status()) {
 			case UT_BAD_ARG :
-				fprintf(stderr, "CVConverter(%s -> %s): UT_BAD_ARG\n", from.c_str(), to.c_str()); break;
+				(*ibmisc_error)(-1,
+				 "CVConverter(%s -> %s): UT_BAD_ARG\n", from.c_str(), to.c_str()); break;
 			case UT_NOT_SAME_SYSTEM :
-				fprintf(stderr, "CVConverter(%s -> %s): UT_NOT_SAME_SYSTEM\n", from.c_str(), to.c_str()); break;
+				(*ibmisc_error)(-1,
+				 "CVConverter(%s -> %s): UT_NOT_SAME_SYSTEM\n", from.c_str(), to.c_str()); break;
 			case UT_MEANINGLESS :
-				fprintf(stderr, "CVConverter(%s -> %s): UT_MEANINGLESS\n", from.c_str(), to.c_str()); break;
+				(*ibmisc_error)(-1,
+				 "CVConverter(%s -> %s): UT_MEANINGLESS\n", from.c_str(), to.c_str()); break;
 			case UT_OS :
-				fprintf(stderr, "CVConverter(%s -> %s): UT_OS\n", from.c_str(), to.c_str()); break;
+				(*ibmisc_error)(-1,
+				 "CVConverter(%s -> %s): UT_OS\n", from.c_str(), to.c_str()); break;
 			default :
-				fprintf(stderr, "CVConverter(%s -> %s): Unknown problem\n", from.c_str(), to.c_str()); break;
+				(*ibmisc_error)(-1,
+				 "CVConverter(%s -> %s): Unknown problem\n", from.c_str(), to.c_str()); break;
 		}
-		giss::exit(1);
 
 	}
 
 
-}	// namespace giss
+}	// namespace ibmisc
 

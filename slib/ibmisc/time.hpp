@@ -2,7 +2,7 @@
 
 #include <ctime>
 
-namespace giss {
+namespace ibmisc {
 namespace time {
 
 

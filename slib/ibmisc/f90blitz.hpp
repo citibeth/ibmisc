@@ -26,7 +26,7 @@
 /** @file
 C++ (Blitz) / Fortran interoperability for Assumed Shape (Fortran 90) arrays. */
 
-namespace giss {
+namespace ibmisc {
 
 /**A reconstruction of the "dope vector" used to describe assumed
 shape arrays in Fortran 90.  Used as parameters in C++ functions to
@@ -96,4 +96,4 @@ std::ostream& operator<<(std::ostream& os, F90Array<ArrT, rank> const &arr_f)
 }
 
 
-}	// namespace giss
+}	// namespace ibmisc

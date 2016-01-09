@@ -18,12 +18,16 @@
 
 #pragma once
 
-#include <giss/Proj.hpp>
-#include <giss/constant.hpp>
-#include <netcdfcpp.h>
-#include <giss/Proj.hpp>
+#include <ibmisc/Proj.hpp>
+#include <ibmisc/netcdf.hpp>
+#include <ibmisc/Proj.hpp>
+#include <cmath>
 
 namespace ibmisc {
+
+// Radians <--> Degrees
+static const double D2R = M_PI / 180.0;
+static const double R2D = 180.0 / M_PI;
 
 /** Class that joins together a pair of Proj instances, to implement
 both the forward and backward translation together in one.  Instances have
@@ -82,8 +86,13 @@ public:
 	@param y1 Destination y (or latitude) coordinate (radians) */
 	int transform(double x0, double y0, double &x1, double &y1) const;
 
-	void netcdf_define(NcFile &nc, NcVar *info_var, std::string const &vname) const;
-	void read_from_netcdf(NcFile &nc, NcVar *info_var, std::string const &vname);
+#ifdef USE_NETCDF
+void ncio_proj2(
+	ibmisc::NcIO &ncio,
+	std::string const &vname,
+	Proj2 &proj,
+	std::string const &attrname);
+#endif
 	
 };
 

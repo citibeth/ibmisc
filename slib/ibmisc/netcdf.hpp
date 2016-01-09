@@ -134,6 +134,33 @@ void get_or_put_var(netCDF::NcVar &ncvar, char rw,
 	}
 }
 // ========================================================
+// Attribute Wrangling
+
+#if 0
+template<class NcVarT, class AttrT>
+void get_or_put_att(
+	NcVarT &ncvar, char rw,
+	const std::string &name, const netCDF::NcType &type,
+	std::vector<AttrT> &data);
+
+template<class NcVarT, AttrT>
+void get_or_put_att(
+	NcVarT &ncvar, char rw,
+	const std::string &name, const netCDF::NcType &type,
+	std::vector<AttrT> &data)
+{
+	switch(rw) {
+		case 'w':
+			ncvar.putAtt(name, type, data.size(), &data[0]);
+		break;
+		case 'r':
+			auto att(ncvar.getAtt(name));
+			data.resize(att.getAttLength());
+			att.getValues(&data[0]);
+		break;
+	}
+}
+#endif
 // ---------------------------------------------------
 template<class TypeT, int RANK>
 static void _check_blitz(

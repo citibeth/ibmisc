@@ -18,7 +18,7 @@
 
 #pragma once
 
-namespace giss {
+namespace ibmisc {
 
 double haversine_distance(
 double lon1_deg, double lat1_deg,

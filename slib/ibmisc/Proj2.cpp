@@ -16,9 +16,9 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-#include <giss/Proj2.hpp>
-#include <giss/ncutil.hpp>
-#include <giss/exit.hpp>
+#include <ibmisc/Proj2.hpp>
+#include <ibmisc/netcdf.hpp>
+#include <ibmisc/ibmisc.hpp>
 
 namespace ibmisc {
 
@@ -56,7 +56,7 @@ int Proj2::transform(double x0, double y0, double &x1, double &y1) const
 	}
 
 	if (direction == Direction::XY2LL) {
-		int ret = giss::transform(_proj, _llproj, x0, y0, x1, y1);
+		int ret = ibmisc::transform(_proj, _llproj, x0, y0, x1, y1);
 		x1 *= R2D;
 		y1 *= R2D;
 		return ret;
@@ -64,43 +64,46 @@ int Proj2::transform(double x0, double y0, double &x1, double &y1) const
 
 	x0 *= D2R;
 	y0 *= D2R;
-	return giss::transform(_llproj, _proj, x0, y0, x1, y1);
+	return ibmisc::transform(_llproj, _proj, x0, y0, x1, y1);
 }
 
 
+#ifdef USE_NETCDF
 
-
-void Proj2::netcdf_define(NcFile &nc, NcVar *info_var, std::string const &vname) const
+void ncio_proj2(
+	ibmisc::NcIO &ncio,
+	std::string const &vname,
+	Proj2 &proj,
+	std::string const &attrname)
 {
-	// ------ Attributes
-	if (is_valid()) {
-		info_var->add_att(vname.c_str(), sproj.c_str());
-		std::string sdir = (direction == Direction::XY2LL ? "xy2ll" : "ll2xy");
-		info_var->add_att((vname + ".direction").c_str(), sdir.c_str());
+	netCDF::NcVar ncvar = ncio.nc->getVar(vname);
+	if (ncio.rw == 'w') {
+		// --------- WRITE
+		if (proj.is_valid()) {
+			ncvar.putAtt(attrname, proj.sproj);
+			std::string sdir = (proj.direction == Proj2::Direction::XY2LL ? "xy2ll" : "ll2xy");
+			ncvar.putAtt((attrname + ".direction"), sdir);
+		} else {
+			ncvar.putAtt(attrname, "");
+			ncvar.putAtt(attrname + ".direction", "");
+		}
 	} else {
-		info_var->add_att(vname.c_str(), "");
-		info_var->add_att((vname + ".direction").c_str(), "");
+		// ----------- READ
+		std::string sproj;
+		ncvar.getAtt(attrname).getValues(sproj);
+		if (sproj == "") {
+			proj.clear();
+		} else {
+			std::string sdir;
+			ncvar.getAtt(attrname + ".direction").getValues(sproj);
+			if (sdir == "xy2ll") proj.direction = Proj2::Direction::XY2LL;
+			else if (sdir == "ll2xy") proj.direction = Proj2::Direction::LL2XY;
+			else (*ibmisc_error)(-1,
+				"Unsupported direction \"%s\" from NetCDF file (must be \"xy2ll\" or \"ll2xy\"", sdir.c_str());
+		}
 	}
 }
 
+#endif
 
-/** @param fname Name of file to load from (eg, an overlap matrix file)
-@param vname Eg: "grid1" or "grid2" */
-void Proj2::read_from_netcdf(
-NcFile &nc,
-NcVar *info_var,
-std::string const &vname)
-{
-	sproj = std::string(get_att(info_var, vname.c_str())->as_string(0));
-	if (sproj == "") {
-		clear();
-	} else {
-		std::string sdir(std::string(get_att(info_var, (vname + ".direction").c_str())->as_string(0)));
-		if (sdir == "xy2ll") direction = Direction::XY2LL;
-		else if (sdir == "ll2xy") direction = Direction::LL2XY;
-		else giss::exit(1);
-	}
-}
-
-
-}	// namespace giss
+}	// namespace ibmisc

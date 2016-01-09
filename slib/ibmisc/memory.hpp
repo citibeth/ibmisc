@@ -23,7 +23,7 @@
 #include <memory>
 #include <typeinfo>
 
-namespace giss {
+namespace ibmisc {
 
 // http://ficksworkshop.com/blog/14-coding/86-how-to-static-cast-std-unique-ptr	
 template<typename D, typename B>
@@ -59,7 +59,7 @@ inline std::shared_ptr<T_DEST> dynamic_shared_cast(std::unique_ptr<T_SRC> &&src)
 	return std::shared_ptr<T_DEST>(dynamic_cast_unique_ptr<T_DEST, T_SRC>(std::move(src)));
 }
 
-}	// namespace giss
+}	// namespace ibmisc
 
 
 
