@@ -43,14 +43,13 @@ if (NOT DEFINED USE_NETCDF)
 	set(USE_NETCDF YES)
 endif()
 if (USE_NETCDF)
-#	find_package(NetCDF4_C REQUIRED)
+	find_package(NetCDF4_C REQUIRED)
 	find_package(NetCDF4_CXX REQUIRED)
 	add_definitions(-DUSE_NETCDF)
 	include_directories(
-#		${NETCDF4_C_INCLUDE_DIR}
+		${NETCDF4_C_INCLUDE_DIR}
 		${NETCDF4_CXX_INCLUDE_DIR})
-#	list(APPEND EXTERNAL_LIBS ${NETCDF4_C_LIBRARY} ${NETCDF4_CXX_LIBRARY})
-	list(APPEND EXTERNAL_LIBS ${NETCDF4_CXX_LIBRARY})
+	list(APPEND EXTERNAL_LIBS ${NETCDF4_C_LIBRARY} ${NETCDF4_CXX_LIBRARY})
 endif()
 # -----------------------------------------------------
 if (NOT DEFINED USE_BOOST)
@@ -82,10 +81,6 @@ FIND_PACKAGE(Doxygen)
 # ----------------------------------------------------------
 
 include (setup_rpath)
-
-# Include all the transitive dependencies determined by EasyBuild.
-# If we're not running with EasyBuild, this does nothing...
-include_directories($ENV{EB_INCLUDE_PATH})
 
 
 # -------- Process subdirectories of the build

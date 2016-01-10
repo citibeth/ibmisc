@@ -1,0 +1,39 @@
+easyblock = 'CmakeDev'
+separate_build_dir = True
+
+name = 'ibmisc'
+version = 'devel'
+
+homepage = 'https://github.com/citibeth/ibmisc/'
+description = """Misc. C++ Utilities while building IceBin"""
+
+toolchain = {'name': 'GCC', 'version': '4.9.3'}
+
+sources = ['/Users/rpfische/git/ibmisc']
+source_urls = ['https://github.com/citibeth/ibmisc/tarball/%(version)s']
+
+configopts = '-DUSE_PROJ4=YES'
+
+dependencies = [
+	('everytrace', 'devel', '', ('mpgompi', '4.9.3')),
+	('PROJ', '4.9.2'),
+	('blitz', '0.10'),
+	('netCDF-C++4', 'ecdf914', '', ('mpgompi', '4.9.3')),
+	('Boost', '1.59.0', '', ('mpgompi', '4.9.3')),
+	('UDUNITS', '2.2.20'),
+	('gtest', '1.7.0', '', ('GCC', '4.9.3')),
+#	('netCDF', '4.3.2', '', ('mpgompi', '4.9.3')),
+]
+
+builddependencies = [
+    ('CMake', '3.4.1', '', ('GCC', '4.9.3')),
+	('Doxygen', '1.8.11', '', ('GCC', '4.9.3')),
+]
+
+sanity_check_paths = {
+    'files': ['lib/libibmisc.%s' % SHLIB_EXT],
+    'dirs': ['include/ibmisc'],
+}
+
+
+moduleclass = 'lib'

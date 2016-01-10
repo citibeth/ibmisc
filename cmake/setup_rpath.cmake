@@ -24,5 +24,11 @@ IF("${isSystemDir}" STREQUAL "-1")
    SET(CMAKE_INSTALL_RPATH "${CMAKE_INSTALL_PREFIX}/lib")
 ENDIF("${isSystemDir}" STREQUAL "-1")
 
+# Forcing of RPATH is not needed.
+# CMake is smart enough to look at the link path, but only
+# includes rpath information for linked libraries that could
+# benefit from it.
+#set(CMAKE_INSTALL_RPATH $ENV{CMAKE_LIBRARY_PATH})
+
 message("-- CMAKE_INSTALL_RPATH " ${CMAKE_INSTALL_RPATH})
 # --------------------------------------------------------
