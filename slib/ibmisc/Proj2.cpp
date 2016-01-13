@@ -49,12 +49,6 @@ void Proj2::realize()
 @param y1 Destination y (or latitude) coordinate (radians) */
 int Proj2::transform(double x0, double y0, double &x1, double &y1) const
 {
-	if (!is_valid()) {
-		x1 = x0;
-		y1 = y0;
-		return 0;
-	}
-
 	if (direction == Direction::XY2LL) {
 		int ret = ibmisc::transform(_proj, _llproj, x0, y0, x1, y1);
 		x1 *= R2D;
@@ -66,44 +60,5 @@ int Proj2::transform(double x0, double y0, double &x1, double &y1) const
 	y0 *= D2R;
 	return ibmisc::transform(_llproj, _proj, x0, y0, x1, y1);
 }
-
-
-#ifdef USE_NETCDF
-
-void ncio_proj2(
-	ibmisc::NcIO &ncio,
-	std::string const &vname,
-	Proj2 &proj,
-	std::string const &attrname)
-{
-	netCDF::NcVar ncvar = ncio.nc->getVar(vname);
-	if (ncio.rw == 'w') {
-		// --------- WRITE
-		if (proj.is_valid()) {
-			ncvar.putAtt(attrname, proj.sproj);
-			std::string sdir = (proj.direction == Proj2::Direction::XY2LL ? "xy2ll" : "ll2xy");
-			ncvar.putAtt((attrname + ".direction"), sdir);
-		} else {
-			ncvar.putAtt(attrname, "");
-			ncvar.putAtt(attrname + ".direction", "");
-		}
-	} else {
-		// ----------- READ
-		std::string sproj;
-		ncvar.getAtt(attrname).getValues(sproj);
-		if (sproj == "") {
-			proj.clear();
-		} else {
-			std::string sdir;
-			ncvar.getAtt(attrname + ".direction").getValues(sproj);
-			if (sdir == "xy2ll") proj.direction = Proj2::Direction::XY2LL;
-			else if (sdir == "ll2xy") proj.direction = Proj2::Direction::LL2XY;
-			else (*ibmisc_error)(-1,
-				"Unsupported direction \"%s\" from NetCDF file (must be \"xy2ll\" or \"ll2xy\"", sdir.c_str());
-		}
-	}
-}
-
-#endif
 
 }	// namespace ibmisc

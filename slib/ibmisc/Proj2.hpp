@@ -20,7 +20,6 @@
 
 #include <ibmisc/Proj.hpp>
 #include <ibmisc/netcdf.hpp>
-#include <ibmisc/Proj.hpp>
 #include <cmath>
 
 namespace ibmisc {
@@ -45,20 +44,10 @@ protected:
 	void realize();
 public:
 
-	/** Tests if this projection has been initialized. */
-	bool is_valid() const { return _proj.is_valid(); }
-
 	/** @param _sproj The projection string.
 	@param _direction Direction of translation. */
 	Proj2(std::string const &_sproj, Direction _direction);
 
-	Proj2() : direction(Direction::LL2XY) {}
-
-	/** Release everything */
-	void clear() {
-		_proj.clear();
-		_llproj.clear();
-	}
 
 	/** Copy constructor */
 	Proj2(Proj2 const &rhs);
@@ -68,13 +57,6 @@ public:
 		sproj(rhs.sproj), direction(_direction)
 		{ realize(); }
 
-	/** Initialize an instance */
-	void init(std::string const &_sproj, Direction _direction)
-	{
-		sproj = _sproj;
-		direction = _direction;
-		realize();
-	}
 
 
 	/** Transforms a single coordinate pair
@@ -96,4 +78,14 @@ void ncio_proj2(
 	
 };
 
-}
+class Proj_LL2XY : public Proj2
+{
+	Proj_LL2XY(std::string const &_sproj) : Proj2(_sproj, Proj2::Direction::LL2XY) {}
+};
+
+class Proj_XY2LL : public Proj2
+{
+	Proj_XY2LL(std::string const &_sproj) : Proj2(sproj, Proj2::Direction::LL2XY) {}
+};
+
+}	// Namespace

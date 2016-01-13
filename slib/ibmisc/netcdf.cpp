@@ -8,6 +8,18 @@ using namespace netCDF;
 
 namespace ibmisc {
 
+void _check_nc_rank(
+	netCDF::NcVar const &ncvar,
+	int rank)
+{
+	// Check rank of NetCDF variable
+	if (ncvar.getDimCount() != rank)
+		(*ibmisc_error)(-1,
+			"NetCDF variable of rank %ld does not match blitz::Array "
+			"of rank %d", ncvar.getDimCount(), rank);
+}
+
+// ===============================================
 /** Gets or creates an unlimited size dimension */
 netCDF::NcDim get_or_add_dim(NcIO &ncio, std::string const &dim_name)
 {
@@ -117,6 +129,25 @@ netCDF::NcVar get_or_add_var(
 	return ncvar;
 }
 
+// ---------------------------------------------
+/** Do linewrap for strings that are intended to be used as comment attributes in NetCDF files.
+       see: http://www.cplusplus.com/forum/beginner/19034/
+*/
+std::string ncwrap( std::string const &str2, size_t width) {
+	std::string str = "\n" + str2;
+    size_t curWidth = width;
+    while( curWidth < str.length() ) {
+        std::string::size_type spacePos = str.rfind( ' ', curWidth );
+        if( spacePos == std::string::npos )
+            spacePos = str.find( ' ', curWidth );
+        if( spacePos != std::string::npos ) {
+            str[ spacePos ] = '\n';
+            curWidth = spacePos + width + 1;
+        }
+    }
+
+    return str;
+}
 
 }	// Namespace
 
