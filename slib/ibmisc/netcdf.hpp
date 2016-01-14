@@ -154,17 +154,50 @@ void get_or_put_att(
 {
 	switch(rw) {
 		case 'w':
-			ncvar.putAtt(name, type, data.size(), data);
+			ncvar.putAtt(name, type, len, data);
 		break;
 		case 'r':
 			auto att(ncvar.getAtt(name));
 			if (att.getAttLength() != len) {
-				(*ibmisc_error)("Trying to read attribute %s of length %ld into C++ variable of length %ld", name, att.getAttLength(), len);
+				(*ibmisc_error)(-1,
+					"Trying to read attribute %s of length %ld into C++ "
+					"variable of length %ld",
+					name.c_str(), att.getAttLength(), len);
 			}
 			att.getValues(data);
 		break;
 	}
 }
+
+
+template<class NcVarT>
+void get_or_put_att(
+	NcVarT &ncvar, char rw,
+	std::string const &name,
+	std::string &data);
+
+template<class NcVarT>
+void get_or_put_att(
+	NcVarT &ncvar, char rw,
+	std::string const &name,
+	std::string &data)
+{
+	switch(rw) {
+		case 'w':
+			ncvar.putAtt(name, data);
+		break;
+		case 'r':
+			auto att(ncvar.getAtt(name));
+#if 0
+			if (att.getAttLength() != len) {
+				(*ibmisc_error)("Trying to read attribute %s of length %ld into C++ variable of length %ld", name, att.getAttLength(), len);
+			}
+#endif
+			att.getValues(data);
+		break;
+	}
+}
+
 // ---------------------------------------
 
 template<class NcVarT, class AttrT>
@@ -206,12 +239,12 @@ void get_or_put_att(
 template<class NcVarT, class EnumT>
 void get_or_put_att_enum(
 	NcVarT &ncvar, char rw,
-	const std::string &name, const netCDF::NcType &type,
+	const std::string &name,
 	EnumT &data)
 {
 	switch(rw) {
 		case 'w':
-			ncvar.putAtt(name, type, std::string(data.str()));
+			ncvar.putAtt(name, std::string(data.str()));
 		break;
 		case 'r':
 			auto att(ncvar.getAtt(name));
