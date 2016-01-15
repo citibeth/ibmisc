@@ -33,10 +33,10 @@ class random_access_iterator : public std::iterator<std::random_access_iterator_
 		{ return static_cast<DerivedT const *>(this); }
 
 public:
-	ValueT operator*() const
+	ValueT &operator*()
 		{ return derived()->operator[](0); }
 
-	ValueT *operator->() const
+	ValueT *operator->()
 		{ return &operator*(); }
 
 	DerivedT& operator++()
@@ -72,23 +72,24 @@ public:
 // ------------------------------------------------------------
 // ------------------------------------------------------------
 // http://www.cplusplus.com/reference/iterator/iterator/
-template<class ValueT, class SubIterT>
-class DerefRandomAccessIter : public random_access_iterator<ValueT, DerefRandomAccessIter<ValueT, SubIterT>>
+template<class ValueT, class WrappedIterT>
+class DerefRandomAccessIter : public random_access_iterator<ValueT, DerefRandomAccessIter<ValueT, WrappedIterT>>
 {
-	SubIterT ii;
 public:
-	DerefRandomAccessIter(SubIterT &&_ii) : ii(_ii) {}
+	WrappedIterT wrapped;
+
+	DerefRandomAccessIter(WrappedIterT &&ii) : wrapped(ii) {}
 
 	ValueT &operator[](int n) const
-		{ return *ii[n]; }
+		{ return *wrapped[n]; }
 	DerefRandomAccessIter &operator+=(int n)
-		{ii += n; return *this;}
+		{wrapped += n; return *this;}
 	DerefRandomAccessIter operator+(int n) const
-		{ return DerefRandomAccessIter(ii + n); }
+		{ return DerefRandomAccessIter(wrapped + n); }
 
 
 	bool operator==(const DerefRandomAccessIter& rhs) const
-		{return ii == rhs.ii;}
+		{return wrapped == rhs.wrapped;}
 };
 // ------------------------------------------------------------
 template<class ValueT, class DerivedT>
@@ -113,23 +114,44 @@ public:
 		{return !derived()->operator==(rhs); }
 };
 // -------------------------------------------------------
-template<class KeyT, class ValueT, class SubIterT>
-class SecondIter : public forward_iterator<ValueT, SecondIter<KeyT, ValueT, SubIterT>>
+template<class KeyT, class ValueT, class WrappedIterT>
+class SecondIter : public forward_iterator<ValueT, SecondIter<KeyT, ValueT, WrappedIterT>>
 {
-	SubIterT ii;
 public:
-	SecondIter(SubIterT &&_ii) : ii(_ii) {}
+	WrappedIterT wrapped;
+
+	SecondIter(WrappedIterT &&ii) : wrapped(ii) {}
 
 	KeyT const &key() const
-		{ return ii->first; }
+		{ return wrapped->first; }
 
 	ValueT &operator*() const
-		{ return ii->second; }
+		{ return wrapped->second; }
 	SecondIter &operator++()
-		{ ++ii; return *this; }
+		{ ++wrapped; return *this; }
 
 	bool operator==(const SecondIter& rhs) const
-		{return ii == rhs.ii;}
+		{return wrapped == rhs.wrapped;}
+};
+// ------------------------------------------------------------
+template<class KeyT, class ValueT, class WrappedIterT>
+class DerefSecondIter : public forward_iterator<ValueT, DerefSecondIter<KeyT, ValueT, WrappedIterT>>
+{
+public:
+	WrappedIterT wrapped;
+	DerefSecondIter(WrappedIterT &&ii) : wrapped(ii) {}
+
+	KeyT const &key() const
+		{ return wrapped->first; }
+
+	ValueT &operator*() const
+		{ return *wrapped->second; }
+
+	DerefSecondIter &operator++()
+		{ ++wrapped; return *this; }
+
+	bool operator==(const DerefSecondIter& rhs) const
+		{return wrapped == rhs.wrapped;}
 };
 // ------------------------------------------------------------
 

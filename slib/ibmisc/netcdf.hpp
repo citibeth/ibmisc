@@ -8,6 +8,7 @@
 #include <ibmisc/ibmisc.hpp>
 #include <ibmisc/blitz.hpp>
 #include <ibmisc/enum.hpp>
+#include <type_traits>
 
 namespace ibmisc {
 
@@ -144,7 +145,7 @@ template<class NcVarT, class AttrT>
 void get_or_put_att(
 	NcVarT &ncvar, char rw,
 	const std::string &name, const netCDF::NcType &type,
-	AttrT *data);
+	AttrT *data, size_t len);
 
 template<class NcVarT, class AttrT>
 void get_or_put_att(
@@ -169,7 +170,7 @@ void get_or_put_att(
 	}
 }
 
-
+// ---------------------------------------
 template<class NcVarT>
 void get_or_put_att(
 	NcVarT &ncvar, char rw,
@@ -188,27 +189,25 @@ void get_or_put_att(
 		break;
 		case 'r':
 			auto att(ncvar.getAtt(name));
-#if 0
-			if (att.getAttLength() != len) {
-				(*ibmisc_error)("Trying to read attribute %s of length %ld into C++ variable of length %ld", name, att.getAttLength(), len);
-			}
-#endif
 			att.getValues(data);
 		break;
 	}
 }
-
 // ---------------------------------------
-
 template<class NcVarT, class AttrT>
 void get_or_put_att(
 	NcVarT &ncvar, char rw,
 	const std::string &name, const netCDF::NcType &type,
 	AttrT &data)
-{ get_or_put_att(ncvar, rw, name, type, &data, 1); }
+{
+	 // Don't allow AttrT to be std::string!
+	 static_assert(!std::is_same<AttrT, std::string>::value,
+		"Use get_or_put_att(NcVar, char rw, string name, string data) for reading/writing a string attribute.");
+
+	get_or_put_att(ncvar, rw, name, type, &data, 1);
+}
 
 // ---------------------------------------
-
 template<class NcVarT, class AttrT>
 void get_or_put_att(
 	NcVarT &ncvar, char rw,
@@ -287,6 +286,8 @@ static void _check_blitz_dims(
 	blitz::Array<TypeT, RANK> const &val,
 	char rw)
 {
+	_check_nc_rank(ncvar, RANK);
+
 	// Check dimensions of NetCDF var vs. blitz::Array
 	for (int k=0; k<RANK; ++k) {
 		netCDF::NcDim ncdim(ncvar.getDim(k));
@@ -338,9 +339,20 @@ void nc_rw_blitz(
 {
 	netCDF::NcVar ncvar = nc->getVar(vname);
 
+	_check_nc_rank(ncvar, RANK);
+
 	if (alloc && rw == 'r') {
 		blitz::TinyVector<int,RANK> shape;
-		for (int k=0; k<RANK; ++k) shape[k] = ncvar.getDim(k).getSize();
+		// NetCDF4-C++ library does not bounds check (as of 2016-01-15)
+		if (RANK != ncvar.getDimCount()) {
+			(*ibmisc_error)(-1,
+				"nc_rw_blitz(): Rank mismatch between blitz::Array (%d) and NetCDF (%d)\n", RANK, ncvar.getDimCount());
+		}
+		for (int k=0; k<RANK; ++k) {
+			netCDF::NcDim dim(ncvar.getDim(k));
+			size_t size = dim.getSize();
+			shape[k] = size;
+		}
 		val->resize(shape);
 	}
 
