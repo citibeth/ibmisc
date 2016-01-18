@@ -16,9 +16,13 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-#include <ibmisc/constant.hpp>
+#include <cmath>
 
 namespace ibmisc {
+
+// Radians <--> Degrees
+static const double D2R = M_PI / 180.0;
+static const double R2D = 180.0 / M_PI;
 
 inline double sqr(double x) { return x*x; }
 

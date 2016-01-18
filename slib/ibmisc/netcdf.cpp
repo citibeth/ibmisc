@@ -8,6 +8,9 @@ using namespace netCDF;
 
 namespace ibmisc {
 
+bool netcdf_debug = false;
+
+
 void _check_nc_rank(
 	netCDF::NcVar const &ncvar,
 	int rank)
@@ -61,7 +64,7 @@ netCDF::NcDim get_or_add_dim(NcIO &ncio, std::string const &dim_name, size_t dim
 		}
 	}
 
-	if (dim.getSize() != dim_size) {
+	if (ncio.rw == 'w' && dim.getSize() != dim_size) {
 		(*ibmisc_error)(-1, 
 			"Attempt in get_or_add_dim() to change size from %ld to %ld",
 			dim.getSize(), dim_size);
@@ -109,7 +112,6 @@ std::vector<netCDF::NcDim> get_or_add_dims(
 	return ret;
 }
 // ====================================================
-/** Error if var doesn't exist. */
 netCDF::NcVar get_or_add_var(
 	NcIO &ncio,
 	std::string const &vname,
@@ -118,7 +120,29 @@ netCDF::NcVar get_or_add_var(
 {
 	netCDF::NcVar ncvar;
 	if (ncio.define) {
-		ncvar = ncio.nc->addVar(vname, nc_type, dims);
+		ncvar = ncio.nc->getVar(vname);
+		if (ncvar.isNull()) {
+			ncvar = ncio.nc->addVar(vname, nc_type, dims);
+		} else {
+			// Check dimensions match
+			if (ncvar.getDimCount() != dims.size()) {
+				(*ibmisc_error)(-1,
+					"NetCDF variable %s(%d dims) has wrong number of "
+					"dimensions, %d expected",
+					vname.c_str(), ncvar.getDimCount(), dims.size());
+			}
+			for (int i=0; i<ncvar.getDimCount(); ++i) {
+				NcDim ncdim = ncvar.getDim(i);
+				if (ncdim != dims[i]) {
+					(*ibmisc_error)(-1,
+						"Trying to change dimension %d of "
+						"NetCDF variable %s from %s=%ld to %s=%ld",
+						i, ncvar.getName().c_str(),
+						ncdim.getName().c_str(), ncdim.getSize(),
+						dims[i].getName().c_str(), dims[i].getSize());
+				}
+			}
+		}
 	} else {
 		ncvar = ncio.nc->getVar(vname);
 		if (ncvar.isNull()) {

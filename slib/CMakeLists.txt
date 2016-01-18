@@ -1,6 +1,7 @@
 # ----------- ibmisc_c
 set(IBMISC_SOURCE
-	ibmisc/ibmisc.cpp)
+	ibmisc/ibmisc.cpp
+	ibmisc/geodesy.cpp)
 
 if (USE_PROJ4)
 	list(APPEND IBMISC_SOURCE ibmisc/Proj2.cpp)

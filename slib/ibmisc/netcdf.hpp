@@ -12,6 +12,8 @@
 
 namespace ibmisc {
 
+extern bool netcdf_debug;
+
 // ---------------------------------------------------
 /** Used to keep track of future writes on NcDefine */
 class NcIO {
@@ -109,6 +111,8 @@ std::vector<netCDF::NcDim> get_or_add_dims(
 	return get_or_add_dims(ncio, dim_names, dim_sizes);
 }
 
+// ---------------------------------------------------------
+
 // ===========================================================
 // Variable Wrangling
 netCDF::NcVar get_or_add_var(
@@ -194,6 +198,17 @@ void get_or_put_att(
 	}
 }
 // ---------------------------------------
+template<class NcVarT>
+inline void get_or_put_att(
+	NcVarT &ncvar, char rw,
+	std::string const &name,
+	bool &data)
+{
+	int idata = data;
+	get_or_put_att(ncvar, rw, name, netCDF::ncInt, &idata, 1);
+	if (rw == 'r') data = idata;
+}
+// ---------------------------------------
 template<class NcVarT, class AttrT>
 void get_or_put_att(
 	NcVarT &ncvar, char rw,
@@ -258,10 +273,10 @@ void get_or_put_att_enum(
 /** Check that blitz::Array is unit strides, column major.
 For now, that's the only kind of Blitz variable we know how to write. */
 template<class TypeT, int RANK>
-static void _check_blitz_strides(blitz::Array<TypeT, RANK> const &val);
+void _check_blitz_strides(blitz::Array<TypeT, RANK> const &val);
 
 template<class TypeT, int RANK>
-static void _check_blitz_strides(blitz::Array<TypeT, RANK> const &val)
+void _check_blitz_strides(blitz::Array<TypeT, RANK> const &val)
 {
 	size_t expected_stride = 1;
 	for (int k=RANK-1; k >= 0; --k) {
@@ -275,13 +290,13 @@ static void _check_blitz_strides(blitz::Array<TypeT, RANK> const &val)
 void _check_nc_rank(netCDF::NcVar const &ncvar, int rank);
 // ---------------------------------------------------
 template<class TypeT, int RANK>
-static void _check_blitz_dims(
+void _check_blitz_dims(
 	netCDF::NcVar const &ncvar,
 	blitz::Array<TypeT, RANK> const &val,
 	char rw);
 
 template<class TypeT, int RANK>
-static void _check_blitz_dims(
+void _check_blitz_dims(
 	netCDF::NcVar const &ncvar,
 	blitz::Array<TypeT, RANK> const &val,
 	char rw)
@@ -304,13 +319,13 @@ static void _check_blitz_dims(
 }
 // ---------------------------------------------------
 template<class TypeT>
-static void _check_vector_dims(
+void _check_vector_dims(
 	netCDF::NcVar const &ncvar,
 	std::vector<TypeT> const &val,
 	char rw);
 
 template<class TypeT>
-static void _check_vector_size(
+void _check_vector_dims(
 	netCDF::NcVar const &ncvar,
 	std::vector<TypeT> const &val,
 	char rw)
@@ -432,25 +447,32 @@ void nc_rw_vector(
 	bool alloc,
 	std::string const &vname)
 {
+	if (netcdf_debug) fprintf(stderr, "BEGIN nc_rw_vector(%s)\n", vname.c_str());
 
 	netCDF::NcVar ncvar = nc->getVar(vname);
-
-	if (alloc & rw == 'r') val->resize(ncvar.getDim(0).getSize());
-
-	blitz::Array<TypeT, 1> bval(vector_blitz(*val));
 	_check_nc_rank(ncvar, 1);
+
+	size_t ncsize = ncvar.getDim(0).getSize();
+
+	if (rw == 'r') {
+		if (alloc) val->resize(ncsize);
+		// Vector dimensions checked below
+	}
+
 	_check_vector_dims(ncvar, *val, rw);
 
 	std::vector<size_t> startp = {0};
-	std::vector<size_t> countp = {val->size()};
+	std::vector<size_t> countp = {ncsize};
 	switch(rw) {
 		case 'r' :
-			ncvar.getVar(startp, countp, &val[0]);
+			ncvar.getVar(startp, countp, &(*val)[0]);
 		break;
 		case 'w' :
-			ncvar.putVar(startp, countp, &val[0]);
+			ncvar.putVar(startp, countp, &(*val)[0]);
 		break;
 	}
+
+	if (netcdf_debug) fprintf(stderr, "END nc_rw_vector(%s)\n", vname.c_str());
 }
 
 template<class TypeT>

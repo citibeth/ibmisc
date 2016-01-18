@@ -3,6 +3,7 @@
 
 #include <vector>
 #include <blitz/array.h>
+#include <ibmisc/ibmisc.hpp>
 
 namespace ibmisc {
 
