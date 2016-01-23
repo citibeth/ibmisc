@@ -10,7 +10,7 @@ include_directories(${GTEST_INCLUDE_DIR} ${PROJECT_SOURCE_DIR}/slib)
 SET(ALL_LIBS ${GTEST_LIBRARY} ${EXTERNAL_LIBS} ibmisc)
 
 
-foreach(TEST netcdf compact_map iter blitz)
+foreach(TEST netcdf compact_map iter blitz indexing)
 	add_executable(test_${TEST} test_${TEST}.cpp)
 	target_link_libraries(test_${TEST} ${ALL_LIBS})
 	add_test(AllTests test_${TEST})

@@ -35,7 +35,7 @@ public:
 		rw(_mode == 'd' ? 'w' : 'r'),
 		define(_mode == 'd') {}
 
-	NcIO(std::string const &filePath, netCDF::NcFile::FileMode fMode) :
+	NcIO(std::string const &filePath, netCDF::NcFile::FileMode fMode = netCDF::NcFile::FileMode::read) :
 		_mync(filePath, fMode),
 		own_nc(true),
 		nc(&_mync),

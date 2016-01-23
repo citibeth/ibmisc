@@ -33,6 +33,15 @@ protected:
 
 };
 
+TEST_F(BlitzTest, tiny_conv)
+{
+	std::array<int, 2> aval = {0, 1};
+	auto bval(ibmisc::to_tiny<long, int,2>(aval));
+
+	blitz::TinyVector<long,2> bval2;
+	ibmisc::to_tiny<long, int, 2>(bval2, aval);
+}
+
 TEST_F(BlitzTest, blitz_conv)
 {
 	std::vector<int> v = {1, 2, 3};

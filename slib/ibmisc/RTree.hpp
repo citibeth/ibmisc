@@ -24,9 +24,10 @@
 // NOTE This file compiles under MSVC 6 SP5 and MSVC .Net 2003 it may not work on other compilers without modification.
 
 // NOTE These next few lines may be win32 specific, you may need to modify them to compile on other platform
-#include <stdio.h>
-#include <math.h>
-#include <assert.h>
+#include <functional>
+#include <cstdio>
+#include <cmath>
+#include <cassert>
 #include <cstdlib>
 
 namespace ibmisc {
@@ -74,7 +75,7 @@ protected:
 
 public:
 
-  typedef boost::function<bool (DATATYPE id)> Callback;
+  typedef std::function<bool (DATATYPE id)> Callback;
 
   // These constant must be declared after Branch and before Node struct
   // Stuck up here for MSVC 6 compiler.  NSVC .NET 2003 is much happier.
