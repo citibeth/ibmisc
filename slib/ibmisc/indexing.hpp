@@ -13,7 +13,8 @@ public:
 };
 // ---------------------------------------
 template<class TupleT, int RANK, class IndexT>
-class Indexing_ColMajor {
+class Indexing_ColMajor : public Indexing<TupleT, RANK, IndexT>
+{
 protected:
 	std::array<TupleT, RANK> extent;
 	std::array<IndexT, RANK> strides;
@@ -54,7 +55,8 @@ public:
 };
 // ---------------------------------------
 template<class TupleT, int RANK, class IndexT>
-class Indexing_RowMajor {
+class Indexing_RowMajor : public Indexing<TupleT, RANK, IndexT>
+{
 protected:
 	std::array<TupleT, RANK> extent;
 	std::array<IndexT, RANK> strides;
