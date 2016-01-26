@@ -80,11 +80,13 @@ void ncio_proj2(
 
 class Proj_LL2XY : public Proj2
 {
+public:
 	Proj_LL2XY(std::string const &_sproj) : Proj2(_sproj, Proj2::Direction::LL2XY) {}
 };
 
 class Proj_XY2LL : public Proj2
 {
+public:
 	Proj_XY2LL(std::string const &_sproj) : Proj2(sproj, Proj2::Direction::LL2XY) {}
 };
 

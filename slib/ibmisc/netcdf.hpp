@@ -447,13 +447,13 @@ void ncio_blitz(
 /** Like get_or_add_dims() above, but specialized for std::vector */
 template<class TypeT>
 std::vector<netCDF::NcDim> get_or_add_dims(
-	netCDF::NcGroup *nc,
+	NcIO &ncio,
 	std::vector<TypeT> &val,
 	std::array<std::string, 1> const &dim_names)
 {
-	std::vector<size_t> dim_sizes(1);
+	std::array<size_t, 1> dim_sizes;
 	dim_sizes[0] = val.size();
-	return get_or_add_dims(nc, val, dim_names, dim_sizes);
+	return get_or_add_dims(ncio, val, dim_names, dim_sizes);
 }
 
 

@@ -14,7 +14,8 @@ public:
 	std::vector<TupleT> extent;	// Extent (# elements) of each index
 	std::vector<int> indices;	// Index IDs sorted by descending stride. {0,1,...} for row-major, reversed for row-major
 
-	std::vector<IndexT> const strides;
+	// Derived fields...
+	std::vector<IndexT> strides;
 
 
 	size_t rank() const { return extent.size(); }
@@ -30,8 +31,8 @@ protected:
 		return ret;
 	}
 
-	Indexing() {}
 public:
+	Indexing() {}
 
 	Indexing(
 		std::vector<TupleT> &&_base,
@@ -110,12 +111,13 @@ void Indexing<TupleT, IndexT>::ncio(
 
 // ----------------------------------------------------------------
 /** Defines the boundaries of an MPI domain.  A simple hypercube in n-D space... */
-template<class TupleT, class IndexT>
+template<class TupleT>
 class Domain {
 public:
-	std::vector<TupleT> const low;	// First "included" element in each index
-	std::vector<TupleT> const high;	// First "excluded" element in each index
+	std::vector<TupleT> low;	// First "included" element in each index
+	std::vector<TupleT> high;	// First "excluded" element in each index
 
+	Domain() {}
 	Domain(std::vector<TupleT> &&_low, std::vector<TupleT> &&_high)
 		: low(std::move(_low)), high(std::move(_high)) {}
 
@@ -133,12 +135,23 @@ public:
 	bool in_domain(std::array<TupleT, RANK> const &tuple) const
 		{ return in_domain(&tuple[0]); }
 
+	void ncio(NcIO &ncio, netCDF::NcType ncTupleT, std::string const &vname);
 };
 
+template<class TupleT>
+void Domain<TupleT>::ncio(
+	NcIO &ncio,
+	netCDF::NcType ncTupleT,
+	std::string const &vname)
+{
+	auto info_v = get_or_add_var(ncio, vname, netCDF::ncInt64, {});
+	get_or_put_att(info_v, ncio.rw, "low", ncTupleT, low);
+	get_or_put_att(info_v, ncio.rw, "high", ncTupleT, high);
+}
 
 template<class TupleT, class IndexT>
 bool in_domain(
-	Domain<TupleT, IndexT> const *domain,
+	Domain<TupleT> const *domain,
 	Indexing<TupleT, IndexT> const *indexing,
 	IndexT ix)
 {
