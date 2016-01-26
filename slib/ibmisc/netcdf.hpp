@@ -173,6 +173,39 @@ void get_or_put_att(
 		break;
 	}
 }
+// ---------------------------------------
+template<class NcVarT>
+void get_or_put_att(
+	NcVarT &ncvar, char rw,
+	const std::string &name,
+	bool *data, size_t len);
+
+template<class NcVarT>
+void get_or_put_att(
+	NcVarT &ncvar, char rw,
+	const std::string &name,
+	bool *data, size_t len)
+{
+	switch(rw) {
+		case 'w':
+			char cdata[len];
+			for (int i=0; i<len; ++i) cdata[i] = (data[i] ? 't' : 'f');
+			ncvar.putAtt(name, ncChar, len, cdata);
+		break;
+		case 'r':
+			auto att(ncvar.getAtt(name));
+			if (att.getAttLength() != len) {
+				(*ibmisc_error)(-1,
+					"Trying to read attribute %s of length %ld into C++ "
+					"variable of length %ld",
+					name.c_str(), att.getAttLength(), len);
+			}
+			char cdata[len];
+			att.getValues(cdata);
+			for (int i=0; i<len; ++i) data[i] = (cdata[i] == 't');
+		break;
+	}
+}
 
 // ---------------------------------------
 template<class NcVarT>
@@ -268,6 +301,7 @@ void get_or_put_att_enum(
 		break;
 	}
 }
+// ---------------------------------------
 // ====================== Error Checking =============================
 // ---------------------------------------------------
 /** Check that blitz::Array is unit strides, column major.

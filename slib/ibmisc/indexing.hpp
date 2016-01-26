@@ -1,99 +1,152 @@
 #ifndef IBMISC_INDEXING
 #define IBMISC_INDEXING
 
+#include <ibmisc/netcdf.hpp>
+
 namespace ibmisc {
 
-template<class TupleT, int RANK, class IndexT>
-class Indexing {
-public:
 
-	virtual ~Indexing() {};
-	virtual IndexT tuple_to_index(std::array<TupleT, RANK>) const = 0;
-	virtual std::array<TupleT, RANK> index_to_tuple(IndexT index) const = 0;
-};
-// ---------------------------------------
-template<class TupleT, int RANK, class IndexT>
-class Indexing_ColMajor : public Indexing<TupleT, RANK, IndexT>
+template<class TupleT, class IndexT>
+class Indexing
 {
-protected:
-	std::array<TupleT, RANK> extent;
-	std::array<IndexT, RANK> strides;
+public:
+	std::vector<TupleT> const base;	// First element in each index
+	std::vector<TupleT> const extent;	// Extent (# elements) of each index
+	std::vector<int> const indices;	// Index IDs sorted by descending stride. {0,1,...} for row-major, reversed for row-major
 
+	std::vector<IndexT> const strides;
+
+
+	size_t rank() const { return extent.size(); }
+
+protected:
+	std::vector<IndexT> make_strides()
+	{
+		std::vector<IndexT> ret(rank());
+		ret[indices[rank()-1]] = 1;
+		for (int d=rank()-2; d>=0; --d) {
+			ret[indices[d]] = ret[indices[d+1]] * extent[indices[d+1]];
+		}
+		return ret;
+	}
+
+	Indexing() {}
 public:
 
-	virtual ~Indexing_ColMajor() {}
-	Indexing_ColMajor(std::array<TupleT, RANK> _extent) : extent(_extent)
-	{
-		strides[0] = 1;
-		for (TupleT k=1; k<RANK; ++k) strides[k] = strides[k-1] * extent[k-1];
-	}
-	IndexT size()
+	Indexing(
+		std::vector<TupleT> &&_base,
+		std::vector<TupleT> &&_extent,
+		std::vector<int> &&_indices)
+	: base(std::move(_base)),
+		extent(std::move(_extent)),
+		indices(std::move(_indices)),
+		strides(make_strides())
+	{}
+
+	IndexT size() const
 	{
 		IndexT ret = extent[0];
-		for (int k=1; k<RANK; ++k) ret *= extent[k];
+		for (int k=1; k<rank(); ++k) ret *= extent[k];
 		return ret;
 	}
 
 
-	IndexT tuple_to_index(std::array<TupleT, RANK> tuple) const
+	IndexT tuple_to_index(TupleT const *tuple) const
 	{
-		IndexT ix = tuple[0];		// We know strides[0] == 1
-		for (TupleT k=1; k<RANK; ++k) ix += tuple[k]*strides[k];
+		IndexT ix = 0;
+		for (int k=0; k<rank(); ++k)
+			ix += (tuple[k]-base[k]) * strides[k];
 		return ix;
 	}
 
-	std::array<TupleT, RANK> index_to_tuple(IndexT ix) const
+	IndexT tuple_to_index(std::vector<TupleT> const &tuple) const
+		{ return tuple_to_index(&tuple[0]); }
+
+	void index_to_tuple(TupleT *tuple, IndexT ix) const
 	{
-		std::array<TupleT, RANK> tuple;
-		for (TupleT k=RANK-1; k>0; --k) {
-			tuple[k] = ix / strides[k];
-			ix -= tuple[k]*strides[k];
+		for (int d=0; d< rank()-1; ++d) {		// indices by descending stride
+			int const k = indices[d];
+			TupleT tuple_k = ix / strides[k];
+			ix -= tuple_k*strides[k];
+			tuple[k] = tuple_k + base[k];
 		}
-		tuple[0] = ix;
-		return tuple;
+		tuple[indices[rank()-1]] = ix;
 	}
-};
-// ---------------------------------------
-template<class TupleT, int RANK, class IndexT>
-class Indexing_RowMajor : public Indexing<TupleT, RANK, IndexT>
-{
-protected:
-	std::array<TupleT, RANK> extent;
-	std::array<IndexT, RANK> strides;
 
-public:
+	template<int RANK>
+	IndexT tuple_to_index(std::array<TupleT, RANK> const &tuple) const
+		{ return tuple_to_index(&tuple[0]); }
 
-	virtual ~Indexing_RowMajor() {}
-	Indexing_RowMajor(std::array<TupleT, RANK> _extent) : extent(_extent)
+	template<int RANK>
+	std::array<TupleT,RANK> index_to_tuple(IndexT ix) const
 	{
-		strides[RANK-1] = 1;
-		for (TupleT k=RANK-2; k>=0; --k) strides[k] = strides[k+1] * extent[k+1];
-	}
-	IndexT size()
-	{
-		IndexT ret = extent[0];
-		for (int k=1; k<RANK; ++k) ret *= extent[k];
+		std::array<TupleT, RANK> ret;
+		index_to_tuple(&ret[0], ix);
 		return ret;
 	}
 
-	IndexT tuple_to_index(std::array<TupleT, RANK> tuple) const
+
+	ncio(netCDF::ncType ncTupleT, netCDF::ncType ncIndexT, std::string const &vname);
+};
+
+template<class TupleT, class IndexT>
+Indexing<TupleT, IndexT>::ncio(
+	netCDF::ncType ncTupleT,
+	std::string const &vname)
+{
+#if 0
+	auto rank_d = get_or_add_dim(ncio, vname + ".rank", rank());
+	ncio_vector(ncio, base, true, vname + ".base", ncTupleT, {rank_d});
+	ncio_vector(ncio, extent, true, vname + ".base", ncTupleT, {rank_d});
+	ncio_vector(ncio, indices, true, vname + ".indices", netCDF::ncInt, {rank_d});
+#else
+	auto info_v = get_or_add_var(ncio, vname, netCDF::ncInt64, {});
+	get_or_put_att(info_v, ncio.rw, "base", ncTupleT, base);
+	get_or_put_att(info_v, ncio.rw, "base", ncTupleT, extent);
+	get_or_put_att(info_v, ncio.rw, "base", ncTupleT, indices);
+#endif
+}
+
+// ----------------------------------------------------------------
+/** Defines the boundaries of an MPI domain.  A simple hypercube in n-D space... */
+template<class TupleT, class IndexT>
+class Domain {
+public:
+	std::vector<TupleT> const low;	// First "included" element in each index
+	std::vector<TupleT> const high;	// First "excluded" element in each index
+
+	Domain(std::vector<TupleT> &&_low, std::vector<TupleT> &&_high)
+		: low(std::move(_low)), high(std::move(_high)) {}
+
+	int rank() const { return low.size(); }
+
+	bool in_domain(TupleT *tuple) const
 	{
-		IndexT ix = tuple[RANK-1];		// We know strides[RANK-1] == 1
-		for (TupleT k=RANK-2; k>=0; --k) ix += tuple[k]*strides[k];
-		return ix;
+		for (int k=0; k<rank; ++k) {
+			if ((tuple[k] < low[k]) || (tuple[k] >= high[l])) return false;
+		}
+		return true;
 	}
 
-	std::array<TupleT, RANK> index_to_tuple(IndexT ix) const
-	{
-		std::array<TupleT, RANK> tuple;
-		for (TupleT k=0; k<RANK-1; ++k) {
-			tuple[k] = ix / strides[k];
-			ix -= tuple[k]*strides[k];
-		}
-		tuple[RANK-1] = ix;
-		return tuple;
-	}
+	template<int RANK>
+	bool in_domain(std::array<TupleT, RANK> const &tuple) const
+		{ return in_domain(&tuple[0]); }
+
 };
+
+
+template<class TupleT, class IndexT>
+bool in_domain(
+	Domain<TupleT, IndexT> const *domain,
+	Indexing<TupleT, IndexT> const *indexing,
+	IndexT ix)
+{
+	TupleT tuple[domain.rank()];
+	indexing.index_to_tuple(tuple, ix);
+	return domain.in_domain(tuple);
+}
+
+// ============================================
 
 
 
