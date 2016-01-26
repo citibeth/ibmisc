@@ -10,9 +10,9 @@ template<class TupleT, class IndexT>
 class Indexing
 {
 public:
-	std::vector<TupleT> const base;	// First element in each index
-	std::vector<TupleT> const extent;	// Extent (# elements) of each index
-	std::vector<int> const indices;	// Index IDs sorted by descending stride. {0,1,...} for row-major, reversed for row-major
+	std::vector<TupleT> base;	// First element in each index
+	std::vector<TupleT> extent;	// Extent (# elements) of each index
+	std::vector<int> indices;	// Index IDs sorted by descending stride. {0,1,...} for row-major, reversed for row-major
 
 	std::vector<IndexT> const strides;
 
@@ -86,12 +86,13 @@ public:
 	}
 
 
-	ncio(netCDF::ncType ncTupleT, netCDF::ncType ncIndexT, std::string const &vname);
+	void ncio(NcIO &ncio, netCDF::NcType ncTupleT, std::string const &vname);
 };
 
 template<class TupleT, class IndexT>
-Indexing<TupleT, IndexT>::ncio(
-	netCDF::ncType ncTupleT,
+void Indexing<TupleT, IndexT>::ncio(
+	NcIO &ncio,
+	netCDF::NcType ncTupleT,
 	std::string const &vname)
 {
 #if 0
@@ -102,8 +103,8 @@ Indexing<TupleT, IndexT>::ncio(
 #else
 	auto info_v = get_or_add_var(ncio, vname, netCDF::ncInt64, {});
 	get_or_put_att(info_v, ncio.rw, "base", ncTupleT, base);
-	get_or_put_att(info_v, ncio.rw, "base", ncTupleT, extent);
-	get_or_put_att(info_v, ncio.rw, "base", ncTupleT, indices);
+	get_or_put_att(info_v, ncio.rw, "extent", ncTupleT, extent);
+	get_or_put_att(info_v, ncio.rw, "indices", ncTupleT, indices);
 #endif
 }
 
@@ -123,7 +124,7 @@ public:
 	bool in_domain(TupleT *tuple) const
 	{
 		for (int k=0; k<rank; ++k) {
-			if ((tuple[k] < low[k]) || (tuple[k] >= high[l])) return false;
+			if ((tuple[k] < low[k]) || (tuple[k] >= high[k])) return false;
 		}
 		return true;
 	}
