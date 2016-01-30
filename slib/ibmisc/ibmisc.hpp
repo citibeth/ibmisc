@@ -1,9 +1,18 @@
 #ifndef IBMISC_IBMISC_HPP
 #define IBMISC_IBMISC_HPP
 
+#include <string>
+#include <cstdarg>
+
 /** @defgroup ibmisc ibmisc.hpp
 @brief Basic stuff common to all ibmisc */
 namespace ibmisc {
+
+std::string vsprintf(const char* format, std::va_list args);
+
+std::string sprintf(const char* format, ...) __attribute__ ((format (printf, 1, 2)));
+
+
 
 // Use this instead.
 // http://www.thecodingforums.com/threads/function-pointers-to-printf.317925/
@@ -15,20 +24,14 @@ main program, to fit into some larger error handling system (eg:
 Everytrace).
 
 https://github.com/citibob/everytrace */
-extern error_ptr ibmisc_error;
+extern ibmisc::error_ptr ibmisc_error;
 
-/** @brief Excpetion thrown by the default SpSparse error handler. */
-class Exception : public std::exception
-{
-public:
-	virtual ~Exception()
-		{}
+#ifdef USE_EVERYTRACE
+extern void everytrace_error(int retcode, const char *format, ...);
+#endif
+extern void exception_error(int retcode, const char *format, ...);
 
-	virtual const char* what() const noexcept
-		{ return "ibmisc::Exception()"; }
-};
-
-}
+}	// namespace
 /** @} */
 
 #endif // Guard

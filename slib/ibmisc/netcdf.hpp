@@ -236,7 +236,9 @@ inline void get_or_put_att(
 	std::string const &name,
 	bool &data)
 {
-	int idata = data;
+	int idata;
+	if (data) idata = 1;
+	else idata = 0;
 	get_or_put_att(ncvar, rw, name, netCDF::ncInt, &idata, 1);
 	if (rw == 'r') data = idata;
 }

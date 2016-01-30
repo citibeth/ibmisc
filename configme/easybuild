@@ -1,3 +1,1 @@
-/usr/bin/python ../ebconfig.py \
-	-DUSE_PROJ4 \
-	"$@"
+/usr/bin/python ../ebconfig.py -DBUILD_PYTHON=YES -DPYTHON_EXECUTABLE=/Users/rpfische/macports/mpgompi-4.9.3/bin/python
