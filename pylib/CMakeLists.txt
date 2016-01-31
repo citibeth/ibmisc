@@ -1,3 +1,19 @@
+find_package(Python REQUIRED)
+find_package(Cython REQUIRED)
+find_package(Numpy REQUIRED)
+
+# ----------Stuff to help with running Python before this project is installed.
+
+# --- Set up PYTHONPATH to find stuff
+configure_file(${CMAKE_CURRENT_SOURCE_DIR}/env.in
+	${CMAKE_CURRENT_BINARY_DIR}/env @ONLY)
+execute_process(COMMAND chmod a+x ${CMAKE_CURRENT_BINARY_DIR}/env)
+
+# --- Convenience link to Python source
+execute_process(COMMAND ln -s -h -f ${CMAKE_CURRENT_SOURCE_DIR} src
+	WORKING_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR})
+
+# -------------------------------------------------------------
 
 include_directories(${PYTHON_INCLUDES} ${NUMPY_INCLUDE_DIRS})
 list(APPEND EXTERNAL_LIBS ${PYTHON_LIBRARY})
@@ -21,22 +37,6 @@ foreach (CYTHON_MODULE ibmisc)
 			--include-dir ${PROJECT_SOURCE_DIR}/pylib
 			${PROJECT_SOURCE_DIR}/pylib/${CYTHON_MODULE}.pyx
 			-o ${CYTHON_MODULE}.cpp)
-
-#		# http://stackoverflow.com/questions/12253389/numpy-c-api-link-several-object-files
-#		set_property(
-#			SOURCE ${CYTHON_MODULE}.cpp
-#			PROPERTY COMPILE_DEFINITIONS USE_IMPORT
-#		)
-
-
-		# Remove NO_IMPORT_ARRAY compiler definition
-		# http://stackoverflow.com/questions/24238937/how-to-change-a-compiler-flag-for-just-one-executable-in-cmake
-#		get_source_file_property( MYPROPS ${CYTHON_MODULE}.cpp COMPILE_DEFINITIONS)
-#message("xxxxxxxxxxxxxxxxxxxxxx " ${MYPROPS})
-#		STRING( REPLACE "-DNO_IMPORT_ARRAY" "" MYPROPS ${MYPROPS} )
-#		set_source_files_properties( ${CYTHON_MODULE}.cpp COMPILE_DEFINITIONS ${MYPROPS} )
-
-
 
 	ADD_LIBRARY(${CYTHON_MODULE}_so MODULE ${CYTHON_MODULE}.cpp ${PYLIB_SOURCES} ${EVERYTRACE_REFADDR})
 
@@ -63,7 +63,7 @@ endforeach()
 
 install(DIRECTORY ${PROJECT_SOURCE_DIR}/pylib/ DESTINATION pylib
           FILES_MATCHING PATTERN "*.py")
-install(DIRECTORY ${PROJECT_SOURCE_DIR}/pylib/ DESTINATION pylib
+install(DIRECTORY ${PROJECT_SOURCE_DIR}/pylib/ DESTINATION include
           FILES_MATCHING PATTERN "*.pxd")
 
 include_directories(${PROJECT_SOURCE_DIR}/slib)

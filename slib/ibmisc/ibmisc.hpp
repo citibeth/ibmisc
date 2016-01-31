@@ -3,10 +3,13 @@
 
 #include <string>
 #include <cstdarg>
+#include <stdexcept>
 
 /** @defgroup ibmisc ibmisc.hpp
 @brief Basic stuff common to all ibmisc */
 namespace ibmisc {
+
+typedef std::runtime_error Exception;
 
 std::string vsprintf(const char* format, std::va_list args);
 

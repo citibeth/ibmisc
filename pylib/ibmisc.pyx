@@ -10,7 +10,7 @@ from cython.operator cimport dereference as deref, preincrement as inc
 cibmisc.init()
 
 cdef class NcIO:
-	cdef cibmisc.NcIO *cself
+	# cdef cibmisc.NcIO *cself
 
 	def __cinit__(self, filePath, sfMode):
 		self.cself = cibmisc.new_ncio(filePath.encode(), sfMode.encode());
@@ -40,8 +40,12 @@ cdef class NcIO:
 #        cdef intp *strides
 #        cdef int flags
 
+# ===================================================
+
+cdef extern from "examples.hpp" namespace "ibmisc::cython":
+	cdef void cyexample_double_blitz(PyObject *) except +
 
 
 # https://bitbucket.org/binet/cy-cxxfwk/src/c2dcf8bd9030b90fb59a168ebf293bb54ea4cb3f/cy/cyfwk.pyx?at=default&fileviewer=file-view-default
 def example_double_blitz(a):
-	cibmisc.cyexample_double_blitz(<PyObject *>a)
+	cyexample_double_blitz(<PyObject *>a)

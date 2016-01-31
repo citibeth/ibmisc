@@ -24,6 +24,3 @@ cdef extern from "ibmisc/cython.hpp" namespace "ibmisc::cython":
 	cdef extern void init()
 	cdef extern call_import_array()
 	cdef NcIO *new_ncio(string fname, string sFileMode)
-
-cdef extern from "examples.hpp" namespace "ibmisc::cython":
-	cdef void cyexample_double_blitz(PyObject *) except +
