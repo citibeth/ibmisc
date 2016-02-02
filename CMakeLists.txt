@@ -97,7 +97,7 @@ add_subdirectory(slib)
 #add_subdirectory(bin)
 if (USE_GTEST)
 	find_package(gtest REQUIRED)
-	add_subdirectory(test)
+	add_subdirectory(tests)
 endif()
 
 if (BUILD_PYTHON)

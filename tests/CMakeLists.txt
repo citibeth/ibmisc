@@ -11,7 +11,13 @@ SET(ALL_LIBS ${GTEST_LIBRARY} ${EXTERNAL_LIBS} ibmisc)
 
 
 foreach(TEST netcdf compact_map iter blitz indexing)
-	add_executable(test_${TEST} test_${TEST}.cpp)
-	target_link_libraries(test_${TEST} ${ALL_LIBS})
-	add_test(AllTests test_${TEST})
+	add_executable(ibmisc_${TEST} ibmisc/test_${TEST}.cpp)
+	target_link_libraries(ibmisc_${TEST} ${ALL_LIBS})
+	add_test(AllTests ibmisc_${TEST})
+endforeach()
+
+foreach(TEST xiter array netcdf multiply_sparse)
+	add_executable(spsparse_${TEST} spsparse/test_${TEST}.cpp)
+	target_link_libraries(spsparse_${TEST} ${ALL_LIBS})
+	add_test(AllTests spsparse_${TEST})
 endforeach()
