@@ -147,7 +147,7 @@ public:
 		spsparse::transpose(overwrite, *this, sort_order);
 	}
 
-	blitz::Array<ValT, RANK> to_dense();
+	blitz::Array<ValT, RANK> to_dense(double fill_value = 0);
 
 	// Sets and returns this->_dim_beginnings
 	std::vector<size_t> const &dim_beginnings() const;
@@ -311,10 +311,10 @@ void VectorCooArray<IndexT, ValT, RANK>::consolidate(
 	}
 
 template<class IndexT, class ValT, int RANK>
-	blitz::Array<ValT, RANK> VectorCooArray<IndexT, ValT, RANK>::to_dense()
+	blitz::Array<ValT, RANK> VectorCooArray<IndexT, ValT, RANK>::to_dense(double fill_value)
 	{
 		blitz::Array<ValT, RANK> ret(ibmisc::to_tiny<int,size_t,rank>(shape));
-		ret = 0;
+		ret = fill_value;
 		DenseAccum<ThisVectorCooArrayT> accum(ret);
 		copy(accum, *this);
 		return ret;

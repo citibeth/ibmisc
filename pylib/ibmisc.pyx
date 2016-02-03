@@ -1,7 +1,7 @@
 import numpy as np
 cimport numpy as np
 np.import_array()
-
+import scipy.sparse
 
 cimport cibmisc
 from cpython.object cimport *
@@ -44,8 +44,14 @@ cdef class NcIO:
 
 cdef extern from "examples.hpp" namespace "ibmisc::cython":
 	cdef void cyexample_double_blitz(PyObject *) except +
-
+	cdef object cyexample_sparse_matrix() except +
 
 # https://bitbucket.org/binet/cy-cxxfwk/src/c2dcf8bd9030b90fb59a168ebf293bb54ea4cb3f/cy/cyfwk.pyx?at=default&fileviewer=file-view-default
 def example_double_blitz(a):
 	cyexample_double_blitz(<PyObject *>a)
+
+def example_sparse_matrix():
+	data, shape = cyexample_sparse_matrix()
+	return scipy.sparse.coo_matrix(data, shape)
+
+# --------------------------
