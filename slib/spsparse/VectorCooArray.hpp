@@ -16,6 +16,19 @@ public:
 
 	std::array<size_t, RANK> shape;		// Extent of each dimension
 	void set_shape(std::array<size_t, RANK> const &_shape) { shape = _shape; }
+#if 0
+	void reset_shape(std::array<size_t, RANK> const &_shape)
+	{
+		for (int k=0; k<RANK; ++k) {
+			if (shape[k] < 0) {
+				shape[k] = _shape[k];
+			} else if (shape[k] != _shape[k]) {
+				(*spsparse_error)(-1,
+					"Trying to change shape[%d] from %d to %d", k, shape[k], _shape[k]);
+			}
+		shape = _shape;
+	}
+#endif
 
 protected:
 	typedef VectorCooArray<IndexT, ValT, RANK> ThisVectorCooArrayT;
@@ -164,7 +177,7 @@ template<class IndexT, class ValT, int RANK>
 VectorCooArray<IndexT, ValT, RANK>::
 	VectorCooArray() : edit_mode(true), dim_beginnings_set(false), sort_order() {
 		sort_order[0] = -1;
-		for (int k=0; k<RANK; ++k) shape[k] = 0;	// User must set this later
+		for (int k=0; k<RANK; ++k) shape[k] = -1;	// User must set this later
 	}
 
 template<class IndexT, class ValT, int RANK>
