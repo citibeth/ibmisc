@@ -20,15 +20,13 @@ public:
 
 	size_t rank() const { return extent.size(); }
 
-protected:
-	std::vector<IndexT> make_strides()
+	void make_strides()
 	{
-		std::vector<IndexT> ret(rank());
-		ret[indices[rank()-1]] = 1;
+		strides.resize(rank());
+		strides[indices[rank()-1]] = 1;
 		for (int d=rank()-2; d>=0; --d) {
-			ret[indices[d]] = ret[indices[d+1]] * extent[indices[d+1]];
+			strides[indices[d]] = strides[indices[d+1]] * extent[indices[d+1]];
 		}
-		return ret;
 	}
 
 public:
@@ -40,9 +38,8 @@ public:
 		std::vector<int> &&_indices)
 	: base(std::move(_base)),
 		extent(std::move(_extent)),
-		indices(std::move(_indices)),
-		strides(make_strides())
-	{}
+		indices(std::move(_indices))
+	{ make_strides(); }
 
 	IndexT size() const
 	{
@@ -100,6 +97,7 @@ void Indexing<TupleT, IndexT>::ncio(
 	get_or_put_att(info_v, ncio.rw, "base", ncTupleT, base);
 	get_or_put_att(info_v, ncio.rw, "extent", ncTupleT, extent);
 	get_or_put_att(info_v, ncio.rw, "indices", ncTupleT, indices);
+	make_strides();
 }
 
 // ----------------------------------------------------------------
