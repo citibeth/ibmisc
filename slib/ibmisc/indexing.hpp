@@ -96,17 +96,10 @@ void Indexing<TupleT, IndexT>::ncio(
 	netCDF::NcType ncTupleT,
 	std::string const &vname)
 {
-#if 0
-	auto rank_d = get_or_add_dim(ncio, vname + ".rank", rank());
-	ncio_vector(ncio, base, true, vname + ".base", ncTupleT, {rank_d});
-	ncio_vector(ncio, extent, true, vname + ".base", ncTupleT, {rank_d});
-	ncio_vector(ncio, indices, true, vname + ".indices", netCDF::ncInt, {rank_d});
-#else
 	auto info_v = get_or_add_var(ncio, vname, netCDF::ncInt64, {});
 	get_or_put_att(info_v, ncio.rw, "base", ncTupleT, base);
 	get_or_put_att(info_v, ncio.rw, "extent", ncTupleT, extent);
 	get_or_put_att(info_v, ncio.rw, "indices", ncTupleT, indices);
-#endif
 }
 
 // ----------------------------------------------------------------
