@@ -87,6 +87,17 @@ public:
 	}
 
 	/** Constructs with a function to produce an owned reference. */
+	LazyPtr(std::function<std::unique_ptr<TypeT> ()> const &compute_owned)
+		: _ptr(0), _compute(compute_owned) {}
+
+	/** Constructs with a function to produce a borrowed referene. */
+	LazyPtr(std::function<TypeT *()> const &compute_borrowed)
+		: _ptr(0), _compute(compute_borrowed) {}
+
+
+
+
+	/** Constructs with a function to produce an owned reference. */
 	LazyPtr(std::function<std::unique_ptr<TypeT> ()> &&compute_owned)
 		: _ptr(0), _compute(std::move(compute_owned)) {}
 
