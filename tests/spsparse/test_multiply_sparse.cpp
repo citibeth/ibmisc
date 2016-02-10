@@ -151,9 +151,6 @@ void test_random_MV_multiply(unsigned int dsize, int seed)
 	VectorCooVector<int, double> eye({dsize});
 	for (int k=0; k<dsize; ++k) eye.add({k}, 1.0);
 
-// std::cout << "A: " << A << std::endl;
-// std::cout << "B: " << B << std::endl;
-
 	VectorCooVector<int, double> C;
 	multiply(C,1.0,
 		(VectorCooVector<int, double> *)0,	// scalei
@@ -162,14 +159,9 @@ void test_random_MV_multiply(unsigned int dsize, int seed)
 		(VectorCooVector<int, double> *)0,	// scalej
 		B);
 
-// std::cout << "C: " << C << std::endl;
-
 	// --------- Compare to dense matrix multiplication
 	auto Ad(A.to_dense());
 	auto Bd(B.to_dense());
-//printf("Bd: [");
-//for (int i=0; i<dsize; ++i) printf("%g ", Bd(i));
-//printf("\n");
 	auto Cd(C.to_dense());
 
 	double usum = 0;
@@ -177,7 +169,6 @@ void test_random_MV_multiply(unsigned int dsize, int seed)
 	for (int i=0; i<dsize; ++i) {
 		double sum=0;
 		for (int k=0; k<dsize; ++k) {
-//printf("pair: (%d %d) %g*%g=%g\n", i,k, Ad(i,k), Bd(k), Ad(i,k)*Bd(k));
 			sum += Ad(i,k) * Bd(k);
 		}
 		if (sum != Cd(i)) {
@@ -191,8 +182,7 @@ void test_random_MV_multiply(unsigned int dsize, int seed)
 		}
 		usum += sum;
 	}
-break_mult:
-	printf("MV seed = %d  sizes = [%ld, %ld, %ld]  usum = %f\n", seed, A.size(), B.size(), C.size(), usum);
+break_mult: ;
 }
 
 TEST_F(SpSparseTest, random_MV_multiply)

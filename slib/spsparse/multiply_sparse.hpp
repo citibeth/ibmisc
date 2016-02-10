@@ -163,15 +163,31 @@ void multiply(
 	DuplicatePolicy duplicate_policy = DuplicatePolicy::ADD,
 	bool zero_nan = false)
 {
+	std::array<int,2> const &adims = (transpose_A == 'T' ? COL_MAJOR : ROW_MAJOR);
+	std::array<int,2> const &bdims = (transpose_B == 'T' ? COL_MAJOR : ROW_MAJOR);
+
+
 	// Set dimensions of output, even if we store nothing in it.
 	std::array<int,2> const &a_sort_order(transpose_A == 'T' ? COL_MAJOR : ROW_MAJOR);
 	std::array<int,2> const &b_sort_order(transpose_B == 'T' ? ROW_MAJOR : COL_MAJOR);
-	ret.set_shape({A.shape[a_sort_order[0]], B.shape[b_sort_order[0]]});
+	ret.set_shape({A.shape[adims[0]], B.shape[bdims[1]]});
 
 	// Check inner dimensions
-	if (A.shape[a_sort_order[1]] != B.shape[b_sort_order[1]]) {
-		(*spsparse_error)(-1, "Inner dimensions for A (%ld) and B (%ld) must match!", A.shape[a_sort_order[1]], B.shape[b_sort_order[1]]);
+	if (A.shape[adims[1]] != B.shape[bdims[0]]) {
+		(*spsparse_error)(-1, "Inner dimensions for A (%ld) and B (%ld) must match!", A.shape[adims[1]], B.shape[bdims[0]]);
 	}
+
+	if (scalei && A.shape[adims[0]] != scalei->shape[0]) {
+		(*spsparse_error)(-1, "Dimension for scalei (%ld) must match A.shape[0]=%ld\n", scalei->shape[0], A.shape[adims[0]]);
+	}
+
+	if (scalej && A.shape[adims[1]] != scalej->shape[0]) {
+		(*spsparse_error)(-1, "Dimension for scalej (%ld) must match A.shape[1]=%ld\n", scalej->shape[0], A.shape[adims[1]]);
+	}
+	if (scalek && B.shape[bdims[1]] != scalek->shape[0]) {
+		(*spsparse_error)(-1, "Dimension for scalek (%ld) must match B.shape[1]=%ld\n", scalek->shape[0], B.shape[bdims[1]]);
+	}
+
 
 	// Short-circuit return on empty output
 	// (DimBeginningXiter doesn't like size()==0)
@@ -377,20 +393,13 @@ void multiply_ele(
 	ScaleAT const &A,
 	ScaleBT const &B)
 {
-printf("AA1\n");
-for (auto ii(make_val_xiter(A.begin(), A.end())); !ii.eof(); ++ii) printf("%d: %f\n", (*ii)[0], ii.val());
-
-
 	for (auto jii = join2_xiter(
 		make_val_xiter(A.begin(), A.end()),
 		make_val_xiter(B.begin(), B.end()));
 		!jii.eof(); ++jii)
 	{
-printf("BB1\n");
 		ret.add(*jii.i1, jii.i1.val() * jii.i2.val());
 	}
-printf("AA2\n");
-
 }
 
 /** @} */
