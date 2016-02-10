@@ -95,6 +95,8 @@ TEST_F(NetcdfTest, blitz)
 
 	blitz::Array<double,2> B(A*2);
 
+	std::vector<std::string> strings = {"s1", "s2"};
+
 	// ---------- Write
 	printf("Writing\n");
 	{
@@ -102,6 +104,10 @@ TEST_F(NetcdfTest, blitz)
 	auto dims = ibmisc::get_or_add_dims(ncio, A, {"dim4", "dim5"});
 	ibmisc::ncio_blitz(ncio, A, true, "A", netCDF::ncDouble, dims);
 	ibmisc::ncio_blitz(ncio, B, true, "B", netCDF::ncDouble, dims);
+
+	auto info_v = get_or_add_var(ncio, "info", netCDF::ncInt64, {});
+	get_or_put_att(info_v, ncio.rw, "strings", strings);
+
 	ncio.close();
 	}
 
@@ -110,16 +116,24 @@ TEST_F(NetcdfTest, blitz)
 	ibmisc::NcIO ncio(fname, NcFile::read);
 
 	blitz::Array<double,2> A2, B2;
+	std::vector<std::string> strings2;
 	auto dims = ibmisc::get_or_add_dims(ncio, A, {"dim4", "dim5"});
 	ibmisc::ncio_blitz(ncio, A2, true, "A", netCDF::ncDouble, dims);
 	ibmisc::ncio_blitz(ncio, B2, true, "B", netCDF::ncDouble, dims);
+
+	auto info_v = get_or_add_var(ncio, "info", netCDF::ncInt64, {});
+	get_or_put_att(info_v, ncio.rw, "strings", strings2);
+
 	ncio.close();
 
 	for (int i=0; i<A.extent(0); ++i) {
 	for (int j=0; j<A.extent(1); ++j) {
 		EXPECT_EQ(A(i,j), A2(i,j));
 	}}
-//	std::cout << "A2" << A2 << std::endl;
+	EXPECT_EQ(strings.size(), strings2.size());
+	for (size_t i=0; i<strings.size(); ++i) {
+		EXPECT_EQ(strings[i], strings2[i]);
+	}
 
 }
 

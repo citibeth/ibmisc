@@ -173,6 +173,7 @@ void get_or_put_att(
 		break;
 	}
 }
+
 // ---------------------------------------
 template<class NcVarT>
 void get_or_put_att(
@@ -229,6 +230,7 @@ void get_or_put_att(
 		break;
 	}
 }
+
 // ---------------------------------------
 template<class NcVarT>
 inline void get_or_put_att(
@@ -263,6 +265,38 @@ void get_or_put_att(
 			auto att(ncvar.getAtt(name));
 			data.resize(att.getAttLength());
 			att.getValues(&data[0]);
+		break;
+	}
+}
+
+// ---------------------------------------
+template<class NcVarT>
+void get_or_put_att(
+	NcVarT &ncvar, char rw,
+	const std::string &name,
+	std::vector<std::string> &data);
+
+template<class NcVarT>
+void get_or_put_att(
+	NcVarT &ncvar, char rw,
+	const std::string &name,
+	std::vector<std::string> &data)
+{
+	switch(rw) {
+		case 'w':
+			ncvar.putAtt(name, netCDF::ncString, data.size(), &data[0]);
+		break;
+		case 'r':
+			auto att(ncvar.getAtt(name));
+			auto N(att.getAttLength());
+			std::vector<char *> cstrs(N);
+			att.getValues(&cstrs[0]);
+			data.clear();
+			data.reserve(cstrs.size());
+			for (size_t i=0; i<cstrs.size(); ++i) {
+				data.push_back(std::string(cstrs[i]));
+				free(cstrs[i]);
+			}
 		break;
 	}
 }
