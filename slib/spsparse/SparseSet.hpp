@@ -14,7 +14,8 @@ class SparseSet {
 	std::vector<SparseT> _d2s;
 
 public:
-	size_t size() { return _d2s.size(); }
+	size_t size() const
+		{ return _d2s.size(); }
 
 	template<class IterT>
 	void add(IterT sparsei, IterT const &sparse_end)
@@ -38,10 +39,10 @@ public:
 		add(sorted.begin(), sorted.end());
 	}
 
-	DenseT to_dense(SparseT const &sval)
+	DenseT to_dense(SparseT const &sval) const
 		{ return _s2d.at(sval); }
 
-	SparseT to_sparse(DenseT const &dval)
+	SparseT to_sparse(DenseT const &dval) const
 	{
 		if (dval < 0 || dval >= _d2s.size()) {
 			(*spsparse_error)(-1,
