@@ -2,6 +2,7 @@
 
 #include <gtest/gtest.h>
 #include <spsparse/VectorCooArray.hpp>
+#include <spsparse/SparseSet.hpp>
 #include <iostream>
 #ifdef USE_EVERYTRACE
 #include <everytrace.h>
@@ -264,6 +265,30 @@ TEST_F(SpSparseTest, dense_to_blitz)
 		EXPECT_EQ(d1, d2);
 	}}
 
+}
+
+TEST_F(SpSparseTest, sparse_set)
+{
+	// Construct a SparseMatrix
+	typedef VectorCooArray<int, double, 2> VectorCooArrayT;
+	VectorCooArrayT arr2({20,10});
+
+	arr2.add({6,4}, 10.);
+	arr2.add({1,0}, 15.);
+	arr2.add({2,4}, 17.);
+	arr2.add({1,3}, 17.);
+
+	// Make a SparseSet for each of its dimensions
+	SparseSet<int,int> ss0;
+	ss0.add_sorted(arr2.dim_begin(0), arr2.dim_end(0));
+
+	EXPECT_EQ(3, ss0.size());
+	EXPECT_EQ(1, ss0.to_sparse(0));
+	EXPECT_EQ(2, ss0.to_sparse(1));
+	EXPECT_EQ(6, ss0.to_sparse(2));
+	EXPECT_EQ(0, ss0.to_dense(1));
+	EXPECT_EQ(1, ss0.to_dense(2));
+	EXPECT_EQ(2, ss0.to_dense(6));
 }
 
 
