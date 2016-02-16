@@ -10,22 +10,37 @@ namespace spsparse {
 SparseVector) and a dense set numbered [0...n) */
 template<class SparseT, class DenseT>
 class SparseSet {
+	SparseT _sparse_extent;
 	std::unordered_map<SparseT, DenseT> _s2d;
 	std::vector<SparseT> _d2s;
 
 public:
-	size_t size() const
+	SparseSet() : _sparse_extent(-1) {}
+
+	bool in_sparse(SparseT sparse_ix)
+		{ return _s2d.find(sparse_ix) != _s2d.end(); }
+
+	SparseT sparse_extent() const
+		{ return _sparse_extent; }
+
+	void set_sparse_extent(SparseT extent)
+		{ _sparse_extent = extent; }
+
+	DenseT dense_extent() const
 		{ return _d2s.size(); }
+
+	void add(SparseT sparse_index)
+	{
+		if (_s2d.find(sparse_index) == _s2d.end()) {
+			_s2d.insert(std::pair<SparseT,DenseT>(sparse_index, dense_extent()));
+			_d2s.push_back(sparse_index);
+		}
+	}
 
 	template<class IterT>
 	void add(IterT sparsei, IterT const &sparse_end)
 	{
-		for (; sparsei != sparse_end; ++sparsei) {
-			if (_s2d.find(*sparsei) == _s2d.end()) {		// Add a new index
-				_s2d.insert(std::pair<SparseT,DenseT>(*sparsei, size()));
-				_d2s.push_back(*sparsei);
-			}
-		}
+		for (; sparsei != sparse_end; ++sparsei) add(*sparsei);
 	}
 
 

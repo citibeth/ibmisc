@@ -6,6 +6,10 @@ list (APPEND CMAKE_MODULE_PATH "${PROJECT_SOURCE_DIR}/cmake")
 include_directories(${PROJECT_SOURCE_DIR}/slib)
 #list (EXTERNAL_LIBS )
 
+# --- Eigen
+find_package(Eigen3 REQUIRED)
+include_directories(${EIGEN3_INCLUDE_DIR})
+
 # -----------------------------------------
 if (NOT DEFINED USE_EVERYTRACE)
 	set(USE_EVERYTRACE NO)

@@ -3,12 +3,15 @@
 #include <iostream>
 #include <random>
 #include <gtest/gtest.h>
+#include <ibmisc/blitz.hpp>
 #include <spsparse/VectorCooArray.hpp>
 #include <spsparse/multiply_sparse.hpp>
+#include <spsparse/eigen.hpp>
 #ifdef USE_EVERYTRACE
 #include <everytrace.h>
 #endif
 
+using namespace ibmisc;
 using namespace spsparse;
 
 // The fixture for testing class Foo.
@@ -73,9 +76,9 @@ std::cout << "ret2: ";
 std::cout << ret2 << std::endl;
 
 	EXPECT_EQ(2, ret2.size());
-	EXPECT_EQ(std::vector<int>({0,1}), blitz_to_vector(ret2.indices(0)));
-	EXPECT_EQ(std::vector<int>({0,0}), blitz_to_vector(ret2.indices(1)));	// j
-	EXPECT_EQ(std::vector<double>({128., 60.}), blitz_to_vector(ret2.vals()));
+	EXPECT_EQ(std::vector<int>({0,1}), to_vector(ret2.indices(0)));
+	EXPECT_EQ(std::vector<int>({0,0}), to_vector(ret2.indices(1)));	// j
+	EXPECT_EQ(std::vector<double>({128., 60.}), to_vector(ret2.vals()));
 }
 
 #endif
@@ -242,6 +245,84 @@ TEST_F(SpSparseTest, random_VV_multiply)
 	}
 }
 // -----------------------------------------------------------
+TEST_F(SpSparseTest, eigen_conv)
+{
+	size_t dsize = 17;
+	SparseSet<int,int> dimi;
+	SparseSet<int,int> dimj;
+	SparseTriplets<VectorCooMatrix<int, double>> A({&dimi, &dimj});
+	A.set_shape({dsize, dsize});
+	A.add({4,5}, 1.);
+	A.add({4,1}, 2.);
+	A.add({0,1}, 3.);
+
+	auto Ae(A.to_eigen());
+
+	VectorCooMatrix<int, double> A2;
+	eigen_to_sparse(A2, Ae, {&dimi, &dimj});
+
+	A.M.consolidate({0,1});
+	A2.consolidate({0,1});
+
+	auto Ai0(to_vector(A.M.indices(0)));
+	auto Ai1(to_vector(A.M.indices(1)));
+	auto Av(to_vector(A.M.vals()));
+	EXPECT_EQ(Ai0, to_vector(A2.indices(0)));
+	EXPECT_EQ(Ai1, to_vector(A2.indices(1)));
+	EXPECT_EQ(Av, to_vector(A2.vals()));
+}
+// -----------------------------------------------------------
+void test_random_MM_multiply_eigen(unsigned int dsize, int seed)
+{
+	std::default_random_engine generator(seed);
+	auto dim_distro(std::bind(std::uniform_int_distribution<int>(0,dsize-1), generator));
+	auto val_distro(std::bind(std::uniform_real_distribution<double>(0,1), generator));
+
+	SparseSet<int,int> dimi;
+	SparseSet<int,int> dimj;
+	SparseSet<int,int> dimk;
+
+	SparseTriplets<VectorCooMatrix<int, double>> A({&dimi, &dimj});
+	A.set_shape({dsize,dsize});
+	SparseTriplets<VectorCooMatrix<int, double>> B({&dimj, &dimk});
+	B.set_shape({dsize,dsize});
+
+	int nranda = (int)(val_distro() * (double)(dsize*dsize));
+	for (int i=0; i<nranda; ++i) A.add({dim_distro(), dim_distro()}, val_distro());
+	int nrandb = (int)(val_distro() * (double)(dsize*dsize));
+	for (int i=0; i<nrandb; ++i) B.add({dim_distro(), dim_distro()}, val_distro());
+
+	Eigen::SparseMatrix<double> Ae, Be, Ce;
+	Ae = A.to_eigen('.');
+	Be = B.to_eigen('.');
+	Ce = Ae * Be;
+
+	VectorCooMatrix<int, double> C({A.M.shape[0], B.M.shape[1]});
+	eigen_to_sparse(C, Ce, {&dimi, &dimk});
+
+	// --------- Compare to dense matrix multiplication
+	auto Ad(A.M.to_dense());
+	auto Bd(B.M.to_dense());
+	auto Cd(C.to_dense());
+	double usum = 0;
+	for (int i=0; i<dsize; ++i) {
+	for (int j=0; j<dsize; ++j) {
+		double sum=0;
+		for (int k=0; k<dsize; ++k) {
+			sum += Ad(i,k) * Bd(k,j);
+		}
+		EXPECT_DOUBLE_EQ(sum, Cd(i,j));
+		usum += sum;
+	}}
+//	printf("MM seed = %d  sizes = [%ld, %ld, %ld]  usum = %f\n", seed, A.M.size(), B.M.size(), C.size(), usum);
+}
+
+TEST_F(SpSparseTest, random_MM_multiply_eigen)
+{
+	for (int seed=1; seed<1000; ++seed)
+ 		test_random_MM_multiply_eigen(5,seed);
+}
+// ---------------------------------------------------------
 int main(int argc, char **argv) {
 #ifdef USE_EVERYTRACE
 	everytrace_init();

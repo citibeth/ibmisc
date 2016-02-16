@@ -280,9 +280,10 @@ TEST_F(SpSparseTest, sparse_set)
 
 	// Make a SparseSet for each of its dimensions
 	SparseSet<int,int> ss0;
+	ss0.set_sparse_extent(arr2.shape[0]);
 	ss0.add_sorted(arr2.dim_begin(0), arr2.dim_end(0));
 
-	EXPECT_EQ(3, ss0.size());
+	EXPECT_EQ(3, ss0.dense_extent());
 	EXPECT_EQ(1, ss0.to_sparse(0));
 	EXPECT_EQ(2, ss0.to_sparse(1));
 	EXPECT_EQ(6, ss0.to_sparse(2));

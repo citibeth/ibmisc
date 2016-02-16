@@ -156,8 +156,9 @@ public:
 
 	void transpose(std::array<int, RANK> const &sort_order)
 	{
-		OverwriteAccum<iterator> overwrite(begin());
-		spsparse::transpose(overwrite, *this, sort_order);
+		std::array<std::vector<IndexT>, RANK> new_index_vecs;
+		for (int k=0; k<RANK; ++k) new_index_vecs[k] = std::move(index_vecs[k]);
+		index_vecs = std::move(new_index_vecs);
 	}
 
 	blitz::Array<ValT, RANK> to_dense(double fill_value = 0);
