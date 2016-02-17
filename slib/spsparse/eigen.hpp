@@ -2,16 +2,41 @@
 
 #include <spsparse/SparseSet.hpp>
 #include <spsparse/VectorCooArray.hpp>
+#include <spsparse/accum.hpp>
 #include <Eigen/SparseCore>
 
 namespace spsparse {
 
-template<class SparseMatrixT, class EigenSparseMatrixT>
-void eigen_to_sparse(
-	SparseMatrixT &ret,
+/** @defgroup eigen eigen.hpp
+
+@brief Linkages between the SpSparse and Eigen libraries: basically,
+converting stuff to/from Eigen::SparseMatrix with dense index space.
+
+@{
+*/
+
+// --------------------------------------------------------------
+/** Converts an Eigen::SparseMatrix to a rank-2 SpSparse structure.
+In the process, it translates for each dimension from the dense index
+space used by Eigen to a sparse index space used by SpSparse.
+
+@param ret OUT: Place to store the resulting SpSparse array.
+@param M IN: The Eigen structure to convert.
+@param dims IN: Dense-to-sparse index conversions for the two dimensions. */
+template<class AccumulatorT, class EigenSparseMatrixT>
+void eigenM_to_sparseM(
+	AccumulatorT &ret,
 	EigenSparseMatrixT const &M,
 	std::array<SparseSet<
-		typename SparseMatrixT::index_type,
+		typename AccumulatorT::index_type,
+		typename EigenSparseMatrixT::Index> *, 2> const &dims);
+
+template<class AccumulatorT, class EigenSparseMatrixT>
+void eigenM_to_sparseM(	// MM = Matrix->Matrix
+	AccumulatorT &ret,
+	EigenSparseMatrixT const &M,
+	std::array<SparseSet<
+		typename AccumulatorT::index_type,
 		typename EigenSparseMatrixT::Index> *, 2> const &dims)
 {
 	ret.set_shape({dims[0]->sparse_extent(), dims[1]->sparse_extent()});
@@ -20,86 +45,137 @@ void eigen_to_sparse(
 		ret.add({dims[0]->to_sparse(ii.row()), dims[1]->to_sparse(ii.col())}, ii.value());
 	}}
 }
+// --------------------------------------------------------------
+template<class AccumulatorT, class EigenSparseMatrixT>
+void sum_rows(		// MV = Matrix->Vector
+	AccumulatorT &ret,
+	EigenSparseMatrixT const &M,
+	std::array<SparseSet<
+		typename AccumulatorT::index_type,
+		typename EigenSparseMatrixT::Index> *, 1> const &dims);
 
-template <class SparseMatrixT>
-class SparseTriplets
+template<class AccumulatorT, class EigenSparseMatrixT>
+void sum_rows(
+	AccumulatorT &ret,
+	EigenSparseMatrixT const &M,
+	std::array<SparseSet<
+		typename AccumulatorT::index_type,
+		typename EigenSparseMatrixT::Index> *, 1> const &dims)
 {
-public:
+	ret.set_shape({dims[0]->sparse_extent()});
+	for (int k=0; k<M.outerSize(); ++k) {
+	for (typename EigenSparseMatrixT::InnerIterator ii(M,k); ii; ++ii) {
+		ret.add({dims[0]->to_sparse(ii.row())}, ii.value());
+	}}
+}
+// --------------------------------------------------------------
+
+template<class SparseMatrixT>
+struct _ES {
 	typedef typename SparseMatrixT::index_type SparseIndexT;
 	typedef typename SparseMatrixT::val_type ValT;
-	typedef spsparse::VectorCooArray<SparseIndexT, ValT, 1> SparseVectorT;
 	typedef Eigen::SparseMatrix<ValT> EigenSparseMatrixT;
 	typedef typename EigenSparseMatrixT::Index DenseIndexT;
-	typedef Eigen::Triplet<ValT> EigenTripletT;
 	typedef SparseSet<SparseIndexT, DenseIndexT> SparseSetT;
+	static const int rank = SparseMatrixT::rank;
 
-	SparseMatrixT M;
-	std::array<SparseSetT *, 2> const dims;
-
-	SparseTriplets(std::array<SparseSetT *,2> const &_dims) : dims(_dims) {}
-
-	void set_shape(std::array<size_t, 2> const &shape)
-	{
-		M.set_shape(shape);
-		dims[0]->set_sparse_extent(shape[0]);
-		dims[1]->set_sparse_extent(shape[1]);
-	}
-
-	void add(std::array<SparseIndexT, 2> const index, ValT const val)
-	{
-		M.add(index, val);
-		dims[0]->add(index[0]);
-		dims[1]->add(index[1]);
-	}
-
-	EigenSparseMatrixT to_eigen(char transpose='.', bool invert=false) const
-	{
-		std::vector<EigenTripletT> triplets;
-
-		for (auto ii=M.begin(); ii != M.end(); ++ii) {
-			int ix0 = (transpose == 'T' ? 1 : 0);
-			int ix1 = (transpose == 'T' ? 0 : 1);
-			auto dense0 = dims[ix0]->to_dense(ii.index(ix0));
-			auto dense1 = dims[ix1]->to_dense(ii.index(ix1));
-			triplets.push_back(EigenTripletT(dense0, dense1, invert ? 1./ii.val() : ii.val()));
-		}
-		EigenSparseMatrixT ret(
-			dims[transpose == 'T' ? 1 : 0]->dense_extent(),
-			dims[transpose == 'T' ? 0 : 1]->dense_extent());
-		ret.setFromTriplets(triplets.begin(), triplets.end());
-		return ret;
-	}
-
-	EigenSparseMatrixT eigen_scale_matrix(int dimi)
-	{
-
-		// Get our weight vector
-		SparseVectorT weight({dims[dimi]->sparse_extent()});
-		for (auto ii=M.begin(); ii != M.end(); ++ii) {
-			weight.add({ii.index(dimi)}, ii.val());
-		}
-		weight.consolidate({0});
-
-		// Convert to Eigen-format scale matrix (and convert indices to dense)
-		std::vector<EigenTripletT> triplets;
-		for (auto ii=weight.begin(); ii != weight.end(); ++ii) {
-			auto dense = dims[dimi]->to_dense(ii.index(0));
-			triplets.push_back(EigenTripletT(dense, dense, 1./ii.val()));
-		}
-
-		auto dense_extent(dims[dimi]->dense_extent());
-		EigenSparseMatrixT scale(dense_extent, dense_extent);
-		scale.setFromTriplets(triplets.begin(), triplets.end());
-		return scale;
-
-	}
-
+	typedef spsparse::VectorCooArray<SparseIndexT, ValT, 1> SparseVectorT;
+	typedef Eigen::Triplet<ValT> EigenTripletT;
 };
 
 
 
+/** A data sructure that acts like a normal SpSparse Accumulator.  BUT:
+  1) When stuff is added to it, it also updates corresponding dimension maps (SparseSet).
+  2) An Eigen::SparseMatrix may be extracted from it when construction is complete. */
+template <class SparseMatrixT>
+class SparseTriplets : public
+	spsparse::MappedArray<SparseMatrixT, typename Eigen::SparseMatrix<typename SparseMatrixT::val_type>::Index>
+{
+public:
+	typedef spsparse::MappedArray<SparseMatrixT, typename Eigen::SparseMatrix<typename SparseMatrixT::val_type>::Index> super;
+	typedef typename super::SparseIndexT SparseIndexT;
+	typedef typename super::ValT ValT;
+	typedef typename super::SparseSetT SparseSetT;
+
+	typedef spsparse::VectorCooArray<SparseIndexT, ValT, 1> SparseVectorT;
+	typedef Eigen::SparseMatrix<ValT> EigenSparseMatrixT;
+	typedef typename EigenSparseMatrixT::Index DenseIndexT;
+	typedef Eigen::Triplet<ValT> EigenTripletT;
+
+	/** @param dims Dimension maps for each dimension.  If one is
+	preparing to multiply matrices, then each dimension map will be
+	shared by at least two SparseTriplets object. */
+	SparseTriplets(std::array<SparseSetT *,2> const &_dims) : super(_dims) {}
+
+	/** Produces an Eigen::SparseMatrix from our internal SparseMatrixT.
+
+	@param transpose Set to 'T' to make the result be a transpose of
+		our internal M.  Use '.' for no transpose.
+	@param invert Set to true to make the result be an element-wise
+		multiplicative ineverse of M. */
+	typename _ES<SparseMatrixT>::EigenSparseMatrixT to_eigen(char transpose='.', bool invert=false) const;
+
+
+	/** Produces a diagonal Eigen::SparseMatrix S where S[i,i] is the sum of internal M over dimension 1-i.
+	@param dimi Index of the dimension that should REMAIN in the scale matrix.
+	@return Eigen::SparseMatrix of shape [len(dimi), len(dimi)] */
+	typename _ES<SparseMatrixT>::EigenSparseMatrixT eigen_scale_matrix(int dimi) const;
+
+};
+// --------------------------------------------------------
+template <class SparseMatrixT>
+typename _ES<SparseMatrixT>::EigenSparseMatrixT SparseTriplets<SparseMatrixT>::to_eigen(char transpose, bool invert) const
+{
+	std::vector<EigenTripletT> triplets;
+
+	for (auto ii=super::M.begin(); ii != super::M.end(); ++ii) {
+		int ix0 = (transpose == 'T' ? 1 : 0);
+		int ix1 = (transpose == 'T' ? 0 : 1);
+		auto dense0 = super::dims[ix0]->to_dense(ii.index(ix0));
+		auto dense1 = super::dims[ix1]->to_dense(ii.index(ix1));
+		triplets.push_back(EigenTripletT(dense0, dense1, invert ? 1./ii.val() : ii.val()));
+	}
+	EigenSparseMatrixT ret(
+		super::dims[transpose == 'T' ? 1 : 0]->dense_extent(),
+		super::dims[transpose == 'T' ? 0 : 1]->dense_extent());
+	ret.setFromTriplets(triplets.begin(), triplets.end());
+	return ret;
+}
+// --------------------------------------------------------
+template <class SparseMatrixT>
+typename _ES<SparseMatrixT>::EigenSparseMatrixT SparseTriplets<SparseMatrixT>::eigen_scale_matrix(int dimi) const
+{
+
+	// Get our weight vector
+	SparseVectorT weight({super::dims[dimi]->sparse_extent()});
+	for (auto ii=super::M.begin(); ii != super::M.end(); ++ii) {
+		weight.add({ii.index(dimi)}, ii.val());
+	}
+	weight.consolidate({0});
+
+	// Convert to Eigen-format scale matrix (and convert indices to dense)
+	std::vector<EigenTripletT> triplets;
+	for (auto ii=weight.begin(); ii != weight.end(); ++ii) {
+		auto dense = super::dims[dimi]->to_dense(ii.index(0));
+		triplets.push_back(EigenTripletT(dense, dense, 1./ii.val()));
+	}
+
+	auto dense_extent(super::dims[dimi]->dense_extent());
+	EigenSparseMatrixT scale(dense_extent, dense_extent);
+	scale.setFromTriplets(triplets.begin(), triplets.end());
+	return scale;
+}
+// --------------------------------------------------------
+/** Produces a diagonal Eigen::SparseMatrix S where S[i,i] is the sum of internal M over dimension 1-i.
+@param M The regrid matrix to sum.
+@param dimi Index of the dimension that should REMAIN in the scale matrix.
+@return Eigen::SparseMatrix of shape [len(dimi), len(dimi)] */
 template<class EigenSparseMatrixT>
-EigenSparseMatrixT scale_matrix(EigenSparseMatrixT &M, int dimi)
+EigenSparseMatrixT weight_matrix(EigenSparseMatrixT &M, int dimi, bool invert);
+
+template<class EigenSparseMatrixT>
+EigenSparseMatrixT weight_matrix(EigenSparseMatrixT &M, int dimi, bool invert)
 {
 	typedef VectorCooArray<typename EigenSparseMatrixT::Index, typename EigenSparseMatrixT::Scalar, 1> SparseVectorT;
 	typedef Eigen::Triplet<typename EigenSparseMatrixT::Scalar, typename EigenSparseMatrixT::Index> EigenTripletT;
@@ -117,16 +193,15 @@ EigenSparseMatrixT scale_matrix(EigenSparseMatrixT &M, int dimi)
 	// Invert weight vector into Eigen-format scale matrix
 	std::vector<EigenTripletT> triplets;
 	for (auto ii=weight.begin(); ii != weight.end(); ++ii) {
-		triplets.push_back(EigenTripletT(ii.index(0), ii.index(0), 1./ii.val()));
+		triplets.push_back(EigenTripletT(ii.index(0), ii.index(0), invert ? 1./ii.val() : ii.val()));
 	}
 
-	EigenSparseMatrixT scale(weight.shape[0], weight.shape[0]);
-	scale.setFromTriplets(triplets.begin(), triplets.end());
-	return scale;
-
+	EigenSparseMatrixT weight_e(weight.shape[0], weight.shape[0]);	// Weight or scale, depending on invert
+	weight_e.setFromTriplets(triplets.begin(), triplets.end());
+	return weight_e;
 }
 
-
+/** @} */
 
 }	// namespace
 

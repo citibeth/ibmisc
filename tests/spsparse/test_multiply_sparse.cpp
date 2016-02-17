@@ -259,7 +259,7 @@ TEST_F(SpSparseTest, eigen_conv)
 	auto Ae(A.to_eigen());
 
 	VectorCooMatrix<int, double> A2;
-	eigen_to_sparse(A2, Ae, {&dimi, &dimj});
+	eigenM_to_sparseM(A2, Ae, {&dimi, &dimj});
 
 	A.M.consolidate({0,1});
 	A2.consolidate({0,1});
@@ -298,7 +298,7 @@ void test_random_MM_multiply_eigen(unsigned int dsize, int seed)
 	Ce = Ae * Be;
 
 	VectorCooMatrix<int, double> C({A.M.shape[0], B.M.shape[1]});
-	eigen_to_sparse(C, Ce, {&dimi, &dimk});
+	eigenM_to_sparseM(C, Ce, {&dimi, &dimk});
 
 	// --------- Compare to dense matrix multiplication
 	auto Ad(A.M.to_dense());
