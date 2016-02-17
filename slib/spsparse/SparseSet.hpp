@@ -17,6 +17,12 @@ class SparseSet {
 public:
 	SparseSet() : _sparse_extent(-1) {}
 
+	void clear() {
+		_sparse_extent = -1;
+		_s2d.clear();
+		_d2s.clear();
+	}
+
 	bool in_sparse(SparseT sparse_ix)
 		{ return _s2d.find(sparse_ix) != _s2d.end(); }
 
@@ -24,7 +30,14 @@ public:
 		{ return _sparse_extent; }
 
 	void set_sparse_extent(SparseT extent)
-		{ _sparse_extent = extent; }
+	{
+		std::stringstream buf;
+		if (_sparse_extent != -1 && _sparse_extent != extent) {
+			buf << "Cannot change sparse_extent from " << _sparse_extent << " to " << extent;
+			(*spsparse_error)(-1, "%s", buf.str().c_str());
+		}
+		_sparse_extent = extent;
+	}
 
 	DenseT dense_extent() const
 		{ return _d2s.size(); }
@@ -65,6 +78,43 @@ public:
 		}
 		return _d2s[dval];
 	}
+};
+// -------------------------------------------------------
+/** A data sructure that acts like a normal SpSparse Accumulator.  BUT:
+  1) When stuff is added to it, it also updates corresponding dimension maps (SparseSet).
+  2) An Eigen::SparseMatrix may be extracted from it when construction is complete. */
+template <class AccumulatorT, class DenseIndexT>
+class MappedArray
+{
+public:
+	typedef typename AccumulatorT::index_type SparseIndexT;
+	typedef typename AccumulatorT::val_type ValT;
+	typedef SparseSet<SparseIndexT, DenseIndexT> SparseSetT;
+	static const int rank = AccumulatorT::rank;
+
+	/** The underlying constructed matrix.  Access directly if needed. */
+	AccumulatorT M;
+	std::array<SparseSetT *, rank> const dims;
+
+	/** @param dims Dimension maps for each dimension.  If one is
+	preparing to multiply matrices, then each dimension map will be
+	shared by at least two MappedArray object. */
+	MappedArray(std::array<SparseSetT *, rank> const &_dims) : dims(_dims) {}
+
+	/** Sets the shape of the underlying matrix (and dimension maps) */
+	void set_shape(std::array<size_t, rank> const &shape)
+	{
+		M.set_shape(shape);
+		for (int k=0; k<rank; ++k) dims[k]->set_sparse_extent(shape[k]);
+	}
+
+	/** Adds an item. */
+	void add(std::array<SparseIndexT, rank> const index, ValT const val)
+	{
+		M.add(index, val);
+		for (int k=0; k<rank; ++k) dims[k]->add(index[k]);
+	}
+
 };
 
 }	// Namespace

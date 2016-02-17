@@ -157,7 +157,7 @@ public:
 	void transpose(std::array<int, RANK> const &sort_order)
 	{
 		std::array<std::vector<IndexT>, RANK> new_index_vecs;
-		for (int k=0; k<RANK; ++k) new_index_vecs[k] = std::move(index_vecs[k]);
+		for (int k=0; k<RANK; ++k) new_index_vecs[k] = std::move(index_vecs[sort_order[k]]);
 		index_vecs = std::move(new_index_vecs);
 	}
 
