@@ -24,8 +24,6 @@ class IndexSet
 	std::vector<KeyT> _ix_to_key;
 
 public:
-	IndexSet() {}
-
 	typedef typename std::vector<KeyT>::iterator iterator;
 	iterator begin() { return _ix_to_key.begin(); }
 	iterator end() { return _ix_to_key.end(); }
@@ -73,7 +71,7 @@ public:
 		return ii->second;
 	}
 
-	KeyT const &at(size_t ix)
+	KeyT const &operator[](size_t ix)
 	{
 		if (ix >= _ix_to_key.size()) {
 			(*ibmisc_error)(-1,

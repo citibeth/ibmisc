@@ -105,27 +105,27 @@ TEST_F(IndexingTest, index_set)
 	names.insert("B");
 	names.insert("C");
 
-	EXPECT_EQ("A", names.at(0));
-	EXPECT_EQ("B", names.at(1));
-	EXPECT_EQ("C", names.at(2));
+	EXPECT_EQ("A", names[0]);
+	EXPECT_EQ("B", names[1]);
+	EXPECT_EQ("C", names[2]);
 
 	EXPECT_EQ(0, names.at("A"));
 	EXPECT_EQ(1, names.at("B"));
 	EXPECT_EQ(2, names.at("C"));
 
 	auto ii(names.begin());
-	EXPECT_EQ(names.at(0), *ii);
+	EXPECT_EQ(names[0], *ii);
 	++ii;
-	EXPECT_EQ(names.at(1), *ii);
+	EXPECT_EQ(names[1], *ii);
 	++ii;
-	EXPECT_EQ(names.at(2), *ii);
+	EXPECT_EQ(names[2], *ii);
 	++ii;
 	EXPECT_EQ(names.end(), ii);
 
 	EXPECT_TRUE(names.contains("A"));
 	EXPECT_FALSE(names.contains("ZZTOP"));
 	EXPECT_THROW(names.at("ZZTOP"), ibmisc::Exception);
-	EXPECT_THROW(names.at(17), ibmisc::Exception);
+	EXPECT_THROW(names[17], ibmisc::Exception);
 }
 
 
