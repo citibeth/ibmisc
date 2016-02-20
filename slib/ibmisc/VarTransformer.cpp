@@ -1,53 +1,64 @@
+#include <iostream>
 #include <ibmisc/VarTransformer.hpp>
 
 namespace ibmisc {
 
-void VarTransformer::allocate()
+void VarTransformer::set_dims(
+	std::vector<std::string> const &outputs,
+	std::vector<std::string> const &inputs,
+	std::vector<std::string> const &scalars)
 {
-	blitz::TinyVector<int, NDIM> extent;
-	for (int i=0; i<NDIM; ++i) extent[i] = _ele_names[i]->size_withunit();
-	_tensor.reference(blitz::Array<double, NDIM>(extent));
+	std::array<std::vector<std::string> const *, RANK> source_dims {&outputs, &inputs, &scalars};
+
+	// Copy the dimension labels, and add a "unit" dimension to the end
+	for (int idim=0; idim<RANK; ++idim) {
+		for (auto ii=source_dims[idim]->begin(); ii != source_dims[idim]->end(); ++ii)
+			_dimensions[idim].insert(*ii);
+		_dimensions[idim].insert("unit");
+	}
+
+	// Allocate the tensor to our size now.
+	blitz::TinyVector<int, RANK> extent;
+	for (int i=0; i<RANK; ++i) extent[i] = _dimensions[i].size();
+	_tensor.reference(blitz::Array<double, RANK>(extent));
 	_tensor = 0;
 }
 
 
-bool VarTransformer::set(std::string output, std::string input, std::string scalar, double val)
+
+bool VarTransformer::set(std::string const &output, std::string const &input, std::string const &scalar, double val)
 {
-	int ioutput = dimension(OUTPUTS).index(output);
-	int iinput = dimension(INPUTS).index(input);
-	int iscalar = dimension(SCALARS).index(scalar);
-
-	bool ret = true;
-	if (ioutput < 0) {
+	bool is_good = true;
+	if (!dim(OUTPUTS).contains(output)) {
 		fprintf(stderr, "ERROR: VarTransformer::set(): output variable %s not defined.\n", output.c_str());
-		ret = false;
+		is_good = false;
 	}
-	if (iinput < 0) {
+	if (!dim(INPUTS).contains(input)) {
 		fprintf(stderr, "ERROR: VarTransformer::set(): input variable %s not defined.\n", input.c_str());
-		ret = false;
+		is_good = false;
+	}
+	if (!dim(SCALARS).contains(scalar)) {
+		fprintf(stderr, "ERROR: VarTransformer::set(): scalar variable %s not defined.\n", scalar.c_str());
+		is_good = false;
 	}
 
-	if (iscalar < 0) {
-		fprintf(stderr, "ERROR: VarTransformer::set(): scalar variable %s not defined.\n", output.c_str());
-		ret = false;
-	}
-
-	if (!ret) return ret;
+	if (is_good) {
+		int ioutput = dim(OUTPUTS).at(output);
+		int iinput = dim(INPUTS).at(input);
+		int iscalar = dim(SCALARS).at(scalar);
 	
-	_tensor(ioutput, iinput, iscalar) = val;
-	return ret;
+		_tensor(ioutput, iinput, iscalar) = val;
+	}
+	return is_good;
 }
 
 /** Local function for debugging output, not for re-use. */
-std::string dims_str(DynamicEnum const &de)
+static std::string dims_str(IndexSet<std::string> const &de)
 {
-	std::string ret;
-	int sz = de.size_withunit();
-	for (int i=0; i<sz; ++i) {
-		ret += de.name(i);
-		ret += ", ";
-	}
-	return ret;
+	std::stringstream buf;
+	int sz = de.size();
+	for (int i=0; i<sz; ++i) buf << de[i] << ", ";
+	return buf.str();
 }
 
 /** Instantiates the scalars with specific values, and returns a 2nd-order
@@ -55,21 +66,23 @@ matrix derived from the 3d-order tensor, in CSR format. */
 CSRAndUnits VarTransformer::apply_scalars(
 		std::vector<std::pair<std::string, double>> const &nvpairs)
 {
+#if 0
 	printf("BEGIN VarTransformer::apply_scalars()\n");
 	for (auto ele : nvpairs) {
 		printf("    %s = %g\n", ele.first.c_str(), ele.second);
 	}
+#endif
 
-//std::cout << "OUTPUTS = " << dims_str(dimension(OUTPUTS)) << std::endl;
-//std::cout << "INPUTS = " << dims_str(dimension(INPUTS)) << std::endl;
-//std::cout << "SCALARS = " << dims_str(dimension(SCALARS)) << std::endl;
+//std::cout << "OUTPUTS = " << dims_str(dim(OUTPUTS)) << std::endl;
+//std::cout << "INPUTS = " << dims_str(dim(INPUTS)) << std::endl;
+//std::cout << "SCALARS = " << dims_str(dim(SCALARS)) << std::endl;
 
 
-	int n_outputs_nu = dimension(OUTPUTS).size_nounit();		// # OUTPUTS no unit
-	int n_inputs_wu = dimension(INPUTS).size_withunit();
-	int n_scalars_wu = dimension(SCALARS).size_withunit();	// # SCALARS w/unit
+	int n_outputs_nu = dim(OUTPUTS).size()-1;		// # OUTPUTS no unit
+	int n_inputs_wu = dim(INPUTS).size();
+	int n_scalars_wu = dim(SCALARS).size();	// # SCALARS w/unit
 
-	int unit_inputs = dimension(INPUTS).unit_ix();
+	int unit_inputs = dim(INPUTS).size()-1;
 
 	// Convert name/value pairs to a regular vector
 	blitz::Array<double,1> scalars(n_scalars_wu);
@@ -79,9 +92,10 @@ CSRAndUnits VarTransformer::apply_scalars(
 		double const val = ii->second;
 
 		// If a provided scalar is not used for this VarTransformer, just ignore it.
-		int ix = dimension(SCALARS).index(nv_name, false);
-		if (ix >= 0) scalars(ix) = val;
+		if (dim(SCALARS).contains(nv_name))
+			scalars(dim(SCALARS).at(nv_name)) = val;
 	}
+	scalars(dim(SCALARS).at("unit")) = 1.0;
 
 	// Take inner product of tensor with our scalars.
 	CSRAndUnits ret(n_outputs_nu);
@@ -101,9 +115,9 @@ CSRAndUnits VarTransformer::apply_scalars(
 		}
 	}
 
-	std::cout << "apply_scalars() returning " << ret;
+//	std::cout << "apply_scalars() returning " << ret;
 
-	printf("END VarTransformer::apply_scalars()\n");
+//	printf("END VarTransformer::apply_scalars()\n");
 	return ret;
 }
 
@@ -137,24 +151,25 @@ std::ostream &operator<<(std::ostream &out, CSRAndUnits const &matu)
 
 std::ostream &operator<<(std::ostream &out, VarTransformer const &vt)
 {
-	int n_outputs_nu = vt.dimension(VarTransformer::OUTPUTS).size_nounit();		// # OUTPUTS no unit
-	int n_inputs_wu = vt.dimension(VarTransformer::INPUTS).size_withunit();
-	int n_scalars_wu = vt.dimension(VarTransformer::SCALARS).size_withunit();	// # SCALARS w/unit
+	size_t n_outputs_nu = vt.dim(VarTransformer::OUTPUTS).size()-1;		// # OUTPUTS no unit
+	size_t n_inputs_wu = vt.dim(VarTransformer::INPUTS).size();
+	size_t n_scalars_wu = vt.dim(VarTransformer::SCALARS).size();	// # SCALARS w/unit
 
-	int unit_outputs = vt.dimension(VarTransformer::OUTPUTS).unit_ix();
-	int unit_inputs = vt.dimension(VarTransformer::INPUTS).unit_ix();
-	int unit_scalars = vt.dimension(VarTransformer::SCALARS).unit_ix();
+	size_t unit_outputs = vt.dim(VarTransformer::OUTPUTS).size()-1;
+	size_t unit_inputs = vt.dim(VarTransformer::INPUTS).size()-1;
+	size_t unit_scalars = vt.dim(VarTransformer::SCALARS).size()-1;
 
 
 	for (int i=0; i<n_outputs_nu; ++i) {
-		out << "    " << vt.dimension(VarTransformer::OUTPUTS).name(i) << " = ";
+		out << "    " << vt.dim(VarTransformer::OUTPUTS)[i] << " = ";
 
 		// Count number of INPUTs used for this OUTPUT
 		int nj = 0;
 		std::vector<int> nk(n_inputs_wu, 0);
 		for (int j=0; j < n_inputs_wu; ++j) {
 			for (int k=0; k < n_scalars_wu; ++k) {
-				if (vt._tensor(i,j,k) != 0) ++nk[j];
+				double tijk = vt._tensor(i,j,k);
+				if (tijk != 0) ++nk[j];
 			}
 			if (nk[j] > 0) ++nj;
 		}
@@ -177,7 +192,7 @@ std::ostream &operator<<(std::ostream &out, VarTransformer const &vt)
 				double val = vt._tensor(i,j,k);
 				if (val == 0.0) continue;
 				if (val != 1.0) out << val;
-				if (k != unit_scalars) out << " " << vt.dimension(VarTransformer::SCALARS).name(k);
+				if (k != unit_scalars) out << " " << vt.dim(VarTransformer::SCALARS)[k];
 
 				if (kk != nkj-1) out << " + ";
 
@@ -185,11 +200,11 @@ std::ostream &operator<<(std::ostream &out, VarTransformer const &vt)
 				++kk;
 			}
 			if (nkj > 1) out << ")";
-			if (j != unit_inputs) out << " " << vt.dimension(VarTransformer::INPUTS).name(j);
+			if (j != unit_inputs) out << " " << vt.dim(VarTransformer::INPUTS)[j];
 
 			if (jj != nj-1) out << " + ";
 
-//			out << vt.dimension(VarTransformer::INPUTS)[j];
+//			out << vt.dim(VarTransformer::INPUTS)[j];
 
 			// Increment count of SEEN j values
 			++jj;

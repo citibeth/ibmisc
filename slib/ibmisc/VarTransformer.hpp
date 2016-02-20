@@ -1,8 +1,9 @@
 #pragma once
 
 #include <vector>
+#include <array>
 #include <blitz/array.h>
-#include <ibmisc/DynamicEnum.hpp>
+#include <ibmisc/IndexSet.hpp>
 
 namespace ibmisc {
 
@@ -82,35 +83,41 @@ And it prevents errors. */
 class VarTransformer {
 public:
 
-	enum {OUTPUTS, INPUTS, SCALARS, NDIM};	// Dimensions of our tensor
+	enum {OUTPUTS, INPUTS, SCALARS, RANK};	// Dimensions of our tensor
 
 protected:
-	blitz::Array<double, NDIM> _tensor;
+	blitz::Array<double, RANK> _tensor;
 
-	/** Name of each element in each dimension */
-	DynamicEnum const *_ele_names[NDIM];
+	/** Name of each element in each dimension.
+	NOTE: This includes a "unit" variable tacked to the end of each dimension. */
 
+	std::array<IndexSet<std::string>,RANK> _dimensions;
 public:
 
 	/** Define the name of each element in a dimension. */
-	void set_names(int dim, DynamicEnum const *ele_names)
-		{ _ele_names[dim] = ele_names; }
+	void set_dims(
+		std::vector<std::string> const &outputs,
+		std::vector<std::string> const &inputs,
+		std::vector<std::string> const &scalars);
 
-	/** Allocate the tensor, based on the names set above. */
-	void allocate();
 
 	// Accessor methods...
-	DynamicEnum const &dimension(int idim) const
-		{ return *_ele_names[idim]; }
+	IndexSet<std::string> const &dim(int idim) const
+		{ return _dimensions[idim]; }
+
+public:
 
 	/** Set an element of the tensor, using name-based indexing.
+    This is equivalent to:
+            output += val * input * scalar
+
 	@return true if all OK, false on error. */
-	bool set(std::string output, std::string input, std::string scalar, double val);
+	bool set(std::string const &output, std::string const &input, std::string const &scalar, double val);
 
 	/** Instantiates the scalars with specific values, and returns a 2nd-order
 	matrix derived from the 3d-order tensor, in CSR format. */
 	CSRAndUnits apply_scalars(
-		std::vector<std::pair<std::string, double>> const &nvpairs);
+		std::vector<std::pair<std::string, double>> const &nvpairs = {});
 
 	friend std::ostream &operator<<(std::ostream &out, VarTransformer const &vt);
 };

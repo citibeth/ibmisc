@@ -24,6 +24,17 @@ class IndexSet
 	std::vector<KeyT> _ix_to_key;
 
 public:
+	IndexSet() {}
+
+	/** Initialize from initializer list */
+	IndexSet(std::vector<KeyT> &&keys) : _ix_to_key(std::move(keys))
+	{
+		for (size_t i=0; i<_ix_to_key.size(); ++i)
+			_key_to_ix.insert(std::make_pair(_ix_to_key[i], i));
+	}
+
+	std::vector<KeyT> const &keys() { return _ix_to_key; }
+
 	typedef typename std::vector<KeyT>::iterator iterator;
 	iterator begin() { return _ix_to_key.begin(); }
 	iterator end() { return _ix_to_key.end(); }
@@ -35,7 +46,7 @@ public:
 	const_iterator cend() const { return _ix_to_key.cend(); }
 
 
-	size_t size() { return _ix_to_key.size(); }
+	size_t size() const { return _ix_to_key.size(); }
 
 	void insert(KeyT const &key)
 	{
@@ -48,19 +59,14 @@ public:
 		_ix_to_key.push_back(key);
 	}
 
-	bool contains(KeyT const &key)
+	bool contains(KeyT const &key) const
 	{
 		auto ii(_key_to_ix.find(key));
 		return (ii != _key_to_ix.end());
 	}
 
-	bool contains(size_t ix)
-	{
-		return (ix < _ix_to_key.size());
-	}
 
-
-	size_t at(KeyT const &key)
+	size_t at(KeyT const &key) const
 	{
 		auto ii(_key_to_ix.find(key));
 		if (ii == _key_to_ix.end()) {
@@ -71,7 +77,7 @@ public:
 		return ii->second;
 	}
 
-	KeyT const &operator[](size_t ix)
+	KeyT const &operator[](size_t ix) const
 	{
 		if (ix >= _ix_to_key.size()) {
 			(*ibmisc_error)(-1,
