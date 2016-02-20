@@ -1,9 +1,13 @@
 #ifndef IBMISC_COMPACT_MAP
 #define IBMISC_COMPACT_MAP
 
-#include <ibmisc/ibmisc.hpp>
+#include <iostream>
+#include <sstream>
 #include <vector>
 #include <map>
+#include <ibmisc/ibmisc.hpp>
+#include <ibmisc/iter.hpp>
+
 
 namespace ibmisc {
 
@@ -12,8 +16,6 @@ namespace ibmisc {
 template<class KeyT>
 class IndexSet;
 
-template<class KeyT>
-std::ostream &operator<<(std::ostream &out, IndexSet<KeyT> const &con);
 // -----------------------------------------
 
 /** Maps keys to integers, according to order of insertion. */
@@ -35,15 +37,23 @@ public:
 
 	std::vector<KeyT> const &keys() { return _ix_to_key; }
 
-	typedef typename std::vector<KeyT>::iterator iterator;
-	iterator begin() { return _ix_to_key.begin(); }
-	iterator end() { return _ix_to_key.end(); }
+	// --------------------------------------------------------
+	typedef EnumRandomIter<typename std::vector<KeyT>::iterator> iterator;
+	iterator begin()
+		{ return enum_random_iter(_ix_to_key.begin(), _ix_to_key.begin()); }
+	iterator end()
+		{ return enum_random_iter(_ix_to_key.begin(), _ix_to_key.end()); }
 
-	typedef typename std::vector<KeyT>::const_iterator const_iterator;
-	const_iterator begin() const { return _ix_to_key.begin(); }
-	const_iterator end() const { return _ix_to_key.end(); }
-	const_iterator cbegin() const { return _ix_to_key.cbegin(); }
-	const_iterator cend() const { return _ix_to_key.cend(); }
+	typedef EnumRandomIter<typename std::vector<KeyT>::const_iterator> const_iterator;
+	const_iterator begin() const
+		{ return enum_random_iter(_ix_to_key.begin(), _ix_to_key.begin()); }
+	const_iterator end() const
+		{ return enum_random_iter(_ix_to_key.begin(), _ix_to_key.end()); }
+	const_iterator cbegin() const
+		{ return enum_random_iter(_ix_to_key.cbegin(), _ix_to_key.cbegin()); }
+	const_iterator cend() const
+		{ return enum_random_iter(_ix_to_key.cbegin(), _ix_to_key.cend()); }
+	// --------------------------------------------------------
 
 
 	size_t size() const { return _ix_to_key.size(); }
@@ -51,7 +61,7 @@ public:
 	void insert(KeyT const &key)
 	{
 		if (_key_to_ix.find(key) != _key_to_ix.end()) {
-			std::stringstream buf;
+			std::ostringstream buf;
 			buf << "Duplicate key detected trying to insert " << key;
 			(*ibmisc_error)(-1, "%s", buf.str().c_str());
 		}
@@ -85,10 +95,6 @@ public:
 		}
 		return _ix_to_key[ix];
 	}
-
-	// http://www.cplusplus.com/forum/general/45776/
-	friend std::ostream &operator<< <>(std::ostream &out, IndexSet<KeyT> const &con);
-
 };
 
 
@@ -102,8 +108,9 @@ std::ostream &operator<<(std::ostream &out, ibmisc::IndexSet<KeyT> const &con)
 	return out;
 }
 
-
 }	// Namespace
 
 
+
 #endif	// Guard
+

@@ -3,7 +3,8 @@ set(IBMISC_SOURCE
 	ibmisc/ibmisc.cpp
 	ibmisc/geodesy.cpp
 	spsparse/spsparse.cpp
-	ibmisc/VarTransformer.cpp)
+	ibmisc/VarTransformer.cpp
+	ibmisc/ConstantSet.cpp)
 
 if (USE_PROJ4)
 	list(APPEND IBMISC_SOURCE ibmisc/Proj2.cpp)

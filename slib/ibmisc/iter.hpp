@@ -154,6 +154,60 @@ public:
 		{return wrapped == rhs.wrapped;}
 };
 // ------------------------------------------------------------
+template<class IterT>
+class EnumRandomIter
+{
+public:
+	typedef typename IterT::value_type value_type;
+
+protected:
+	IterT const begin;
+	IterT ii;
+
+public:
+	EnumRandomIter(IterT const &_begin, IterT const &_ii) : begin(_begin), ii(_ii) {}
+
+
+	value_type operator[](int n)
+		{ return ii[n]; }
+	value_type operator*()
+		{ return *ii; }
+
+	EnumRandomIter &operator+=(int n)
+		{ ii += n; return *this; }
+	EnumRandomIter& operator--()
+		{ --ii; return *this; }
+	EnumRandomIter& operator++()
+		{ ++ii; return *this; }
+	EnumRandomIter &operator-=(int n)
+		{ ii -= n; return *this; }
+
+	EnumRandomIter operator+(int n) const
+		{ return EnumRandomIter(begin, ii+n); }
+
+	bool operator==(EnumRandomIter const &rhs) const
+		{ return ii == rhs.ii; }
+	bool operator!=(const EnumRandomIter& rhs) const
+		{return ii != rhs.ii; }
+
+#if 0
+	bool operator==(IterT const &rhs) const
+		{ return ii == rhs; }
+	bool operator!=(const IterT& rhs) const
+		{return ii != rhs; }
+#endif
+
+	size_t index()
+		{ return ii - begin; }
+};
+
+/** Convenience constructor */
+template<class IterT>
+EnumRandomIter<IterT> enum_random_iter(IterT const &_begin, IterT const &_ii)
+	{ return EnumRandomIter<IterT>(_begin, _ii); }
+
+
+// ------------------------------------------------------------
 
 
 
