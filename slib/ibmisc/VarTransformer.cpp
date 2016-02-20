@@ -3,6 +3,9 @@
 
 namespace ibmisc {
 
+const std::string VarTransformer::UNIT = "1";
+
+
 void VarTransformer::set_dims(
 	std::vector<std::string> const &outputs,
 	std::vector<std::string> const &inputs,
@@ -14,7 +17,7 @@ void VarTransformer::set_dims(
 	for (int idim=0; idim<RANK; ++idim) {
 		for (auto ii=source_dims[idim]->begin(); ii != source_dims[idim]->end(); ++ii)
 			_dimensions[idim].insert(*ii);
-		_dimensions[idim].insert("unit");
+		_dimensions[idim].insert(UNIT);
 	}
 
 	// Allocate the tensor to our size now.
@@ -95,7 +98,7 @@ CSRAndUnits VarTransformer::apply_scalars(
 		if (dim(SCALARS).contains(nv_name))
 			scalars(dim(SCALARS).at(nv_name)) = val;
 	}
-	scalars(dim(SCALARS).at("unit")) = 1.0;
+	scalars(dim(SCALARS).at(UNIT)) = 1.0;
 
 	// Take inner product of tensor with our scalars.
 	CSRAndUnits ret(n_outputs_nu);

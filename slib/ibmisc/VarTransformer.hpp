@@ -82,6 +82,7 @@ And it prevents errors. */
 
 class VarTransformer {
 public:
+	static const std::string UNIT;
 
 	enum {OUTPUTS, INPUTS, SCALARS, RANK};	// Dimensions of our tensor
 
