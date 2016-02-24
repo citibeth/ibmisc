@@ -97,6 +97,28 @@ TEST_F(IndexingTest, indexing_netcdf)
 }
 
 // -----------------------------------------------------------
+TEST_F(IndexingTest, domain)
+{
+	Indexing<int, long> ind(
+		{0,0},		// Base
+		{4,5},		// Extent
+		{0,1});		// Row major
+
+	Domain<int> domain({3,3}, {4,5});
+
+	EXPECT_TRUE(domain.in_domain<2>({3,4}));
+	EXPECT_FALSE(domain.in_domain<2>({3,5}));
+	EXPECT_FALSE(domain.in_domain<2>({0,0}));
+
+	EXPECT_FALSE(in_domain(&domain, &ind, 0L));
+	EXPECT_FALSE(in_domain(&domain, &ind, 15L));
+	EXPECT_TRUE(in_domain(&domain, &ind, 19L));
+	EXPECT_FALSE(in_domain(&domain, &ind, 20L));
+
+}
+// -----------------------------------------------------------
+
+
 TEST_F(IndexingTest, index_set)
 {
 	IndexSet<std::string> names;
@@ -130,7 +152,6 @@ TEST_F(IndexingTest, index_set)
 
 
 // -----------------------------------------------------------
-
 
 int main(int argc, char **argv) {
 	::testing::InitGoogleTest(&argc, argv);

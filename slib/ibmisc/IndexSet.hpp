@@ -28,6 +28,11 @@ class IndexSet
 public:
 	IndexSet() {}
 
+	void clear() {
+		_key_to_ix.clear();
+		_ix_to_key.clear();
+	}
+
 	/** Initialize from initializer list */
 	IndexSet(std::vector<KeyT> &&keys) : _ix_to_key(std::move(keys))
 	{
@@ -58,7 +63,7 @@ public:
 
 	size_t size() const { return _ix_to_key.size(); }
 
-	void insert(KeyT const &key)
+	size_t insert(KeyT const &key)
 	{
 		if (_key_to_ix.find(key) != _key_to_ix.end()) {
 			std::ostringstream buf;
@@ -66,7 +71,9 @@ public:
 			(*ibmisc_error)(-1, "%s", buf.str().c_str());
 		}
 		_key_to_ix.insert(std::make_pair(key, _key_to_ix.size()));
+		size_t ix = _ix_to_key.size();
 		_ix_to_key.push_back(key);
+		return ix;
 	}
 
 	bool contains(KeyT const &key) const

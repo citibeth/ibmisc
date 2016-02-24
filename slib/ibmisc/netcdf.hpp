@@ -212,13 +212,15 @@ template<class NcVarT>
 void get_or_put_att(
 	NcVarT &ncvar, char rw,
 	std::string const &name,
-	std::string &data);
+	std::string &data,
+	bool required = true);
 
 template<class NcVarT>
 void get_or_put_att(
 	NcVarT &ncvar, char rw,
 	std::string const &name,
-	std::string &data)
+	std::string &data,
+	bool required = true)
 {
 	switch(rw) {
 		case 'w':
@@ -226,7 +228,8 @@ void get_or_put_att(
 		break;
 		case 'r':
 			auto att(ncvar.getAtt(name));
-			att.getValues(data);
+			if (required || !att.isNull())
+				att.getValues(data);
 		break;
 	}
 }
@@ -323,6 +326,10 @@ void get_or_put_att_enum(
 	}
 }
 // ---------------------------------------
+
+// ---------------------------------------
+
+
 // ====================== Error Checking =============================
 // ---------------------------------------------------
 /** Check that blitz::Array is unit strides, column major.

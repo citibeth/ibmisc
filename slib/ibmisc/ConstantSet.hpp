@@ -31,18 +31,21 @@ public:
 		{}
 	};
 
-protected:
 	IndexSet<std::string> index;	// Densely ordered set of constant names
 	std::vector<Data> data;	// Meta-data and value data
 
+protected:
 	int add(
 		std::string const &name, std::string const &units,
 		std::string const &description);
 
-public:
-	UTSystem const * const ut_system;	//!< Unit system to use for conversions
+	UTSystem const * ut_system;	//!< Unit system to use for conversions
 
-	ConstantSet(UTSystem const *_ut_system) : ut_system(_ut_system) {}
+public:
+	void init(UTSystem const *_ut_system)
+	{
+		ut_system = _ut_system;
+	}
 
 	/** @return Index of the new constant. */
 	int set(
@@ -57,6 +60,7 @@ public:
 		std::string const &src_name,
 		std::string const &description);
 
+#if 0
 	// ---------------------------------------------
 	typedef IndexSet<std::string>::iterator iterator;
 	iterator begin() { return index.begin(); }
@@ -66,6 +70,7 @@ public:
 	const_iterator end() const { return index.end(); }
 	const_iterator cbegin() const { return index.cbegin(); }
 	const_iterator cend() const { return index.cend(); }
+#endif
 
 	// ---------------------------------------------
 	// Reading constants
@@ -89,4 +94,15 @@ public:
 	void ncio(NcIO &ncio, std::string const &vname);
 };
 
+}
+
+inline std::ostream &operator<<(std::ostream &out, ibmisc::ConstantSet::Data const &cf)
+	{ return out << "(" << cf.name << " = " << cf.val << " [" << cf.units << "])"; } 
+
+inline std::ostream &operator<<(std::ostream &out, ibmisc::ConstantSet const &constants)
+{
+	for (auto ii=constants.data.begin(); ii != constants.data.end(); ++ii) {
+		std::cout << *ii << std::endl;
+	}
+	return out;
 }

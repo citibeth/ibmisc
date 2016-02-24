@@ -114,9 +114,9 @@ public:
 
 	int rank() const { return low.size(); }
 
-	bool in_domain(TupleT *tuple) const
+	bool in_domain(TupleT const *tuple) const
 	{
-		for (int k=0; k<rank; ++k) {
+		for (int k=0; k<rank(); ++k) {
 			if ((tuple[k] < low[k]) || (tuple[k] >= high[k])) return false;
 		}
 		return true;
@@ -146,9 +146,9 @@ bool in_domain(
 	Indexing<TupleT, IndexT> const *indexing,
 	IndexT ix)
 {
-	TupleT tuple[domain.rank()];
-	indexing.index_to_tuple(tuple, ix);
-	return domain.in_domain(tuple);
+	TupleT tuple[domain->rank()];
+	indexing->index_to_tuple(tuple, ix);
+	return domain->in_domain(tuple);
 }
 
 // ============================================
