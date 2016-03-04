@@ -57,11 +57,11 @@ foreach (CYTHON_MODULE ibmisc)
 	set_target_properties(${CYTHON_MODULE}_so PROPERTIES
 		INSTALL_RPATH_USE_LINK_PATH TRUE)
 
-	install(TARGETS ${CYTHON_MODULE}_so DESTINATION pylib)
+	install(TARGETS ${CYTHON_MODULE}_so DESTINATION lib/python${PYTHON_VERSION}/site-packages)
 
 endforeach()
 
-install(DIRECTORY ${PROJECT_SOURCE_DIR}/pylib/ DESTINATION pylib
+install(DIRECTORY ${PROJECT_SOURCE_DIR}/pylib/ DESTINATION lib/python${PYTHON_VERSION}/site-packages
           FILES_MATCHING PATTERN "*.py")
 install(DIRECTORY ${PROJECT_SOURCE_DIR}/pylib/ DESTINATION include
           FILES_MATCHING PATTERN "*.pxd")
