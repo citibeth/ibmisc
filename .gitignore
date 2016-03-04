@@ -31,3 +31,5 @@ build
 *~
 *.bak
 easybuild/
+todel
+.#*

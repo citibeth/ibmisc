@@ -37,7 +37,7 @@ if (NOT DEFINED USE_BLITZ)
 	set(USE_BLITZ YES)
 endif()
 if (USE_BLITZ)
-	find_package(blitz REQUIRED)
+	find_package(Blitz REQUIRED)
 	add_definitions(-DUSE_BLITZ)
 	include_directories(${BLITZ_INCLUDE_DIR})
 	list(APPEND EXTERNAL_LIBS ${BLITZ_LIBRARY})
@@ -61,7 +61,7 @@ if (NOT DEFINED USE_BOOST)
 	set(USE_BOOST YES)
 endif()
 if (USE_BOOST)
-	find_package(boost COMPONENTS operators optional iterator preprocessor)
+	find_package(Boost COMPONENTS operators optional iterator preprocessor)
 	add_definitions(-DUSE_BOOST)
 	include_directories(${BOOST_INCLUDE_DIRS})
 	list(APPEND EXTERNAL_LIBS ${BOOST_LIBRARIES})
@@ -93,14 +93,14 @@ include (setup_rpath)
 
 # Include all the transitive dependencies determined by EasyBuild.
 # If we're not running with EasyBuild, this does nothing...
-include_directories($ENV{EB_INCLUDE_PATH})
+include_directories($ENV{CMAKE_TRANSITIVE_INCLUDE_PATH})
 
 
 # -------- Process subdirectories of the build
 add_subdirectory(slib)
 #add_subdirectory(bin)
 if (USE_GTEST)
-	find_package(gtest REQUIRED)
+	find_package(Gtest REQUIRED)
 	add_subdirectory(tests)
 endif()
 

@@ -1,10 +1,12 @@
 # ----------- ibmisc_c
 set(IBMISC_SOURCE
+	ibmisc/string.cpp
 	ibmisc/ibmisc.cpp
 	ibmisc/geodesy.cpp
-	spsparse/spsparse.cpp
 	ibmisc/VarTransformer.cpp
-	ibmisc/ConstantSet.cpp)
+	ibmisc/ConstantSet.cpp
+	spsparse/spsparse.cpp)
+
 
 if (USE_PROJ4)
 	list(APPEND IBMISC_SOURCE ibmisc/Proj2.cpp)

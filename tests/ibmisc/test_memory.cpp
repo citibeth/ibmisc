@@ -2,6 +2,7 @@
 
 #include <gtest/gtest.h>
 #include <ibmisc/memory.hpp>
+#include <ibmisc/string.hpp>
 #include <iostream>
 #include <cstdio>
 #include <memory>
@@ -53,6 +54,15 @@ TEST_F(MemoryTest, lazy_ptr_test)
 	EXPECT_EQ("hello", *p1);
 	EXPECT_EQ("hello", *p2);
 	EXPECT_EQ("hello", *p3);
+}
+
+TEST_F(MemoryTest, string_printf)
+{
+	std::string s1(string_printf("Hello World"));
+	EXPECT_EQ("Hello World", s1);
+
+	std::string s2(string_printf("H%s%d", "ello ", 17));
+	EXPECT_EQ("Hello 17", s2);
 }
 
 
