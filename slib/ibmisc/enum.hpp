@@ -26,12 +26,12 @@ namespace ibmisc {
 
 template<class T>
 inline T parse_enum(std::string const &str) {
-	auto ret = T::get_by_name(str.c_str());
-	if (!ret) {
-		(*ibmisc_error)(-1,
-			"Error converting from string '%s' for boost::enum type %s\n", str.c_str(), typeid(T).name());
-	}
-	return *ret;
+    auto ret = T::get_by_name(str.c_str());
+    if (!ret) {
+        (*ibmisc_error)(-1,
+            "Error converting from string '%s' for boost::enum type %s\n", str.c_str(), typeid(T).name());
+    }
+    return *ret;
 }
 
 }

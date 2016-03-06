@@ -23,18 +23,18 @@ namespace spsparse {
 
 @see spsparse::consolidate() */
 enum class DuplicatePolicy {
-	LEAVE_ALONE, ADD, REPLACE};
+    LEAVE_ALONE, ADD, REPLACE};
 
 
 /** @brief Excpetion thrown by the default SpSparse error handler. */
 class Exception : public std::exception
 {
 public:
-	virtual ~Exception()
-		{}
+    virtual ~Exception()
+        {}
 
-	virtual const char* what() const noexcept
-		{ return "spsparse::Exception()"; }
+    virtual const char* what() const noexcept
+        { return "spsparse::Exception()"; }
 };
 
 
@@ -65,17 +65,17 @@ Code Example
 template<class VectorCooArrayT>
 class MyClass {
 public:
-	SPSPARSE_LOCAL_TYPES(VectorCooArrayT);
+    SPSPARSE_LOCAL_TYPES(VectorCooArrayT);
 
 };
 @endcode
 */
 #define SPSPARSE_LOCAL_TYPES(ArrayOrIterT) \
-	static const int rank = ArrayOrIterT::rank; \
-	typedef typename ArrayOrIterT::index_type index_type; \
-	typedef typename ArrayOrIterT::val_type val_type; \
-	typedef std::array<index_type, rank> indices_type; \
-	typedef blitz::Array<val_type, rank> blitz_type
+    static const int rank = ArrayOrIterT::rank; \
+    typedef typename ArrayOrIterT::index_type index_type; \
+    typedef typename ArrayOrIterT::val_type val_type; \
+    typedef std::array<index_type, rank> indices_type; \
+    typedef blitz::Array<val_type, rank> blitz_type
 
 // -------------------------------------------------------------
 // Values for sort_order formal parameter below
@@ -95,11 +95,11 @@ std::complex<double>).
 template<class NumT>
 inline bool isnone(NumT const n, bool const zero_nan=false)
 {
-	if (zero_nan) {
-		return std::isnan(n) || (n == 0);
-	} else {
-		return (n == 0);
-	}
+    if (zero_nan) {
+        return std::isnan(n) || (n == 0);
+    } else {
+        return (n == 0);
+    }
 }
 
 // ----------------------------------------------------------
@@ -113,19 +113,19 @@ std::ostream &stream(std::ostream &os, T const * const a, int RANK);
 template<class T>
 std::ostream &stream(std::ostream &os, T const * const a, int RANK)
 {
-	if (RANK == 0) {
-		os << "{}";
-	} else {
-		os << "{";
-		for (int k=0; ; ) {
-			os << a[k];
-			++k;
-			if (k == RANK) break;
-			os << ", ";
-		}
-		os << "}";
-	}
-	return os;
+    if (RANK == 0) {
+        os << "{}";
+    } else {
+        os << "{";
+        for (int k=0; ; ) {
+            os << a[k];
+            ++k;
+            if (k == RANK) break;
+            os << ", ";
+        }
+        os << "}";
+    }
+    return os;
 }
 
 /** @} */

@@ -7,11 +7,11 @@ namespace ibmisc {
 std::string string_printf(const std::string& format, ...);
 
 inline void toupper(std::string &str) {
-	std::transform(str.begin(), str.end(), str.begin(), ::toupper);
+    std::transform(str.begin(), str.end(), str.begin(), ::toupper);
 }
 
 inline void tolower(std::string &str) {
-	std::transform(str.begin(), str.end(), str.begin(), ::tolower);
+    std::transform(str.begin(), str.end(), str.begin(), ::tolower);
 }
 
 inline bool ends_with(std::string const &fullString, std::string const &ending)

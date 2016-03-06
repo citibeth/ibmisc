@@ -25,102 +25,102 @@ namespace ibmisc {
 /** Memory-safe peer class for projections in the proj.4 C library.
 @see http://trac.osgeo.org/proj */
 class Proj {
-	projPJ pj;
+    projPJ pj;
 
 public:
-	Proj() : pj(0) {}
+    Proj() : pj(0) {}
 
-	friend int transform(Proj const &src, Proj const &dest,
-		long point_count, int point_offset,
-		double *x, double *y, double *z);
+    friend int transform(Proj const &src, Proj const &dest,
+        long point_count, int point_offset,
+        double *x, double *y, double *z);
 
 
-	// ------------------ Five Standard constructors/methods for C++
-	// See: http://www2.research.att.com/~bs/C++0xFAQ.html
+    // ------------------ Five Standard constructors/methods for C++
+    // See: http://www2.research.att.com/~bs/C++0xFAQ.html
 
-	/** Create a projection.
-	@param definition The proj.4 string describing the projection. */
-	explicit Proj(std::string const &definition)
-		: pj(pj_init_plus(definition.c_str())) {}
+    /** Create a projection.
+    @param definition The proj.4 string describing the projection. */
+    explicit Proj(std::string const &definition)
+        : pj(pj_init_plus(definition.c_str())) {}
 
 protected:
-	/** Needed by latlong_from_proj() */
-	explicit Proj(projPJ _pj) : pj(_pj) {}
+    /** Needed by latlong_from_proj() */
+    explicit Proj(projPJ _pj) : pj(_pj) {}
 
 public:
-	~Proj() {
-		if (pj) {
-			pj_free(pj);
-			pj = 0;
-		}
-	}
+    ~Proj() {
+        if (pj) {
+            pj_free(pj);
+            pj = 0;
+        }
+    }
 
-	/** Transfer ownership (move) */
-	Proj(Proj&& h) : pj(h.pj) //, pj_def{h.pj_def}
-		{ h.pj = 0; }
+    /** Transfer ownership (move) */
+    Proj(Proj&& h) : pj(h.pj) //, pj_def{h.pj_def}
+        { h.pj = 0; }
 
-	/** Transfer value */
-	Proj& operator=(Proj&& h)
-	{
-		if (pj) pj_free(pj);
-		pj = h.pj;
-		h.pj = 0;
-		return *this;
-	}
+    /** Transfer value */
+    Proj& operator=(Proj&& h)
+    {
+        if (pj) pj_free(pj);
+        pj = h.pj;
+        h.pj = 0;
+        return *this;
+    }
 
-	/** Copy constructor */
-	Proj(const Proj &h)
-	{ *this = h; }
+    /** Copy constructor */
+    Proj(const Proj &h)
+    { *this = h; }
 
-	Proj& operator=(const Proj &h)
-	{
-		char *pj_def = pj_get_def(h.pj, 0);
-		pj = pj_init_plus(pj_def);
-		pj_dalloc(pj_def);
-		return *this;
-	}
+    Proj& operator=(const Proj &h)
+    {
+        char *pj_def = pj_get_def(h.pj, 0);
+        pj = pj_init_plus(pj_def);
+        pj_dalloc(pj_def);
+        return *this;
+    }
 
-	// --------------------------- Other Stuff
-
-
-	/** Returns TRUE if the passed coordinate system is geographic
-	(proj=latlong). */
-	int is_latlong() const
-		{ return pj_is_latlong(pj); }
+    // --------------------------- Other Stuff
 
 
-	/** Returns TRUE if the coordinate system is geocentric (proj=geocent). */
-	int is_geocent() const
-		{ return pj_is_geocent(pj); }
+    /** Returns TRUE if the passed coordinate system is geographic
+    (proj=latlong). */
+    int is_latlong() const
+        { return pj_is_latlong(pj); }
 
-	/** Returns the PROJ.4 initialization string suitable for use with
-	pj_init_plus() that would produce this coordinate system, but with the
-	definition expanded as much as possible (for instance +init= and
-	+datum= definitions).
-	@param options Unused at this point
-	*/
-	std::string get_def(int options=0) const
-	{
-		char *pj_def = 0;
-		pj_def = pj_get_def(pj, options);
 
-		std::string ret = std::string(pj_def);
-		pj_dalloc(pj_def);
-		return ret;
-	}
+    /** Returns TRUE if the coordinate system is geocentric (proj=geocent). */
+    int is_geocent() const
+        { return pj_is_geocent(pj); }
+
+    /** Returns the PROJ.4 initialization string suitable for use with
+    pj_init_plus() that would produce this coordinate system, but with the
+    definition expanded as much as possible (for instance +init= and
+    +datum= definitions).
+    @param options Unused at this point
+    */
+    std::string get_def(int options=0) const
+    {
+        char *pj_def = 0;
+        pj_def = pj_get_def(pj, options);
+
+        std::string ret = std::string(pj_def);
+        pj_dalloc(pj_def);
+        return ret;
+    }
 
 
 
 
 
 public:
-	/** Returns a new coordinate system definition that is the geographic
-	coordinate (lat/long) system underlying pj_in.	This is essential in
-	creating TWO Proj objects to be used in the transform() subroutines below. */
-	Proj latlong_from_proj() const
-	{
-		return Proj(pj_latlong_from_proj(pj));
-	}
+    /** Returns a new coordinate system definition that is the geographic
+    coordinate (lat/long) system underlying pj_in.  This is essential in
+    creating TWO Proj objects to be used in the transform() subroutines below. */
+    Proj latlong_from_proj() const
+    {
+        return Proj(pj_latlong_from_proj(pj));
+    }
 
 };
 
@@ -135,10 +135,10 @@ public:
 @param z IN/OUT, OPTIONAL: The z (or longitude) array of points.
 */
 inline int transform(Proj const &src, Proj const &dest,
-	long point_count, int point_offset, double *x, double *y, double *z=0)
+    long point_count, int point_offset, double *x, double *y, double *z=0)
 {
-	return pj_transform(src.pj, dest.pj,
-		point_count, point_offset, x, y, z);
+    return pj_transform(src.pj, dest.pj,
+        point_count, point_offset, x, y, z);
 }
 
 /** Transforms a single coordinate pair
@@ -149,16 +149,16 @@ inline int transform(Proj const &src, Proj const &dest,
 @param x1 Destination x (or longitude) coordinate (radians)
 @param y1 Destination y (or latitude) coordinate (radians) */
 inline int transform(Proj const &src, Proj const &dest,
-	double x0, double y0, double &x1, double &y1)
+    double x0, double y0, double &x1, double &y1)
 {
-	x1 = x0;
-	y1 = y0;
-	int ret = transform(src, dest, 1, 1, &x1, &y1);
-	return ret;
+    x1 = x0;
+    y1 = y0;
+    int ret = transform(src, dest, 1, 1, &x1, &y1);
+    return ret;
 }
 
 
-}		// Namespace
+}       // Namespace
 
-#endif	// Guard
+#endif  // Guard
 

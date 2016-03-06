@@ -26,7 +26,7 @@
 
 namespace ibmisc {
 
-// http://ficksworkshop.com/blog/14-coding/86-how-to-static-cast-std-unique-ptr	
+// http://ficksworkshop.com/blog/14-coding/86-how-to-static-cast-std-unique-ptr 
 template<typename D, typename B>
 std::unique_ptr<D> static_cast_unique_ptr(std::unique_ptr<B>& base)
 {
@@ -57,7 +57,7 @@ std::unique_ptr<D> dynamic_cast_unique_ptr(std::unique_ptr<B>&& base)
 template <class T_DEST, class T_SRC>
 inline std::shared_ptr<T_DEST> dynamic_shared_cast(std::unique_ptr<T_SRC> &&src)
 {
-	return std::shared_ptr<T_DEST>(dynamic_cast_unique_ptr<T_DEST, T_SRC>(std::move(src)));
+    return std::shared_ptr<T_DEST>(dynamic_cast_unique_ptr<T_DEST, T_SRC>(std::move(src)));
 }
 
 // ---------------------------------------------------------------
@@ -67,76 +67,76 @@ may return either a object (and "owned" reference), or a C-pointer (a
 "borrowed" reference). */
 template<class TypeT>
 class LazyPtr {
-	TypeT *_ptr;						// Borrowed reference
-	std::unique_ptr<TypeT> _uptr;	// Owned reference
+    TypeT *_ptr;                        // Borrowed reference
+    std::unique_ptr<TypeT> _uptr;   // Owned reference
 
-	boost::variant<
-		std::function<TypeT *()>,		// Borrowed
-		std::function<std::unique_ptr<TypeT> ()>	// Owned
-	> _compute;
+    boost::variant<
+        std::function<TypeT *()>,       // Borrowed
+        std::function<std::unique_ptr<TypeT> ()>    // Owned
+    > _compute;
 
 
 public:
 
-	/** Constructs with an already-evaluted borrowed reference. */
-	LazyPtr(TypeT *ptr) : _ptr(ptr) {}
+    /** Constructs with an already-evaluted borrowed reference. */
+    LazyPtr(TypeT *ptr) : _ptr(ptr) {}
 
-	/** Constructs with an already-evaluated owned refernece. */
-	LazyPtr(std::unique_ptr<TypeT> &&uptr) : _uptr(std::move(uptr)) {
-		_ptr = _uptr.get();
-	}
+    /** Constructs with an already-evaluated owned refernece. */
+    LazyPtr(std::unique_ptr<TypeT> &&uptr) : _uptr(std::move(uptr)) {
+        _ptr = _uptr.get();
+    }
 
-	/** Constructs with a function to produce an owned reference. */
-	LazyPtr(std::function<std::unique_ptr<TypeT> ()> const &compute_owned)
-		: _ptr(0), _compute(compute_owned) {}
+    /** Constructs with a function to produce an owned reference. */
+    LazyPtr(std::function<std::unique_ptr<TypeT> ()> const &compute_owned)
+        : _ptr(0), _compute(compute_owned) {}
 
-	/** Constructs with a function to produce a borrowed referene. */
-	LazyPtr(std::function<TypeT *()> const &compute_borrowed)
-		: _ptr(0), _compute(compute_borrowed) {}
-
-
+    /** Constructs with a function to produce a borrowed referene. */
+    LazyPtr(std::function<TypeT *()> const &compute_borrowed)
+        : _ptr(0), _compute(compute_borrowed) {}
 
 
-	/** Constructs with a function to produce an owned reference. */
-	LazyPtr(std::function<std::unique_ptr<TypeT> ()> &&compute_owned)
-		: _ptr(0), _compute(std::move(compute_owned)) {}
-
-	/** Constructs with a function to produce a borrowed referene. */
-	LazyPtr(std::function<TypeT *()> &&compute_borrowed)
-		: _ptr(0), _compute(std::move(compute_borrowed)) {}
-
-	// -----------------------------------------------------
-	// Used by operator*()
-	class eval_visitor : public boost::static_visitor<> {
-		LazyPtr<TypeT> const *lptr;
-	public:
-		eval_visitor(LazyPtr<TypeT> const *_lptr) : lptr(_lptr) {}
-
-		void operator()(std::function<TypeT *()> const &borrowed_fn) const
-		{
-			const_cast<TypeT *&>(lptr->_ptr) = borrowed_fn(); }
-		void operator()(std::function<std::unique_ptr<TypeT> ()> const &owned_fn) const {
-			const_cast<std::unique_ptr<TypeT>&>(lptr->_uptr) = owned_fn();
-			const_cast<TypeT *&>(lptr->_ptr) = &*lptr->_uptr;
-		}
-	};
-	friend class eval_visitor;
 
 
-	/** Dereference our "pointer."  Evaluates the function, if it has
-	not already been evaluated. */
-	TypeT &operator*() const {
-		if (!_ptr) {
-			boost::apply_visitor(eval_visitor(this), _compute);
-		}
-		return *_ptr;
-	}
-	TypeT *operator->() const
-		{ return &operator*(); }
+    /** Constructs with a function to produce an owned reference. */
+    LazyPtr(std::function<std::unique_ptr<TypeT> ()> &&compute_owned)
+        : _ptr(0), _compute(std::move(compute_owned)) {}
+
+    /** Constructs with a function to produce a borrowed referene. */
+    LazyPtr(std::function<TypeT *()> &&compute_borrowed)
+        : _ptr(0), _compute(std::move(compute_borrowed)) {}
+
+    // -----------------------------------------------------
+    // Used by operator*()
+    class eval_visitor : public boost::static_visitor<> {
+        LazyPtr<TypeT> const *lptr;
+    public:
+        eval_visitor(LazyPtr<TypeT> const *_lptr) : lptr(_lptr) {}
+
+        void operator()(std::function<TypeT *()> const &borrowed_fn) const
+        {
+            const_cast<TypeT *&>(lptr->_ptr) = borrowed_fn(); }
+        void operator()(std::function<std::unique_ptr<TypeT> ()> const &owned_fn) const {
+            const_cast<std::unique_ptr<TypeT>&>(lptr->_uptr) = owned_fn();
+            const_cast<TypeT *&>(lptr->_ptr) = &*lptr->_uptr;
+        }
+    };
+    friend class eval_visitor;
+
+
+    /** Dereference our "pointer."  Evaluates the function, if it has
+    not already been evaluated. */
+    TypeT &operator*() const {
+        if (!_ptr) {
+            boost::apply_visitor(eval_visitor(this), _compute);
+        }
+        return *_ptr;
+    }
+    TypeT *operator->() const
+        { return &operator*(); }
 };
 // --------------------------------------------------------------
 
-}	// namespace ibmisc
+}   // namespace ibmisc
 
 
 

@@ -254,7 +254,7 @@ public:
     StackElement m_stack[MAX_STACK];              ///< Stack as we are doing iteration instead of recursion
     int m_tos;                                    ///< Top Of Stack index
   
-//	friend RTree;
+//  friend RTree;
 //    friend RTree<DATATYPE, ELEMTYPE, NUMDIMS, ELEMTYPEREAL, TMAXNODES, TMINNODES>; // Allow hiding of non-public functions while allowing manipulation by logical owner
   };
 
@@ -1610,6 +1610,6 @@ bool RTREE_QUAL::Search(Node* a_node, Rect* a_rect, int& a_foundCount, RTree::Ca
 
 #undef RTREE_TEMPLATE
 #undef RTREE_QUAL
-}	// namespace ibmisc
+}   // namespace ibmisc
 
 #endif //RTREE_H

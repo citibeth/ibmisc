@@ -34,7 +34,7 @@ extern void everytrace_error(int retcode, const char *format, ...);
 #endif
 extern void exception_error(int retcode, const char *format, ...);
 
-}	// namespace
+}   // namespace
 /** @} */
 
 #endif // Guard

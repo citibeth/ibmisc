@@ -28,35 +28,35 @@ in effect, and less than zero if the information is not available.
 /** C++ version of standard struct tm */
 class tm : public ::tm {
 public:
-	tm() {
-		tm_year = 0;
-		tm_mon = 0;
-		tm_mday = 0;
-		tm_isdst = 0;
-		tm_yday = 0;
-		tm_wday = 0;
-		tm_hour = 0;
-		tm_min = 0;
-		tm_sec = 0;
-	}
+    tm() {
+        tm_year = 0;
+        tm_mon = 0;
+        tm_mday = 0;
+        tm_isdst = 0;
+        tm_yday = 0;
+        tm_wday = 0;
+        tm_hour = 0;
+        tm_min = 0;
+        tm_sec = 0;
+    }
 
-	tm(int year, int month, int mday)
-	{
-		tm_year = year - 1900;
-		tm_mon = month - 1;
-		tm_mday = mday;
-		tm_isdst = 0;
-		tm_yday = 0;
-		tm_wday = 0;
-		tm_hour = 0;
-		tm_min = 0;
-		tm_sec = 0;
-	}
+    tm(int year, int month, int mday)
+    {
+        tm_year = year - 1900;
+        tm_mon = month - 1;
+        tm_mday = mday;
+        tm_isdst = 0;
+        tm_yday = 0;
+        tm_wday = 0;
+        tm_hour = 0;
+        tm_min = 0;
+        tm_sec = 0;
+    }
 
-		int year() const { return tm_year + 1900; }
-		int mon() const { return tm_mon + 1; }
-		int month() const { return tm_mon + 1; }
-		int mday() const { return tm_mday; }
-	};
+        int year() const { return tm_year + 1900; }
+        int mon() const { return tm_mon + 1; }
+        int month() const { return tm_mon + 1; }
+        int mday() const { return tm_mday; }
+    };
 
 }}

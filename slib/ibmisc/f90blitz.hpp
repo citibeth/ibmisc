@@ -37,44 +37,44 @@ number of dimensions.
 @see f90blitz_f.py */
 template<class ArrT, int rank>
 struct F90Array {
-	ArrT *base;				///< Beginning of the array
-	ArrT *deltas[rank];		///< Used to calculate strides
-	int lbounds[rank];		///< Lower bound index of each dimension (usually 1)
-	int ubounds[rank];		///< Upper bound index of each dimension
+    ArrT *base;             ///< Beginning of the array
+    ArrT *deltas[rank];     ///< Used to calculate strides
+    int lbounds[rank];      ///< Lower bound index of each dimension (usually 1)
+    int ubounds[rank];      ///< Upper bound index of each dimension
 
-	F90Array() : base(0) {}
+    F90Array() : base(0) {}
 
-	/** Extracts the dope vector from an existing blitz::Array.  Used
-	to write C++ test code for Fortrn APIs (so we can construct and pass
-	dope vectors without actually running Fortran code.) */
-	F90Array(blitz::Array<ArrT,rank> &arr) {
-		this->base = arr.data();
+    /** Extracts the dope vector from an existing blitz::Array.  Used
+    to write C++ test code for Fortrn APIs (so we can construct and pass
+    dope vectors without actually running Fortran code.) */
+    F90Array(blitz::Array<ArrT,rank> &arr) {
+        this->base = arr.data();
 
-		blitz::TinyVector<int, rank> idx(0);
-		for (int i=0; i<rank; ++i) {
-			this->deltas[i] = this->base + arr.stride(i);
-			this->lbounds[i] = arr.lbound(i);
-			this->ubounds[i] = arr.ubound(i);
-		}
-	}
+        blitz::TinyVector<int, rank> idx(0);
+        for (int i=0; i<rank; ++i) {
+            this->deltas[i] = this->base + arr.stride(i);
+            this->lbounds[i] = arr.lbound(i);
+            this->ubounds[i] = arr.ubound(i);
+        }
+    }
 
-	/** Construct a blitz::Array from the dope vector.  The blitz
-	array returned is identical to the original Fortran array used to
-	create this dope vector. */
-	blitz::Array<ArrT,rank> to_blitz()
-	{
-		blitz::TinyVector<int, rank> shape, stride;
-		blitz::GeneralArrayStorage<rank> stor;
-		for (int i=0; i<rank; ++i) {
-			shape[i] = ubounds[i] - lbounds[i] + 1;
-			stride[i] = deltas[i] - base;
-			stor.base()[i] = lbounds[i];
-			// Ordering is not needed because we're using stride
-			// stor.ordering()[i] = i;      // Fortran ordering, blitz++ manual p31
-		}
-		return blitz::Array<ArrT,rank>(base, shape, stride,
-			blitz::neverDeleteData, stor);
-	}
+    /** Construct a blitz::Array from the dope vector.  The blitz
+    array returned is identical to the original Fortran array used to
+    create this dope vector. */
+    blitz::Array<ArrT,rank> to_blitz()
+    {
+        blitz::TinyVector<int, rank> shape, stride;
+        blitz::GeneralArrayStorage<rank> stor;
+        for (int i=0; i<rank; ++i) {
+            shape[i] = ubounds[i] - lbounds[i] + 1;
+            stride[i] = deltas[i] - base;
+            stor.base()[i] = lbounds[i];
+            // Ordering is not needed because we're using stride
+            // stor.ordering()[i] = i;      // Fortran ordering, blitz++ manual p31
+        }
+        return blitz::Array<ArrT,rank>(base, shape, stride,
+            blitz::neverDeleteData, stor);
+    }
 
 };
 
@@ -82,18 +82,18 @@ struct F90Array {
 template<class ArrT, int rank>
 std::ostream& operator<<(std::ostream& os, F90Array<ArrT, rank> const &arr_f)
 {
-	char buf[32];
-	sprintf(buf, "%p", arr_f.base);
+    char buf[32];
+    sprintf(buf, "%p", arr_f.base);
 
-	os << "F90Array(" << std::string(buf) << " [";
-	for (int i=0; i<rank; ++i) os << (arr_f.deltas[i] - arr_f.base) << " ";
-	os << "] : [";
-	for (int i=0; i<rank; ++i) os << arr_f.lbounds[i] << " ";
-	os << "] -- [";
-	for (int i=0; i<rank; ++i) os << arr_f.ubounds[i] << " ";
-	os << "])";
+    os << "F90Array(" << std::string(buf) << " [";
+    for (int i=0; i<rank; ++i) os << (arr_f.deltas[i] - arr_f.base) << " ";
+    os << "] : [";
+    for (int i=0; i<rank; ++i) os << arr_f.lbounds[i] << " ";
+    os << "] -- [";
+    for (int i=0; i<rank; ++i) os << arr_f.ubounds[i] << " ";
+    os << "])";
     return os;
 }
 
 
-}	// namespace ibmisc
+}   // namespace ibmisc

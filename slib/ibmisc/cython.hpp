@@ -27,24 +27,24 @@ int ndim);
 
 static inline ibmisc::NcIO *new_ncio(std::string fname, std::string sfileMode)
 {
-	netCDF::NcFile::FileMode fileMode;
-	if (sfileMode == "read") fileMode = netCDF::NcFile::FileMode::read;
-	else if (sfileMode == "write") fileMode = netCDF::NcFile::FileMode::write;
-	else if (sfileMode == "replace") fileMode = netCDF::NcFile::FileMode::replace;
-	else if (sfileMode == "newFile") fileMode = netCDF::NcFile::FileMode::newFile;
-	else {
-		(*ibmisc::ibmisc_error)(-1,
-			"Bad file mode for netCDF::NcFile::FileMode: %s", sfileMode.c_str());
-	}
+    netCDF::NcFile::FileMode fileMode;
+    if (sfileMode == "read") fileMode = netCDF::NcFile::FileMode::read;
+    else if (sfileMode == "write") fileMode = netCDF::NcFile::FileMode::write;
+    else if (sfileMode == "replace") fileMode = netCDF::NcFile::FileMode::replace;
+    else if (sfileMode == "newFile") fileMode = netCDF::NcFile::FileMode::newFile;
+    else {
+        (*ibmisc::ibmisc_error)(-1,
+            "Bad file mode for netCDF::NcFile::FileMode: %s", sfileMode.c_str());
+    }
 
 
-	return new ibmisc::NcIO(fname, fileMode);
+    return new ibmisc::NcIO(fname, fileMode);
 }
 
 inline void exit()
 {
-	// Not sure what we should do here...
-	// We want to exit the Cython code and return an exception to Python
+    // Not sure what we should do here...
+    // We want to exit the Cython code and return an exception to Python
 }
 
 // --------------------------------------------------------------------
@@ -53,30 +53,30 @@ inline void exit()
 template<class T>
 inline int np_type_num()
 {
-	PyErr_SetString(PyExc_ValueError, "np_type_num(): Unknown type_num");
-	ibmisc::cython::exit();
+    PyErr_SetString(PyExc_ValueError, "np_type_num(): Unknown type_num");
+    ibmisc::cython::exit();
 }
 
 template<> inline int np_type_num<short>()
-	{ return NPY_SHORT; }
+    { return NPY_SHORT; }
 
 template<> inline int np_type_num<int>()
-	{ return NPY_INT; }
+    { return NPY_INT; }
 
 template<> inline int np_type_num<long>()
-	{ return NPY_LONG; }
+    { return NPY_LONG; }
 
 template<> inline int np_type_num<float>()
-	{ return NPY_FLOAT; }
+    { return NPY_FLOAT; }
 
 template<> inline int np_type_num<double>()
-	{ return NPY_DOUBLE; }
+    { return NPY_DOUBLE; }
 
 template<> inline int np_type_num<long double>()
-	{ return NPY_LONGDOUBLE; }
+    { return NPY_LONGDOUBLE; }
 
 template<> inline int np_type_num<long long>()
-	{ return NPY_LONGLONG; }
+    { return NPY_LONGLONG; }
 
 /** TODO: Add the following basic Numpy types
 
@@ -116,24 +116,24 @@ PyObject *ovec,
 std::string const &vname,
 std::array<int,N> dims)
 {
-	// Check data types and cast
-	PyArrayObject *vec = check_dimensions(ovec, vname, np_type_num<T>(), &dims[0], N);
+    // Check data types and cast
+    PyArrayObject *vec = check_dimensions(ovec, vname, np_type_num<T>(), &dims[0], N);
 
     int const T_size = sizeof(T);
-	assert(T_size == PyArray_ITEMSIZE(vec));
+    assert(T_size == PyArray_ITEMSIZE(vec));
 
     blitz::TinyVector<int,N> shape(0);
     blitz::TinyVector<int,N> strides(0);
 
-	// Set up shape and strides
+    // Set up shape and strides
     for (int i=0;i<N;++i) {
         shape[i]   = PyArray_DIM(vec, i);
-		// Python/Numpy strides are in bytes, Blitz++ in sizeof(T) units.
+        // Python/Numpy strides are in bytes, Blitz++ in sizeof(T) units.
         strides[i] = PyArray_STRIDE(vec, i) / T_size;
     }
 
     return blitz::Array<T,N>((T*) PyArray_DATA(vec),shape,strides,
-		blitz::neverDeleteData);
+        blitz::neverDeleteData);
 }
 
 
@@ -147,26 +147,26 @@ blitz::Array<T,N> const &arr,
 std::string const &vname,
 std::array<int,N> const &dims)
 {
-	/* See:
+    /* See:
 http://gael-varoquaux.info/programming/cython-example-of-exposing-c-computed-arrays-in-python-without-data-copies.html
 http://docs.scipy.org/doc/numpy-1.10.0/reference/c-api.array.html
-	*/
+    */
 }
 #endif
 
 template<class T, int N>
 PyObject *blitz_to_np(blitz::Array<T,N> const &array)
 {
-	std::array<int,N> dims;
-	for (int i=0; i<N; ++i) dims[i] = array.extent(i);
-	PyObject *array_py = PyArray_FromDims(N, &dims[0], np_type_num<T>());
+    std::array<int,N> dims;
+    for (int i=0; i<N; ++i) dims[i] = array.extent(i);
+    PyObject *array_py = PyArray_FromDims(N, &dims[0], np_type_num<T>());
 
-	// Wrap as blitz for convenience
-	auto array_bl(np_to_blitz<T,N>(array_py, "array_py", dims));
+    // Wrap as blitz for convenience
+    auto array_bl(np_to_blitz<T,N>(array_py, "array_py", dims));
 
-	// Copy from the arraytor to the Blitz array
-	array_bl = array;
-	return array_py;
+    // Copy from the arraytor to the Blitz array
+    array_bl = array;
+    return array_py;
 }
 
 
@@ -177,23 +177,23 @@ PyObject *spsparse_to_tuple(ArrayT A);
 template<class ArrayT>
 PyObject *spsparse_to_tuple(ArrayT A)
 {
-	PyObject *indices_t = PyTuple_New(ArrayT::rank);
-	PyObject *shape_t = PyTuple_New(ArrayT::rank);
-	for (int k=0; k<ArrayT::rank; ++k) {
-		// blitz::Array<typename ArrayT::val_type, ArrayT::rank> idx(indices(k));
-		PyTuple_SetItem(indices_t, k, blitz_to_np<typename ArrayT::index_type,1>(A.indices(k)));
-		PyTuple_SetItem(shape_t, k, Py_BuildValue("i", A.shape[k]));
-	}
+    PyObject *indices_t = PyTuple_New(ArrayT::rank);
+    PyObject *shape_t = PyTuple_New(ArrayT::rank);
+    for (int k=0; k<ArrayT::rank; ++k) {
+        // blitz::Array<typename ArrayT::val_type, ArrayT::rank> idx(indices(k));
+        PyTuple_SetItem(indices_t, k, blitz_to_np<typename ArrayT::index_type,1>(A.indices(k)));
+        PyTuple_SetItem(shape_t, k, Py_BuildValue("i", A.shape[k]));
+    }
 
-	PyObject *data_t = Py_BuildValue("OO",
-		blitz_to_np<typename ArrayT::val_type, 1>(A.vals()),
-		indices_t);
+    PyObject *data_t = Py_BuildValue("OO",
+        blitz_to_np<typename ArrayT::val_type, 1>(A.vals()),
+        indices_t);
 
-	// For scipy.sparse.coo_matrix((data1, (rows1, cols1)), shape=(nrow1, ncol1))
-	PyObject *ret = Py_BuildValue("OO", data_t, shape_t);
+    // For scipy.sparse.coo_matrix((data1, (rows1, cols1)), shape=(nrow1, ncol1))
+    PyObject *ret = Py_BuildValue("OO", data_t, shape_t);
 
-	return ret;
+    return ret;
 }
 
 
-}}	// namespace
+}}  // namespace

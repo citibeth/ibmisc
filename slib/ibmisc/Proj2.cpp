@@ -24,20 +24,20 @@ namespace ibmisc {
 
 Proj2::Proj2(std::string const &_sproj, Direction _direction) :
 sproj(_sproj), direction(_direction)
-	{ realize(); }
+    { realize(); }
 
 
 Proj2::Proj2(Proj2 const &rhs) :
 sproj(rhs.sproj), direction(rhs.direction)
-	{ realize(); }
+    { realize(); }
 
 
 void Proj2::realize()
 {
-	if (sproj == "") return;
+    if (sproj == "") return;
 
-	_proj = Proj(sproj);
-	_llproj = _proj.latlong_from_proj();
+    _proj = Proj(sproj);
+    _llproj = _proj.latlong_from_proj();
 }
 
 /** Transforms a single coordinate pair
@@ -49,16 +49,16 @@ void Proj2::realize()
 @param y1 Destination y (or latitude) coordinate (radians) */
 int Proj2::transform(double x0, double y0, double &x1, double &y1) const
 {
-	if (direction == Direction::XY2LL) {
-		int ret = ibmisc::transform(_proj, _llproj, x0, y0, x1, y1);
-		x1 *= R2D;
-		y1 *= R2D;
-		return ret;
-	}
+    if (direction == Direction::XY2LL) {
+        int ret = ibmisc::transform(_proj, _llproj, x0, y0, x1, y1);
+        x1 *= R2D;
+        y1 *= R2D;
+        return ret;
+    }
 
-	x0 *= D2R;
-	y0 *= D2R;
-	return ibmisc::transform(_llproj, _proj, x0, y0, x1, y1);
+    x0 *= D2R;
+    y0 *= D2R;
+    return ibmisc::transform(_llproj, _proj, x0, y0, x1, y1);
 }
 
-}	// namespace ibmisc
+}   // namespace ibmisc

@@ -59,40 +59,40 @@ for (auto ii = A.begin(); ii != A.end(); ++ii)
 
 Code Example:
 @code
-	std::vector<int> vec;
-	for (auto ii(make_xiter(vec.begin(), vec.end());
-		!ii.eof(); ++ii)
-	{ printf("vec[%d] = %d\n", ii.offset(), *ii); }
+    std::vector<int> vec;
+    for (auto ii(make_xiter(vec.begin(), vec.end());
+        !ii.eof(); ++ii)
+    { printf("vec[%d] = %d\n", ii.offset(), *ii); }
 @endcode
 
 */
 template<class STLIter>
 class STLXiter {
 public:
-	/** @brief Beginning of iteration. */
-	STLIter const begin;
-	/** @brief Current position of iteration (access as needed). */
-	STLIter ii;
-	/** @brief End of iteration */
-	STLIter const end;
+    /** @brief Beginning of iteration. */
+    STLIter const begin;
+    /** @brief Current position of iteration (access as needed). */
+    STLIter ii;
+    /** @brief End of iteration */
+    STLIter const end;
 
-	typedef typename STLIter::value_type value_type;
+    typedef typename STLIter::value_type value_type;
 
-	STLXiter(STLIter const &_begin, STLIter const &_end) :
-		begin(_begin), ii(_begin), end(_end) {}
+    STLXiter(STLIter const &_begin, STLIter const &_end) :
+        begin(_begin), ii(_begin), end(_end) {}
 
-	/** @brief True if iterator has no more values (cannot be dereferenced). */
-	bool eof() { return (ii == end); }
+    /** @brief True if iterator has no more values (cannot be dereferenced). */
+    bool eof() { return (ii == end); }
 
-	/** @brief Number of times the iterator has been incremented
-	since the beginning. */
-	size_t offset() { return ii - begin; }
+    /** @brief Number of times the iterator has been incremented
+    since the beginning. */
+    size_t offset() { return ii - begin; }
 
-	/** @brief Move the iterator forward one step. */
-	void operator++() { ++ii; }
+    /** @brief Move the iterator forward one step. */
+    void operator++() { ++ii; }
 
-	/** @brief Pass-through, dereference the iterator. */
-	auto operator*() -> decltype(*ii) { return *ii; }
+    /** @brief Pass-through, dereference the iterator. */
+    auto operator*() -> decltype(*ii) { return *ii; }
 };
 
 /** @brief Convert standard STL iterator (with extra .val() method)
@@ -100,10 +100,10 @@ into our XIter.
 
 Code Example:
 @code
-	VectorCooVector<int, double> vec;
-	for (auto ii(make_val_xiter(vec.begin(), vec.end());
-		!ii.eof(); ++ii)
-	{ printf("vec[%d] = %d\n", ii.index(0), ii.val()); }
+    VectorCooVector<int, double> vec;
+    for (auto ii(make_val_xiter(vec.begin(), vec.end());
+        !ii.eof(); ++ii)
+    { printf("vec[%d] = %d\n", ii.index(0), ii.val()); }
 @endcode
 
 @see spsparse::STLXiter */
@@ -112,12 +112,12 @@ class ValSTLXiter : public STLXiter<ValSTLIter>
 {
 public:
 
-	ValSTLXiter(ValSTLIter const &_begin, ValSTLIter const &_end) :
-		STLXiter<ValSTLIter>(_begin, _end) {}
+    ValSTLXiter(ValSTLIter const &_begin, ValSTLIter const &_end) :
+        STLXiter<ValSTLIter>(_begin, _end) {}
 
-	/** @brief Pass-through, call val() on the iterator. */
-	auto val() -> decltype(STLXiter<ValSTLIter>::ii.val())
-		{ return this->ii.val(); }
+    /** @brief Pass-through, call val() on the iterator. */
+    auto val() -> decltype(STLXiter<ValSTLIter>::ii.val())
+        { return this->ii.val(); }
 };
 // --------------------------------------------------------
 
@@ -127,12 +127,12 @@ public:
 
 template<class STLIter>
 STLXiter<STLIter> make_xiter(
-	STLIter **_begin, STLIter &&_end)
+    STLIter **_begin, STLIter &&_end)
 { return STLXiter<STLIter>(std::move(_begin), std::move(_end)); }
 
 template<class ValSTLIter>
 ValSTLXiter<ValSTLIter> make_val_xiter(
-	ValSTLIter &&_begin, ValSTLIter &&_end)
+    ValSTLIter &&_begin, ValSTLIter &&_end)
 { return ValSTLXiter<ValSTLIter>(std::move(_begin), std::move(_end)); }
 
 
@@ -149,53 +149,53 @@ ValSTLXiter<ValSTLIter> make_val_xiter(
 template<class Xiter1T, class Xiter2T, class Xiter3T>
 class Join3Xiter
 {
-	typename std::remove_const<typename Xiter1T::value_type>::type next_match;
-	bool _eof;
+    typename std::remove_const<typename Xiter1T::value_type>::type next_match;
+    bool _eof;
 
 public:
-	// Allow user to access underlying Xiters, to get useful stuff out of them.
-	Xiter1T i1;
-	Xiter2T i2;
-	Xiter3T i3;
-	int total_in_use;
+    // Allow user to access underlying Xiters, to get useful stuff out of them.
+    Xiter1T i1;
+    Xiter2T i2;
+    Xiter3T i3;
+    int total_in_use;
 
-	bool eof() { return _eof; }
+    bool eof() { return _eof; }
 
-	Join3Xiter(Xiter1T &&_i1, Xiter2T &&_i2, Xiter3T &&_i3) :
-		next_match(0),
-		i1(std::move(_i1)),
-		i2(std::move(_i2)),
-		i3(std::move(_i3))
-	{
-		_eof = i1.eof();
-		if (_eof) return;
-		next_match = *i1;
-		next_noincr();
-	}
+    Join3Xiter(Xiter1T &&_i1, Xiter2T &&_i2, Xiter3T &&_i3) :
+        next_match(0),
+        i1(std::move(_i1)),
+        i2(std::move(_i2)),
+        i3(std::move(_i3))
+    {
+        _eof = i1.eof();
+        if (_eof) return;
+        next_match = *i1;
+        next_noincr();
+    }
 
 private:
-	void next_noincr()
-	{
+    void next_noincr()
+    {
 #define JOIN_RANK 3
 #include "next_noincr_body.hpp"
 #undef JOIN_RANK
-	}
+    }
 
 public:
-	void operator++()
-	{
-		++i1;
-		++i2;
-		++i3;
-		// We now don't know, i1 or i2 might now be EOF
-		next_noincr();
-	}
+    void operator++()
+    {
+        ++i1;
+        ++i2;
+        ++i3;
+        // We now don't know, i1 or i2 might now be EOF
+        next_noincr();
+    }
 
 };
 
 template<class Xiter1T, class Xiter2T, class Xiter3T>
 class Join3Xiter<Xiter1T, Xiter2T, Xiter3T> join3_xiter(Xiter1T &&i1, Xiter2T &&i2, Xiter3T &&i3)
-	{ return Join3Xiter<Xiter1T, Xiter2T, Xiter3T>(std::move(i1), std::move(i2), std::move(i3)); }
+    { return Join3Xiter<Xiter1T, Xiter2T, Xiter3T>(std::move(i1), std::move(i2), std::move(i3)); }
 
 // ========================================================
 /** @brief Joins two (sorted, non-repeating) Xiters, producing output when the two match.
@@ -205,11 +205,11 @@ Code Example:
 std::vector<int> v1 = {0, 3, 4, 8};
 std::vector<int> v2 = {1, 4, 5, 6, 7, 8, 10};
 for (auto ii(join2_xiter(
-	make_xiter(v1.begin(), v1.end()),
-	make_xiter(v2.begin(), v2.end())));
-	!ii.eof(); ++ii)
+    make_xiter(v1.begin(), v1.end()),
+    make_xiter(v2.begin(), v2.end())));
+    !ii.eof(); ++ii)
 {
-	printf("Matching value is %d\n", *v1.i1);
+    printf("Matching value is %d\n", *v1.i1);
 }
 @endcode
 
@@ -220,13 +220,13 @@ For example:
 @code
 VectorCooVector<int, double> v1, v2;
 for (auto ii(join2_xiter(
-	make_xiter(v1.begin(), v1.end()),
-	make_xiter(v2.begin(), v2.end())));
-	!ii.eof(); ++ii)
+    make_xiter(v1.begin(), v1.end()),
+    make_xiter(v2.begin(), v2.end())));
+    !ii.eof(); ++ii)
 {
-	// NOTE: *ii.v1 == *ii.v2 here!
-	printf("v1[%d] = %g, v2[%d] = %g\n",
-		*ii.v1, ii.v1.val(), *ii.v2, ii.v2.val());
+    // NOTE: *ii.v1 == *ii.v2 here!
+    printf("v1[%d] = %g, v2[%d] = %g\n",
+        *ii.v1, ii.v1.val(), *ii.v2, ii.v2.val());
 }
 @endcode
 
@@ -236,55 +236,55 @@ for (auto ii(join2_xiter(
 template<class Xiter1T, class Xiter2T>
 class Join2Xiter
 {
-	typename std::remove_const<typename Xiter1T::value_type>::type next_match;
-	bool _eof;
+    typename std::remove_const<typename Xiter1T::value_type>::type next_match;
+    bool _eof;
 
 public:
-	// Allow user to access underlying Xiters, to get useful stuff out of them.
-	Xiter1T i1;
-	Xiter2T i2;
-	int total_in_use;
+    // Allow user to access underlying Xiters, to get useful stuff out of them.
+    Xiter1T i1;
+    Xiter2T i2;
+    int total_in_use;
 
-	bool eof()
-		{ return _eof; }
+    bool eof()
+        { return _eof; }
 
-	Join2Xiter(Xiter1T &&_i1, Xiter2T &&_i2) :
-		i1(std::move(_i1)),
-		i2(std::move(_i2))
-	{
-		_eof = i1.eof();
-		if (_eof) return;
-		next_match = *i1;
-		next_noincr();
-	}
+    Join2Xiter(Xiter1T &&_i1, Xiter2T &&_i2) :
+        i1(std::move(_i1)),
+        i2(std::move(_i2))
+    {
+        _eof = i1.eof();
+        if (_eof) return;
+        next_match = *i1;
+        next_noincr();
+    }
 
 private:
-	void next_noincr()
-	{
+    void next_noincr()
+    {
 #define JOIN_RANK 2
 #include "next_noincr_body.hpp"
 #undef JOIN_RANK
-	}
+    }
 
 public:
-	void operator++()
-	{
-		++i1;
-		++i2;
-		// We now don't know, i1 or i2 might now be EOF
-		next_noincr();
-	}
+    void operator++()
+    {
+        ++i1;
+        ++i2;
+        // We now don't know, i1 or i2 might now be EOF
+        next_noincr();
+    }
 
 };
 
 template<class Xiter1T, class Xiter2T>
 class Join2Xiter<Xiter1T, Xiter2T> join2_xiter(Xiter1T &&i1, Xiter2T &&i2)
-	{ return Join2Xiter<Xiter1T, Xiter2T>(std::move(i1), std::move(i2)); }
+    { return Join2Xiter<Xiter1T, Xiter2T>(std::move(i1), std::move(i2)); }
 
 // ========================================================
 
 /** @} */
 
-}	// Namespace
+}   // Namespace
 
 #endif

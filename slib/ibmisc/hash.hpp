@@ -15,8 +15,8 @@ std::hash<> for std::pair.
 @see gridutil.hpp,std::hash< pair< S, T > > */
 template<class A, class B>
 struct HashPair {
-	size_t operator()(std::pair<A, B> const &x) const throw()
-		{ return std::hash<A>()(x.first)*31 + std::hash<B>()(x.second); }
+    size_t operator()(std::pair<A, B> const &x) const throw()
+        { return std::hash<A>()(x.first)*31 + std::hash<B>()(x.second); }
 };
 
 }
@@ -43,7 +43,7 @@ namespace std
       return seed;
     }
 #else
-	{ return std::hash<S>()(v.first)*31 + std::hash<T>()(v.second); }
+    { return std::hash<S>()(v.first)*31 + std::hash<T>()(v.second); }
 #endif
 
   };

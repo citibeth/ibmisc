@@ -1,32 +1,32 @@
 # ----------- ibmisc_c
 set(IBMISC_SOURCE
-	ibmisc/string.cpp
-	ibmisc/ibmisc.cpp
-	ibmisc/geodesy.cpp
-	ibmisc/VarTransformer.cpp
-	ibmisc/ConstantSet.cpp
-	spsparse/spsparse.cpp)
+    ibmisc/string.cpp
+    ibmisc/ibmisc.cpp
+    ibmisc/geodesy.cpp
+    ibmisc/VarTransformer.cpp
+    ibmisc/ConstantSet.cpp
+    spsparse/spsparse.cpp)
 
 
 if (USE_PROJ4)
-	list(APPEND IBMISC_SOURCE ibmisc/Proj2.cpp)
+    list(APPEND IBMISC_SOURCE ibmisc/Proj2.cpp)
 endif()
 
 if (USE_BOOST)
-	if (USE_NETCDF)
-		list(APPEND IBMISC_SOURCE
-			ibmisc/netcdf.cpp)
-	endif()
+    if (USE_NETCDF)
+        list(APPEND IBMISC_SOURCE
+            ibmisc/netcdf.cpp)
+    endif()
 endif()
 
 if (USE_UDUNITS2)
-	list(APPEND IBMISC_SOURCE
-		ibmisc/udunits2.cpp)
+    list(APPEND IBMISC_SOURCE
+        ibmisc/udunits2.cpp)
 endif()
 
 add_library(ibmisc SHARED
-	${EVERYTRACE_REFADDR}	# Blank if not USE_EVERYTRACE
-	${IBMISC_SOURCE})
+    ${EVERYTRACE_REFADDR}   # Blank if not USE_EVERYTRACE
+    ${IBMISC_SOURCE})
 
 target_link_libraries(ibmisc ${EXTERNAL_LIBS})
 
@@ -48,14 +48,14 @@ install(DIRECTORY ${PROJECT_SOURCE_DIR}/slib/ DESTINATION include
 # ------------- API Docs
 IF (DOXYGEN_FOUND)
 
-	configure_file(${CMAKE_CURRENT_SOURCE_DIR}/Doxyfile.in
-		${CMAKE_CURRENT_BINARY_DIR}/Doxyfile @ONLY)
+    configure_file(${CMAKE_CURRENT_SOURCE_DIR}/Doxyfile.in
+        ${CMAKE_CURRENT_BINARY_DIR}/Doxyfile @ONLY)
 
-	add_custom_target(apidoc
-		${DOXYGEN_EXECUTABLE} ${CMAKE_CURRENT_BINARY_DIR}/Doxyfile
-		WORKING_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}
-		COMMENT "Generating API documentation with Doxygen" VERBATIM
-	)
+    add_custom_target(apidoc
+        ${DOXYGEN_EXECUTABLE} ${CMAKE_CURRENT_BINARY_DIR}/Doxyfile
+        WORKING_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}
+        COMMENT "Generating API documentation with Doxygen" VERBATIM
+    )
 
 
 #ADD_CUSTOM_TARGET(apidoc_forced

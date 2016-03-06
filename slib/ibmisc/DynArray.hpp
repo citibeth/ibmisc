@@ -25,8 +25,8 @@ size to be defined at runtime.  Analogous to std::array.  The template
 parameter T will generally be an "extensible" data type.  For example:
 @code
 struct SMBMsg {
-	int sheetno;
-	double vals[1];		// Always at least one, could be more
+    int sheetno;
+    double vals[1];     // Always at least one, could be more
 };
 @endcode
 
@@ -38,107 +38,107 @@ elements of a DynArray.
 template<class T>
 class DynArray {
 public:
-	// -------------------------------------------------------
-	// See: http://www.cplusplus.com/reference/iterator/BidirectionalIterator/
-	// See: http://www.cplusplus.com/reference/iterator/RandomAccessIterator/
-	class iterator {
-		DynArray<T> *array;
-		T *cur;
-	public:
-		T *get() {return cur; }
+    // -------------------------------------------------------
+    // See: http://www.cplusplus.com/reference/iterator/BidirectionalIterator/
+    // See: http://www.cplusplus.com/reference/iterator/RandomAccessIterator/
+    class iterator {
+        DynArray<T> *array;
+        T *cur;
+    public:
+        T *get() {return cur; }
 
-		iterator(DynArray<T> *_array, T *_cur) : array(_array), cur(_cur) {}
-		iterator() : array(0), cur(0) {}
-		iterator(iterator const &b) : array(b.array), cur(b.cur) {}
+        iterator(DynArray<T> *_array, T *_cur) : array(_array), cur(_cur) {}
+        iterator() : array(0), cur(0) {}
+        iterator(iterator const &b) : array(b.array), cur(b.cur) {}
 
-		void operator=(iterator const &b) {
-			array = b.array;
-			cur = b.cur;
-		}
-		~iterator() {}
+        void operator=(iterator const &b) {
+            array = b.array;
+            cur = b.cur;
+        }
+        ~iterator() {}
 
-		bool operator==(iterator const &b)
-			{ return (cur == b.cur); }
-		bool operator!=(iterator  const &b)
-			{ return !(*this == b); }
+        bool operator==(iterator const &b)
+            { return (cur == b.cur); }
+        bool operator!=(iterator  const &b)
+            { return !(*this == b); }
 
-		T & operator*() { return *cur; }
-		T * operator->() { return cur; }
+        T & operator*() { return *cur; }
+        T * operator->() { return cur; }
 
-		iterator &operator++() { array->incr(cur); return *this; }		// prefix ++
-		// http://stackoverflow.com/questions/3846296/overloading-of-the-operator/3846374#3846374
-		iterator operator++(int) {		// postfix
-			iterator result(*this);
-			++(*this);
-			return result;
-		}
+        iterator &operator++() { array->incr(cur); return *this; }      // prefix ++
+        // http://stackoverflow.com/questions/3846296/overloading-of-the-operator/3846374#3846374
+        iterator operator++(int) {      // postfix
+            iterator result(*this);
+            ++(*this);
+            return result;
+        }
 
-		iterator &operator--() { array->decr(cur); return *this; }		// prefix --
-		// http://stackoverflow.com/questions/3846296/overloading-of-the-operator/3846374#3846374
-		iterator operator--(int) {		// postfix
-			iterator result(*this);
-			--(*this);
-			return result;
-		}
+        iterator &operator--() { array->decr(cur); return *this; }      // prefix --
+        // http://stackoverflow.com/questions/3846296/overloading-of-the-operator/3846374#3846374
+        iterator operator--(int) {      // postfix
+            iterator result(*this);
+            --(*this);
+            return result;
+        }
 
-		bool operator<(iterator const &b) { return cur < b.cur; }
-		bool operator>(iterator const &b) { return cur > b.cur; }
-		bool operator<=(iterator const &b) { return cur <= b.cur; }
-		bool operator>=(iterator const &b) { return cur >= b.cur; }
+        bool operator<(iterator const &b) { return cur < b.cur; }
+        bool operator>(iterator const &b) { return cur > b.cur; }
+        bool operator<=(iterator const &b) { return cur <= b.cur; }
+        bool operator>=(iterator const &b) { return cur >= b.cur; }
 
 
-	};			// iterator
-	// -------------------------------------------------------
+    };          // iterator
+    // -------------------------------------------------------
 
-	size_t const size;
-	size_t const ele_size;
-	char * const buf;
-	char * const buf_end;
+    size_t const size;
+    size_t const ele_size;
+    char * const buf;
+    char * const buf_end;
 
-	/** Instantiate a fixed-size array.
-	@param _ele_size The size of each element, must be at least
-	sizeof(T) where T is the template parameter.
-	@param Number of elements to allocate in the array. */
-	DynArray(size_t _ele_size, size_t _size) :
-		ele_size(_ele_size),
-		size(_size),
-		buf((char *)malloc(size * ele_size)),
-		buf_end(buf + size * ele_size) {}
+    /** Instantiate a fixed-size array.
+    @param _ele_size The size of each element, must be at least
+    sizeof(T) where T is the template parameter.
+    @param Number of elements to allocate in the array. */
+    DynArray(size_t _ele_size, size_t _size) :
+        ele_size(_ele_size),
+        size(_size),
+        buf((char *)malloc(size * ele_size)),
+        buf_end(buf + size * ele_size) {}
 
-	~DynArray() { free(buf); }
+    ~DynArray() { free(buf); }
 
-	DynArray(DynArray const &b) = delete;
-	void operator=(DynArray const &b) = delete;
-	void operator=(DynArray &&b) = delete;
+    DynArray(DynArray const &b) = delete;
+    void operator=(DynArray const &b) = delete;
+    void operator=(DynArray &&b) = delete;
 
-	iterator begin() { return iterator(this, reinterpret_cast<T *>(buf)); }
-	iterator end() { return  iterator(this, reinterpret_cast<T *>(buf_end)); }
+    iterator begin() { return iterator(this, reinterpret_cast<T *>(buf)); }
+    iterator end() { return  iterator(this, reinterpret_cast<T *>(buf_end)); }
 
-	T &operator[](int ix)
-		{ return *reinterpret_cast<T *>(buf + ele_size * ix); }
+    T &operator[](int ix)
+        { return *reinterpret_cast<T *>(buf + ele_size * ix); }
 
-	T const &operator[](int ix) const
-		{ return *reinterpret_cast<T const *>(buf + ele_size * ix); }
+    T const &operator[](int ix) const
+        { return *reinterpret_cast<T const *>(buf + ele_size * ix); }
 
-	/** Adds one from a pointer to an array element.  Used to iterate. */
-	void incr(T *&ptr) const {
-		ptr = reinterpret_cast<T *>(
-			reinterpret_cast<char *>(ptr) + ele_size);
-	}
+    /** Adds one from a pointer to an array element.  Used to iterate. */
+    void incr(T *&ptr) const {
+        ptr = reinterpret_cast<T *>(
+            reinterpret_cast<char *>(ptr) + ele_size);
+    }
 
-	/** Subtracts one from a pointer to an array element.  Used to iterate. */
-	void decr(T *&ptr) const {
-		ptr = reinterpret_cast<T *>(
-			reinterpret_cast<char *>(ptr) - ele_size);
-	}
+    /** Subtracts one from a pointer to an array element.  Used to iterate. */
+    void decr(T *&ptr) const {
+        ptr = reinterpret_cast<T *>(
+            reinterpret_cast<char *>(ptr) - ele_size);
+    }
 
-	/** Computes a-b for two pointers.
-	@param a Pointer to an array element.
-	@param b Pointer to an array element. */
-	size_t diff(T *a, T*b) {
-		size_t bdiff = reinterpret_cast<char *>(a) - reinterpret_cast<char *>(b);
-		return bdiff / ele_size;
-	}
+    /** Computes a-b for two pointers.
+    @param a Pointer to an array element.
+    @param b Pointer to an array element. */
+    size_t diff(T *a, T*b) {
+        size_t bdiff = reinterpret_cast<char *>(a) - reinterpret_cast<char *>(b);
+        return bdiff / ele_size;
+    }
 };
 
 }
