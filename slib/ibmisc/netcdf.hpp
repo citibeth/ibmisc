@@ -15,6 +15,22 @@ namespace ibmisc {
 extern bool netcdf_debug;
 
 // ---------------------------------------------------
+// Convert template types to NetCDF types
+
+template<class T>
+inline netCDF::NcType get_nc_type()
+{
+    (*ibmisc_error)(-1,
+        "get_nc_type(): Unknown type");
+}
+
+
+template<> inline netCDF::NcType get_nc_type<double>()
+	{ return netCDF::ncDouble; }
+
+template<> inline netCDF::NcType get_nc_type<int>()
+	{ return netCDF::ncInt; }
+// ---------------------------------------------------
 /** Used to keep track of future writes on NcDefine */
 class NcIO {
     std::vector<std::function<void ()>> _io;
