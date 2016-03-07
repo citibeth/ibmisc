@@ -3,7 +3,7 @@
 # https://github.com/snikulov/google-test-examples/blob/master/CMakeLists.txt
 
 enable_testing()
-find_package(GTest REQUIRED)
+find_package(Gtest REQUIRED)
 include_directories(${GTEST_INCLUDE_DIR} ${PROJECT_SOURCE_DIR}/slib)
 
 
