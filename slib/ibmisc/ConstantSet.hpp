@@ -39,9 +39,9 @@ protected:
         std::string const &name, std::string const &units,
         std::string const &description);
 
+public:
     UTSystem const * ut_system; //!< Unit system to use for conversions
 
-public:
     void init(UTSystem const *_ut_system)
     {
         ut_system = _ut_system;
