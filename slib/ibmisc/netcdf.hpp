@@ -26,10 +26,10 @@ inline netCDF::NcType get_nc_type()
 
 
 template<> inline netCDF::NcType get_nc_type<double>()
-	{ return netCDF::ncDouble; }
+    { return netCDF::ncDouble; }
 
 template<> inline netCDF::NcType get_nc_type<int>()
-	{ return netCDF::ncInt; }
+    { return netCDF::ncInt; }
 // ---------------------------------------------------
 /** Used to keep track of future writes on NcDefine */
 class NcIO {

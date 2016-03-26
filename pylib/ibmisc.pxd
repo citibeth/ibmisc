@@ -2,4 +2,4 @@
 cimport cibmisc
 
 cdef class NcIO:
-	cdef cibmisc.NcIO *cself
+    cdef cibmisc.NcIO *cself
