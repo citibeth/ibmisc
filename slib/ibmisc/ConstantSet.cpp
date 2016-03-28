@@ -86,7 +86,7 @@ double ConstantSet::get_as(std::string const &name,
 // =======================================================
 void ConstantSet::ncio(NcIO &ncio, std::string const &vname)
 {
-    auto constants_v = get_or_add_var(ncio, vname, netCDF::ncInt64, {});
+    auto constants_v = get_or_add_var(ncio, vname, "int64", {});
 
     // Get a list of the names of our constants
     if (ncio.rw == 'w') {

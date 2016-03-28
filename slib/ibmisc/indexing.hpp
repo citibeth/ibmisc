@@ -111,7 +111,7 @@ void Indexing<TupleT, IndexT>::ncio(
     netCDF::NcType ncTupleT,
     std::string const &vname)
 {
-    auto info_v = get_or_add_var(ncio, vname, netCDF::ncInt64, {});
+    auto info_v = get_or_add_var(ncio, vname, "int64", {});
     get_or_put_att(info_v, ncio.rw, "base", ncTupleT, base);
     get_or_put_att(info_v, ncio.rw, "extent", ncTupleT, extent);
     get_or_put_att(info_v, ncio.rw, "indices", ncTupleT, indices);
@@ -153,7 +153,7 @@ void Domain<TupleT>::ncio(
     netCDF::NcType ncTupleT,
     std::string const &vname)
 {
-    auto info_v = get_or_add_var(ncio, vname, netCDF::ncInt64, {});
+    auto info_v = get_or_add_var(ncio, vname, "int64", {});
     get_or_put_att(info_v, ncio.rw, "low", ncTupleT, low);
     get_or_put_att(info_v, ncio.rw, "high", ncTupleT, high);
 }

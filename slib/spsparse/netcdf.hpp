@@ -117,10 +117,10 @@ void ncio_spsparse(
     if (ncio.rw == 'w') {
         dims = ibmisc::get_or_add_dims(ncio, dim_names, {A.size(), A.rank});
 
-        auto info_v = get_or_add_var(ncio, vname + ".info", netCDF::ncInt64, {});
+        auto info_v = get_or_add_var(ncio, vname + ".info", "int64", {});
         info_v.putAtt("shape", netCDF::ncUint64, A.rank, &A.shape[0]);
 
-        get_or_add_var(ncio, vname + ".indices", netCDF::ncInt64, dims);
+        get_or_add_var(ncio, vname + ".indices", "int64", dims);
         get_or_add_var(ncio, vname + ".vals", netCDF::ncDouble, {dims[0]});
         ncio += std::bind(&nc_write_spsparse<ArrayT>, ncio.nc, &A, vname);
     } else {

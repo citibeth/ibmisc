@@ -70,7 +70,7 @@ public:
         define(_mode == 'd') {}
 
     NcIO(std::string const &filePath, netCDF::NcFile::FileMode fMode = netCDF::NcFile::FileMode::read) :
-        _mync(filePath, fMode),
+        _mync(filePath, fMode, netCDF::NcFile::FileFormat::nc4),
         own_nc(true),
         nc(&_mync),
         rw(fMode == netCDF::NcFile::FileMode::read ? 'r' : 'w'),
@@ -153,6 +153,12 @@ netCDF::NcVar get_or_add_var(
     NcIO &ncio,
     std::string const &vname,
     netCDF::NcType const &nc_type,
+    std::vector<netCDF::NcDim> const &dims);
+
+netCDF::NcVar get_or_add_var(
+    NcIO &ncio,
+    std::string const &vname,
+    std::string const &snc_type,
     std::vector<netCDF::NcDim> const &dims);
 
 template<class TypeT>

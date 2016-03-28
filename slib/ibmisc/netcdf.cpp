@@ -130,17 +130,34 @@ std::vector<netCDF::NcDim> get_or_add_dims(
     return ret;
 }
 // ====================================================
+/** This works only for NetCDF-3 types.  See:
+   https://github.com/Unidata/netcdf-cxx4/issues/30 */
 netCDF::NcVar get_or_add_var(
     NcIO &ncio,
     std::string const &vname,
     netCDF::NcType const &nc_type,
     std::vector<netCDF::NcDim> const &dims)
 {
+    std::string snc_type(nc_type.getName());
+    return get_or_add_var(ncio, vname, snc_type, dims);
+}
+
+/** This works for all valid NetCDF types. */
+netCDF::NcVar get_or_add_var(
+    NcIO &ncio,
+    std::string const &vname,
+    std::string const &snc_type,
+    std::vector<netCDF::NcDim> const &dims)
+{
     netCDF::NcVar ncvar;
     if (ncio.define) {
         ncvar = ncio.nc->getVar(vname);
+        std::vector<std::string> sdims;
+        for (auto dim=dims.begin(); dim != dims.end(); ++dim)
+            sdims.push_back(dim->getName());
+
         if (ncvar.isNull()) {
-            ncvar = ncio.nc->addVar(vname, nc_type, dims);
+            ncvar = ncio.nc->addVar(vname, snc_type, sdims);
         } else {
             // Check dimensions match
             if (ncvar.getDimCount() != dims.size()) {

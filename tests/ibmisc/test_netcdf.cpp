@@ -123,7 +123,7 @@ TEST_F(NetcdfTest, blitz)
     ibmisc::ncio_blitz(ncio, A, true, "A", netCDF::ncDouble, dims);
     ibmisc::ncio_blitz(ncio, B, true, "B", netCDF::ncDouble, dims);
 
-    auto info_v = get_or_add_var(ncio, "info", netCDF::ncInt64, {});
+    auto info_v = get_or_add_var(ncio, "info", "int64", {});
     get_or_put_att(info_v, ncio.rw, "strings", strings);
 
     ncio.close();
@@ -139,7 +139,7 @@ TEST_F(NetcdfTest, blitz)
     ibmisc::ncio_blitz(ncio, A2, true, "A", netCDF::ncDouble, dims);
     ibmisc::ncio_blitz(ncio, B2, true, "B", netCDF::ncDouble, dims);
 
-    auto info_v = get_or_add_var(ncio, "info", netCDF::ncInt64, {});
+    auto info_v = get_or_add_var(ncio, "info", "int64", {});
     get_or_put_att(info_v, ncio.rw, "strings", strings2);
 
     ncio.close();
