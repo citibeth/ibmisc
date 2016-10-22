@@ -89,7 +89,12 @@ if (NOT DEFINED USE_GTEST)
 endif()
 # -----------------------------------------------------
 #https://cmake.org/pipermail/cmake/2007-February/012796.html
-FIND_PACKAGE(Doxygen)
+if (NOT DEFINED BUILD_DOCS)
+    set(BUILD_DOCS NO)
+endif()
+if (BUILD_DOCS)
+    FIND_PACKAGE(Doxygen)
+endif()
 # ----------------------------------------------------------
 
 include (setup_rpath)
