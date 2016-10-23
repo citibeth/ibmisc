@@ -101,7 +101,7 @@ include (setup_rpath)
 
 # Include all the transitive dependencies determined by EasyBuild.
 # If we're not running with EasyBuild, this does nothing...
-include_directories($ENV{CMAKE_TRANSITIVE_INCLUDE_PATH})
+include_directories($ENV{SPACK_TRANSITIVE_INCLUDE_PATH})
 
 
 # -------- Process subdirectories of the build
