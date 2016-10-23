@@ -178,8 +178,8 @@ void multiply(
     MatBT const &B,
     char transpose_B,           // 'T' for transpose, '.' otherwise
     ScaleKT const *scalek,
-    DuplicatePolicy duplicate_policy = DuplicatePolicy::ADD,
-    bool zero_nan = false)
+    DuplicatePolicy duplicate_policy,
+    bool zero_nan)
 {
     std::array<int,2> const &adims = (transpose_A == 'T' ? COL_MAJOR : ROW_MAJOR);
     std::array<int,2> const &bdims = (transpose_B == 'T' ? COL_MAJOR : ROW_MAJOR);
@@ -321,8 +321,8 @@ void multiply(
     char transpose_A,           // 'T' for transpose, '.' otherwise
     ScaleJT const *scalej,      // Vector
     VecT const &V,
-    DuplicatePolicy duplicate_policy = DuplicatePolicy::ADD,
-    bool zero_nan = false)
+    DuplicatePolicy duplicate_policy,
+    bool zero_nan)
 {
     // Set dimensions of output, even if we store nothing in it.
     std::array<int,2> const &a_sort_order(transpose_A == 'T' ? COL_MAJOR : ROW_MAJOR);

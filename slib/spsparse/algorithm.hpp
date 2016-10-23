@@ -270,8 +270,8 @@ template<class VectorCooArrayT, class AccumulatorT>
 void consolidate(AccumulatorT &ret,
     VectorCooArrayT const &A,
     std::array<int, VectorCooArrayT::rank> const &sort_order,
-    DuplicatePolicy duplicate_policy = DuplicatePolicy::ADD,
-    bool zero_nan = false)  // Treat NaN like 0
+    DuplicatePolicy duplicate_policy,
+    bool zero_nan)  // Treat NaN like 0
 {
     const int RANK = VectorCooArrayT::rank;
     typedef typename VectorCooArrayT::index_type IndexT;

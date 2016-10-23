@@ -260,7 +260,7 @@ void get_or_put_att(
     NcVarT &ncvar, char rw,
     std::string const &name,
     std::string &data,
-    bool required = true)
+    bool required)
 {
     switch(rw) {
         case 'w':
