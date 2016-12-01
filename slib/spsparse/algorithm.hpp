@@ -39,22 +39,6 @@ The first parameter for an algorithm is always the output (an accumulator).  Int
 
 
 // -----------------------------------------------------------
-/** @brief Copy a sparse array
-@param ret Accumulator for output.
-@param A Input. */
-template<class VectorCooArrayT, class AccumulatorT>
-void copy(AccumulatorT &ret, VectorCooArrayT const &A, bool set_shape=true);
-
-template<class VectorCooArrayT, class AccumulatorT>
-void copy(AccumulatorT &ret, VectorCooArrayT const &A, bool set_shape)
-{
-    if (set_shape) ret.set_shape(A.shape);
-    std::array<int,VectorCooArrayT::rank> idx;
-    for (auto ii=A.begin(); ii != A.end(); ++ii) {
-        ret.add(ii.index(), ii.val());
-    }
-}
-// -----------------------------------------------------------
 /** @brief Determines offset of beginning of each row/col (leading sorted dimension) in an array.
 @note The array MUST be sorted properly beforehand, or this will fail.
 
@@ -372,19 +356,6 @@ std::vector<size_t> sorted_permutation(VectorCooArrayT const &A,
     std::stable_sort(perm.begin(), perm.end(), cmp);
 
     return perm;
-}
-// ----------------------------------------------------------
-template<class TypeT, int RANK, class CooArrayT>
-void to_sparse(CooArrayT &ret,
-    blitz::Array<TypeT, RANK> const &arr);
-
-template<class TypeT, int RANK, class CooArrayT>
-void to_sparse(CooArrayT &ret,
-    blitz::Array<TypeT, RANK> const &arr)
-{
-    for (auto ii=arr.begin(); ii != arr.end(); ++ii) {
-        if (*ii != 0) ret.add_blitz(ii.position(), *ii);
-    }
 }
 // ----------------------------------------------------------
 

@@ -91,6 +91,20 @@ void to_tiny(blitz::TinyVector<TinyT, RANK> &ret, std::array<ArrayT, RANK> const
 {
     for (int k=0; k<RANK; ++k) ret[k] = arr[k];
 }
+// ------------------------------------------------------------------
+template<class ArrayT, class TinyT, int RANK>
+std::array<ArrayT, RANK> to_array(blitz::TinyVector<TinyT, RANK> const &tiny)
+{
+    std::array<ArrayT, RANK> ret;
+    for (int k=0; k<RANK; ++k) ret[k] = tiny[k];
+    return ret;
+}
+
+template<class ArrayT, class TinyT, int RANK>
+void to_array(std::array<ArrayT, RANK> &ret, blitz::TinyVector<TinyT, RANK> const &tiny)
+{
+    for (int k=0; k<RANK; ++k) ret[k] = arr[k];
+}
 
 
 // ------------------------------------------------------------------
@@ -284,7 +298,7 @@ copy(Baccum, A);
 @endcode
 
 */
-template<class ValueT, int RANK, int DUPLICATE_POLICY = DuplicatePolicy::ADD>
+template<class ValueT, int RANK>
 struct BlitzAccum
 {
     static const int rank = RANK;
@@ -292,50 +306,108 @@ struct BlitzAccum
     typedef ValueT val_type;
 
 private:
-    blitz::Array<val_type,rank> dense;
-    blitz::TinyVector<int, rank> bidx;
+    blitz::Array<val_type,rank> result;
+    DuplicatePolicy duplicate_policy;
     bool shape_is_set;
+    double fill_value;
 
 public:
-    BlitzAccum(blitz::Array<val_type,rank> &_dense)
-    : dense(_dense), shape_is_set(true) {}
+    BlitzAccum(ValueT fill_value, DuplicatePolicy _duplicate_policy)
+    : set_shape(true), shape_is_set(false), fill_value(_vill_value) {}
 
-    void set_shape(std::array<size_t, RANK> const &_shape)
-    {
-        if (!shape_is_set) {
-            blitz::TinyVec<index_type,rank> shape_t;
-            to_tiny(shape_t, _shape);
-            dense.reference(blitz::Array<val_type,rank>(shape_t));
-            dense = 0;
-            shape_is_set = true;
-        }
-    }
+    BlitzAccum(blitz::Array<val_type,rank> &_dense, DuplicatePolicy _duplicate_policy)
+    : result(_dense), shape_is_set(true), fill_value(0), duplicate_policy(_duplicate_policy) {}
+    blitz::Array<val_type,rank> &to_blitz() { return result; }
 
-    inline void add(std::array<index_type,rank> const &index, val_type const &val)
-    {
-        ibmisc::to_tiny<int, index_type, rank>(bidx, index);
-        val_type &oval(dense(bidx));
+    void set_shape(std::array<size_t, RANK> const &_shape);
 
-        switch(DUPLICATE_POLICY) {
-            case DuplicatePolicy::LEAVE_ALONE :
-                if (!std::isnan(oval)) oval = val;
-            break;
-            case DuplicatePolicy::ADD :
-                oval += val;
-            break;
-            case DuplicatePolicy::REPLACE :
-                oval = val;
-            break;
-        }
-    }
+    inline void add(std::array<index_type,rank> const &index, val_type const &val);
 };
 
+template<class ValueT, int RANK>
+void BlitzAccum::set_shape(std::array<size_t, RANK> const &_shape)
+{
+    if (!shape_is_set) {
+        blitz::TinyVec<index_type,rank> shape_t;
+        to_tiny(shape_t, _shape);
+        result.reference(blitz::Array<val_type,rank>(shape_t));
+        result = fill_value;
+        shape_is_set = true;
+    }
+}
 
-template<class ValueT, int RANK, int DUPLICATE_POLICY = DuplicatePolicy::ADD>
-inline BlitzAccum<ValueT,RANK,DUPLICATE_POLICY>
-dense_accum(blitz::Array<ValueT,RANK> &_dense)
-    { return BlitzAccum<ValueT,RANK,DUPLICATE_POLICY>(_dense); }
 
+template<class ValueT, int RANK>
+inline void BlitzAccum::add(std::array<index_type,rank> const &index, val_type const &val)
+{
+    // Check bounds...
+    blitz::TinyVector<int, rank> bidx;
+    for (unsigned int i=0; i<rank; ++i) {
+        auto &ix(index[i]);
+        if (ix < result.lbound(i) || ix > result.ubound(i)) (*ibmisc_error)(-1,
+            "Index %d out of bounds: %d vs [%d, %d]",
+            i, ix, result.lbound(i), result.ubound(i));
+        bidx[i] = index[i];
+    }
+    val_type &oval(result(bidx));
+
+    switch(DUPLICATE_POLICY) {
+        case DuplicatePolicy::LEAVE_ALONE :
+            if (!std::isnan(oval)) oval = val;
+        break;
+        case DuplicatePolicy::ADD :
+            oval += val;
+        break;
+        case DuplicatePolicy::REPLACE :
+            oval = val;
+        break;
+        case DuplicatePolicy::REPLACE_THEN_ADD :
+            if (std::isnan(oval)) oval = val;
+            else oval += val;
+        break;
+    }
+}
+
+
+
+
+/** Accumulate on our own internal blitz::Array.  Size will be set by
+copy(), etc.  based on the source. */
+template<class ValueT, int RANK>
+blitz_accum(ValueT fill_value, DuplicatePolicy _duplicate_policy)
+{
+}
+
+/** Accumulate on an existing, already-allocated blitz::Array */
+template<class ValueT, int RANK>
+inline BlitzAccum<ValueT,RANK>
+blitz_accum(blitz::Array<ValueT,RANK> &_dense, DuplicatePolicy duplicate_policy)
+    { return BlitzAccum<ValueT,RANK>(_dense, duplicate_policy); }
+
+// ----------------------------------------------------------
+
+template<class AccumulatorT, class TypeT, int RANK>
+void copy(AccumulatorT &ret,
+    blitz::Array<TypeT, RANK> const &arr, bool set_shape=true);
+
+template<class AccumulatorT, class TypeT, int RANK>
+void copy(AccumulatorT &ret,
+    blitz::Array<TypeT, RANK> const &arr, bool set_shape)
+{
+    if (set_shape) {
+        std::array<size_t,RANK> shape;
+        for (int i=0; i<RANK; ++i) shape[i] = arr.extent(i);
+        ret.set_shape(shape);
+    }
+
+    typedef typename AccumulatorT::index_type IndexT;
+    for (auto ii=arr.begin(); ii != arr.end(); ++ii) {
+        if (*ii != 0) {
+            auto index(to_array<IndexT,int,RANK>(ii.position()));
+            ret.add(index, *ii);
+        }
+    }
+}
 
 
 

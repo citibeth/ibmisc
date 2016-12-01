@@ -60,7 +60,7 @@ TEST_F(BlitzTest, tiny_conv)
     ibmisc::to_tiny<long, int, 2>(bval2, aval);
 }
 
-TEST_F(BlitzTest, blitz_conv)
+TEST_F(BlitzTest, blitz_conv_vector)
 {
     std::vector<int> v = {1, 2, 3};
     auto b(to_blitz(v));
@@ -68,6 +68,22 @@ TEST_F(BlitzTest, blitz_conv)
     EXPECT_EQ(&b(0), &v[0]);
 
     std::vector<double> v2 = {1, 2, 3};
+    auto b2(to_blitz(v));
+    EXPECT_EQ(b.extent(0), v.size());
+    EXPECT_EQ(&b(0), &v[0]);
+    EXPECT_EQ(&b(1), &v[1]);
+    EXPECT_EQ(&b(2), &v[2]);
+
+}
+
+TEST_F(BlitzTest, blitz_conv_array)
+{
+    std::array<int,3> v = {1, 2, 3};
+    auto b(to_blitz(v));
+    EXPECT_EQ(b.extent(0), v.size());
+    EXPECT_EQ(&b(0), &v[0]);
+
+    std::array<double,3> v2 = {1, 2, 3};
     auto b2(to_blitz(v));
     EXPECT_EQ(b.extent(0), v.size());
     EXPECT_EQ(&b(0), &v[0]);

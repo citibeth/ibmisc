@@ -187,8 +187,6 @@ public:
         index_vecs = std::move(new_index_vecs);
     }
 
-    blitz::Array<ValT, RANK> to_dense(double fill_value = 0);
-
     // Sets and returns this->_dim_beginnings
     std::vector<size_t> const &dim_beginnings() const;
 
@@ -276,7 +274,7 @@ void VectorCooArray<IndexT, ValT, RANK>::reserve(size_t size) {
 
 // ------------------------------------------------------------------------
 template<class IndexT, class ValT, int RANK>
-    void VectorCooArray<IndexT, ValT, RANK>::add(std::array<IndexT, RANK> const index, ValT const val)
+    void VectorCooArray<IndexT, ValT, RANK>::add(std::array<IndexT, RANK> const index, ValT const &val)
     {
         if (!edit_mode) {
             (*spsparse_error)(-1, "Must be in edit mode to use VectorCooArray::add()");
@@ -305,36 +303,6 @@ template<class IndexT, class ValT, int RANK>
         val_vec.push_back(val);
     }
 // ------------------------------------------------------------------------
-template<class IndexT, class ValT, int RANK>
-    void VectorCooArray<IndexT, ValT, RANK>::add_blitz(blitz::TinyVector<IndexT, RANK> const &index, ValT const val)
-    {
-        if (!edit_mode) {
-            (*spsparse_error)(-1, "Must be in edit mode to use VectorCooArray::add()");
-        }
-
-        // Check bounds
-        for (int i=0; i<RANK; ++i) {
-            if (index[i] < 0 || index[i] >= shape[i]) {
-                std::ostringstream buf;
-                buf << "Sparse index out of bounds: index=(";
-                for (int j=0; j<RANK; ++j) {
-                    buf << index[j];
-                    buf << " ";
-                }
-                buf << ") vs. shape=(";
-                for (int j=0; j<RANK; ++j) {
-                    buf << shape[j];
-                    buf << " ";
-                }
-                buf << ")";
-                (*spsparse_error)(-1, buf.str().c_str());
-            }
-        }
-
-        for (int i=0; i<RANK; ++i) index_vecs[i].push_back(index[i]);
-        val_vec.push_back(val);
-    }
-// ---------------------------------------------------------------
 
 template<class IndexT, class ValT, int RANK>
 void VectorCooArray<IndexT, ValT, RANK>::consolidate(
@@ -348,16 +316,6 @@ void VectorCooArray<IndexT, ValT, RANK>::consolidate(
         ThisVectorCooArrayT ret(shape);
         spsparse::consolidate(ret, *this, _sort_order, duplicate_policy, handle_nan);
         *this = std::move(ret);
-    }
-
-template<class IndexT, class ValT, int RANK>
-    blitz::Array<ValT, RANK> VectorCooArray<IndexT, ValT, RANK>::to_dense(double fill_value)
-    {
-        blitz::Array<ValT, RANK> ret(ibmisc::to_tiny<int,size_t,rank>(shape));
-        ret = fill_value;
-        DenseAccum<ThisVectorCooArrayT> accum(ret);
-        copy(accum, *this);
-        return ret;
     }
 
 template<class IndexT, class ValT, int RANK>
@@ -394,6 +352,23 @@ using VectorCooMatrix = VectorCooArray<IndexT, ValT, 2>;
 
 template<class IndexT, class ValT>
 using VectorCooVector = VectorCooArray<IndexT, ValT, 1>;
+// ---------------------------------------------------------------------------
+/** @brief Copy a sparse array
+@param ret Accumulator for output.
+@param A Input. */
+template<class AccumulatorT, class IndexT, class ValT, int RANK>
+void copy(AccumulatorT &ret, VectorCooArray<IndexT,ValT,RANK> const &A, bool set_shape=true);
+
+template<class AccumulatorT, class IndexT, class ValT, int RANK>
+void copy(AccumulatorT &ret, VectorCooArray<IndexT,ValT,RANK> const &A)
+{
+    if (set_shape) ret.set_shape(A.shape);
+    std::array<int,VectorCooArrayT::rank> idx;
+    for (auto ii=A.begin(); ii != A.end(); ++ii) {
+        ret.add(ii.index(), ii.val());
+    }
+}
+// ---------------------------------------------------------------------------
 
 
 }   // Namespace

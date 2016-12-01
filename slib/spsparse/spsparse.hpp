@@ -38,10 +38,11 @@ namespace spsparse {
 - ADD (default): Sum them together.
 - LEAVE_ALONE: Use the first value encountered.
 - REPLACE: Use the last value encountered.
+- REPLACE_THEN_ADD: (for dense destinations only) Add if it's not NaN, otherwise replace
 
 @see spsparse::consolidate() */
 enum class DuplicatePolicy {
-    LEAVE_ALONE, ADD, REPLACE};
+    LEAVE_ALONE, ADD, REPLACE, REPLACE_THEN_ADD};
 
 
 /** @brief Excpetion thrown by the default SpSparse error handler. */
