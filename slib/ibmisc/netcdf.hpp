@@ -49,6 +49,7 @@ template<> inline netCDF::NcType get_nc_type<double>()
 template<> inline netCDF::NcType get_nc_type<int>()
     { return netCDF::ncInt; }
 // ---------------------------------------------------
+
 /** Used to keep track of future writes on NcDefine */
 class NcIO {
     std::vector<std::function<void ()>> _io;
@@ -63,38 +64,20 @@ public:
         'd' : Define and write (if user calls operator() later)
         'w' : Write only
         'r' : Read only (if user calls operator() later) */
-    NcIO(netCDF::NcGroup *_nc, char _mode) :
-        nc(_nc),
-        own_nc(false),
-        rw(_mode == 'd' ? 'w' : 'r'),
-        define(_mode == 'd') {}
+    NcIO(netCDF::NcGroup *_nc, char _mode);
 
-    NcIO(std::string const &filePath, netCDF::NcFile::FileMode fMode = netCDF::NcFile::FileMode::read) :
-        _mync(filePath, fMode, netCDF::NcFile::FileFormat::nc4),
-        own_nc(true),
-        nc(&_mync),
-        rw(fMode == netCDF::NcFile::FileMode::read ? 'r' : 'w'),
-        define(rw == 'w') {}
+    // mode can be (see https://docs.python.org/3/library/functions.html#open)
+    // 'r' 	open for reading (default)
+    // 'w' 	open for writing, truncating the file first
+    // 'x' 	open for exclusive creation, failing if the file already exists
+    // 'a' 	open for writing, appending to the end of the file if it exists
+    NcIO(std::string const &filePath, char mode);
 
-    void operator+=(std::function<void ()> const &fn)
-    {
-        if (rw == 'r') fn();
-        else _io.push_back(fn);
-    }
+    void operator+=(std::function<void ()> const &fn);
 
-    void operator()() {
-        for (auto ii=_io.begin(); ii != _io.end(); ++ii) (*ii)();
-        _io.clear();
-    }
+    void operator()();
 
-    void close() {
-        if (own_nc) {
-            (*this)();
-            _mync.close();
-        } else {
-            (*ibmisc_error)(-1, "NcIO::close() only valid on NcGroups it owns.");
-        }
-    }
+    void close();
 };
 // ===========================================================
 // Dimension Wrangling
@@ -146,6 +129,28 @@ std::vector<netCDF::NcDim> get_or_add_dims(
 }
 
 // ---------------------------------------------------------
+/** Accumulator for dimension name and sizes. */
+class NcDimSpec {
+    std::vector<std::string> names;
+    std::vector<size_t> extents;
+
+public:
+    NcDimSpec() {}
+    NcDimSpec(std::vector<std::string> &&_names,
+        std::vector<size_t> &&_extents)
+    : names(_names), extents(_extents) {}
+
+
+    void push_back(std::string const &name, long extent) {
+        names.push_back(name);
+        extents.push_back(extent);
+    }
+
+    std::vector<netCDF::NcDim> to_dims(NcIO &ncio)
+        { return get_or_add_dims(ncio, names, extents); }
+
+}
+
 
 // ===========================================================
 // Variable Wrangling
@@ -522,7 +527,29 @@ void ncio_blitz(
     ncio += std::bind(&nc_rw_blitz<TypeT, RANK>,
         ncio.nc, ncio.rw, &val, alloc, vname);
 
+    return ncvar;
 }
+
+
+/** Define and write a blitz::Array. */
+template<class TypeT, int RANK>
+void ncio_blitz(
+    NcIO &ncio,
+    blitz::Array<TypeT, RANK> &val,
+    bool alloc,
+    std::string const &vname,
+    std::string const &snc_type,
+    std::vector<netCDF::NcDim> const &dims)
+{
+    netCDF::NcVar ncvar = get_or_add_var(ncio, vname, snc_type, dims);
+
+    // const_cast allows us to re-use nc_rw_blitz for read and write
+    ncio += std::bind(&nc_rw_blitz<TypeT, RANK>,
+        ncio.nc, ncio.rw, &val, alloc, vname);
+
+    return ncvar;
+}
+
 // ----------------------------------------------------
 // =================================================
 // Specializations for std::vector instead of blitz::Array
@@ -604,13 +631,12 @@ void ncio_vector(
 }
 // ----------------------------------------------------
 
+// ----------------------------------------------------
+
 /** Do linewrap for strings that are intended to be used as comment attributes in NetCDF files.
        see: http://www.cplusplus.com/forum/beginner/19034/
 */
 extern std::string ncwrap( std::string const &str, size_t width = 55 );
-
-
-
 
 
 }   // Namespace

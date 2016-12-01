@@ -5,6 +5,8 @@ set(IBMISC_SOURCE
     ibmisc/geodesy.cpp
     ibmisc/VarTransformer.cpp
     ibmisc/ConstantSet.cpp
+    ibmisc/ncfile.cpp
+    ibmisc/indexing.cpp
     spsparse/spsparse.cpp)
 
 

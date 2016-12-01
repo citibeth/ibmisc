@@ -20,6 +20,7 @@
 #define SPSPARSE_BLITZ_HPP
 
 #include <vector>
+#include <array>
 #include <blitz/array.h>
 #include <ibmisc/ibmisc.hpp>
 
@@ -52,6 +53,17 @@ blitz::Array<T,1> const to_blitz(std::vector<T> const &vec)
 
 template<class T>
 blitz::Array<T,1> to_blitz(std::vector<T> &vec)
+    { VECTOR_TO_BLITZ_BODY; }
+
+/** Converts a const std::array to a const Blitz++ 1-D array that shares the same memory. */
+#if 0    // C++14 only
+template<class T, int RANK>
+blitz::Array<T,1> const to_blitz(std::array<T, RANK> const &vec)
+    { VECTOR_TO_BLITZ_BODY; }
+#endif
+
+template<class T, int RANK>
+blitz::Array<T,1> to_blitz(std::array<T, RANK> &vec)
     { VECTOR_TO_BLITZ_BODY; }
 
 #undef VECTOR_TO_BLITZ_BODY

@@ -26,6 +26,10 @@
 
 namespace ibmisc {
 
+template<class ValT>
+std::unique_ptr<ValT> new_unique_ptr(ValT &&val)
+    { return std::unique_ptr<ValT>(new ValT(std::move(val))); }
+
 // http://ficksworkshop.com/blog/14-coding/86-how-to-static-cast-std-unique-ptr 
 template<typename D, typename B>
 std::unique_ptr<D> static_cast_unique_ptr(std::unique_ptr<B>& base)

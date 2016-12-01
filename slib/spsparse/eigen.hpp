@@ -64,29 +64,6 @@ void eigenM_to_sparseM( // MM = Matrix->Matrix
     }}
 }
 // --------------------------------------------------------------
-template<class AccumulatorT, class EigenSparseMatrixT>
-void sum_rows(      // MV = Matrix->Vector
-    AccumulatorT &ret,
-    EigenSparseMatrixT const &M,
-    std::array<SparseSet<
-        typename AccumulatorT::index_type,
-        typename EigenSparseMatrixT::Index> *, 1> const &dims);
-
-template<class AccumulatorT, class EigenSparseMatrixT>
-void sum_rows(
-    AccumulatorT &ret,
-    EigenSparseMatrixT const &M,
-    std::array<SparseSet<
-        typename AccumulatorT::index_type,
-        typename EigenSparseMatrixT::Index> *, 1> const &dims)
-{
-    ret.set_shape({dims[0]->sparse_extent()});
-    for (int k=0; k<M.outerSize(); ++k) {
-    for (typename EigenSparseMatrixT::InnerIterator ii(M,k); ii; ++ii) {
-        ret.add({dims[0]->to_sparse(ii.row())}, ii.value());
-    }}
-}
-// --------------------------------------------------------------
 
 template<class SparseMatrixT>
 struct _ES {
@@ -161,63 +138,54 @@ typename _ES<SparseMatrixT>::EigenSparseMatrixT SparseTriplets<SparseMatrixT>::t
     return ret;
 }
 // --------------------------------------------------------
-template <class SparseMatrixT>
-typename _ES<SparseMatrixT>::EigenSparseMatrixT SparseTriplets<SparseMatrixT>::eigen_scale_matrix(int dimi) const
+template<class ValueT>
+inline blitz::Array<ValueT> sum(
+    Eigen::SparseMatrix<ValueT> const &M, int dimi)
 {
-
-    // Get our weight vector
-    SparseVectorT weight({super::dims[dimi]->sparse_extent()});
-    for (auto ii=super::M.begin(); ii != super::M.end(); ++ii) {
-        weight.add({ii.index(dimi)}, ii.val());
-    }
-    weight.consolidate({0});
-
-    // Convert to Eigen-format scale matrix (and convert indices to dense)
-    std::vector<EigenTripletT> triplets;
-    for (auto ii=weight.begin(); ii != weight.end(); ++ii) {
-        auto dense = super::dims[dimi]->to_dense(ii.index(0));
-        triplets.push_back(EigenTripletT(dense, dense, 1./ii.val()));
-    }
-
-    auto dense_extent(super::dims[dimi]->dense_extent());
-    EigenSparseMatrixT scale(dense_extent, dense_extent);
-    scale.setFromTriplets(triplets.begin(), triplets.end());
-    return scale;
-}
-// --------------------------------------------------------
-/** Produces a diagonal Eigen::SparseMatrix S where S[i,i] is the sum of internal M over dimension 1-i.
-@param M The regrid matrix to sum.
-@param dimi Index of the dimension that should REMAIN in the scale matrix.
-@return Eigen::SparseMatrix of shape [len(dimi), len(dimi)] */
-template<class EigenSparseMatrixT>
-EigenSparseMatrixT weight_matrix(EigenSparseMatrixT &M, int dimi, bool invert);
-
-template<class EigenSparseMatrixT>
-EigenSparseMatrixT weight_matrix(EigenSparseMatrixT &M, int dimi, bool invert)
-{
-    typedef VectorCooArray<typename EigenSparseMatrixT::Index, typename EigenSparseMatrixT::Scalar, 1> SparseVectorT;
-    typedef Eigen::Triplet<typename EigenSparseMatrixT::Scalar, typename EigenSparseMatrixT::Index> EigenTripletT;
-
     // Get our weight vector (in dense coordinate space)
-    typename EigenSparseMatrixT::Index dim_size = (dimi == 0 ? M.rows() : M.cols());
-    SparseVectorT weight({dim_size});
-
+    typename Eigen::SparseMatrix<ValueT>::Index dim_size = (dimi == 0 ? M.rows() : M.cols());
+    blitz::Array<typename EigenSparseMatrixT::value_type,1> ret(dim_size);
+    ret = 0;
     for (int k=0; k<M.outerSize(); ++k) {
     for (typename EigenSparseMatrixT::InnerIterator ii(M,k); ii; ++ii) {
-        weight.add({dimi == 0 ? ii.row() : ii.col()}, ii.value());
+        ret[dimi == 0 ? ii.row() : ii.col()] += ii.value();
     }}
-    weight.consolidate({0});
+}
+// --------------------------------------------------------------
+template<class ValueT>
+Eigen::SparseMatrix<ValueT> diag_matrix(
+    blitz::Array<ValueT,1> const &diag, bool invert);
+
+template<class ValueT>
+Eigen::SparseMatrix<ValueT> diag_matrix(
+    blitz::Array<ValueT,1> const &diag, bool invert)
+{
+    int n = diag.extent(0);
 
     // Invert weight vector into Eigen-format scale matrix
-    std::vector<EigenTripletT> triplets;
-    for (auto ii=weight.begin(); ii != weight.end(); ++ii) {
-        triplets.push_back(EigenTripletT(ii.index(0), ii.index(0), invert ? 1./ii.val() : ii.val()));
+    std::vector<Eigen::Triplet<ValueT>> triplets;
+    for (int i=0; i < diag.extent(0); ++i) {
+        triplets.push_back(Eigen::Triplet<ValueT>(
+            i, i, invert ? 1./ii.val() : ii.val()));
     }
 
-    EigenSparseMatrixT weight_e(weight.shape[0], weight.shape[0]);  // Weight or scale, depending on invert
-    weight_e.setFromTriplets(triplets.begin(), triplets.end());
-    return weight_e;
+    EigenSparseMatrixT M(diag.extent(0), diag.extent(0));
+    M.setFromTriplets(triplets.begin(), triplets.end());
+    return M;
 }
+
+template<class ValueT>
+Eigen::SparseMatrix<ValueT> diag_matrix(blitz::Array<ValueT,1> diag, bool invert)
+inline weight_matrix(blitz::Array<ValueT,1> weights)
+    { return diag_matrix(weights, false); }
+
+
+template<class ValueT>
+Eigen::SparseMatrix<ValueT> diag_matrix(blitz::Array<ValueT,1> diag, bool invert)
+inline scale_matrix(blitz::Array<ValueT,1> weights)
+    { return diag_matrix(weights, true); }
+// --------------------------------------------------------------
+
 
 /** @} */
 

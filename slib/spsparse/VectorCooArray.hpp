@@ -21,6 +21,15 @@
 
 #include <spsparse/array.hpp>
 
+
+
+// Forward declaration of class boost::serialization::access
+namespace boost {
+namespace serialization {
+class access;
+}
+}
+
 namespace spsparse {
 
 template<class IndexT, class ValT, int RANK>
@@ -31,6 +40,16 @@ public:
     typedef IndexT index_type;
     typedef ValT val_type;
     typedef std::array<index_type, rank> indices_type;
+
+    friend class boost::serialization::access;
+    template<typename ArchiveT>
+    void serialize(ArchiveT& ar, const unsigned version) {
+        ar & shape;
+        ar & index_vecs;
+        ar & val_vec;
+        ar & dim_beginnings_set;
+        ar & _dim_beginnings;
+    }
 
     std::array<size_t, RANK> shape;     // Extent of each dimension
     void set_shape(std::array<size_t, RANK> const &_shape) { shape = _shape; }

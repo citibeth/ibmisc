@@ -41,6 +41,61 @@ void _check_nc_rank(
 }
 
 // ===============================================
+/*
+@param mode Can be (see https://docs.python.org/3/library/functions.html#open)
+ 'r' open for reading (default)
+ 'w' open for writing, truncating the file first
+ 'x' open for exclusive creation, failing if the file already exists
+ 'a' open for writing, appending to the end of the file if it exists
+*/
+inline netCDF::NcFile::FileMode _filemode_to_netcdf(char mode)
+{
+    switch(mode) {
+        case 'r' : return netCDF::NcFile::FileMode::read;
+        case 'w' : return netCDF::NcFile::FileMode::replace;
+        case 'x' : return netCDF::NcFile::FileMode::newFile;
+        case 'a' : return netCDF::NcFile::FileMode::write;
+    }
+    (*ibmisc_error)(-1,
+        "Illegal filemode: '%c'", mode);
+}
+
+NcIO::NcIO(netCDF::NcGroup *_nc, char _mode) :
+    nc(_nc),
+    own_nc(false),
+    rw(_mode == 'd' ? 'w' : 'r'),
+    define(_mode == 'd') {}
+
+NcIO::NcIO(std::string const &filePath, char mode) :
+    _mync(filePath, _filemode_to_netcdf(mode),
+        netCDF::NcFile::FileFormat::nc4),
+    own_nc(true),
+    nc(&_mync),
+    rw(mode == 'r' ? 'r' : 'w'),
+    define(rw == 'w') {}
+
+void NcIO::operator+=(std::function<void ()> const &fn)
+{
+    if (rw == 'r') fn();
+    else _io.push_back(fn);
+}
+
+void NcIO::operator()() {
+    for (auto ii=_io.begin(); ii != _io.end(); ++ii) (*ii)();
+    _io.clear();
+}
+
+void NcIO::close() {
+    if (own_nc) {
+        (*this)();
+        _mync.close();
+    } else {
+        (*ibmisc_error)(-1, "NcIO::close() only valid on NcGroups it owns.");
+    }
+}
+
+
+// -----------------------------------------------------
 /** Gets or creates an unlimited size dimension */
 netCDF::NcDim get_or_add_dim(NcIO &ncio, std::string const &dim_name)
 {
