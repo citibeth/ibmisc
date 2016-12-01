@@ -51,6 +51,8 @@ string(REGEX REPLACE "\n" ";" _NUMPY_VALUES ${_NUMPY_VALUES})
 list(GET _NUMPY_VALUES -2 NUMPY_VERSION)
 list(GET _NUMPY_VALUES -1 NUMPY_INCLUDE_DIRS)
 
+message("NUMPY_INCLUDE_DIRS " ${NUMPY_INCLUDE_DIRS})
+
 string(REGEX MATCH "^[0-9]+\\.[0-9]+\\.[0-9]+" _VER_CHECK "${NUMPY_VERSION}")
 if("${_VER_CHECK}" STREQUAL "")
     # The output from Python was unexpected. Raise an error always

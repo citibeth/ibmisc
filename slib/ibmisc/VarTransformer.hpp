@@ -102,7 +102,8 @@ class VarTransformer {
 public:
     static const std::string UNIT;
 
-    enum {OUTPUTS, INPUTS, SCALARS, RANK};  // Dimensions of our tensor
+    // Dimensions of our tensor (RANK is sentinel)
+    enum {OUTPUTS, INPUTS, SCALARS, RANK};
 
 protected:
     blitz::Array<double, RANK> _tensor;

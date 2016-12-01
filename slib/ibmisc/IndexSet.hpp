@@ -58,7 +58,7 @@ public:
             _key_to_ix.insert(std::make_pair(_ix_to_key[i], i));
     }
 
-    std::vector<KeyT> const &keys() { return _ix_to_key; }
+    std::vector<KeyT> const &keys() const { return _ix_to_key; }
 
     // --------------------------------------------------------
     typedef EnumRandomIter<typename std::vector<KeyT>::iterator> iterator;

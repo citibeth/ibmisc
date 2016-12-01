@@ -9,9 +9,9 @@ configure_file(${CMAKE_CURRENT_SOURCE_DIR}/env.in
     ${CMAKE_CURRENT_BINARY_DIR}/env @ONLY)
 execute_process(COMMAND chmod a+x ${CMAKE_CURRENT_BINARY_DIR}/env)
 
-# --- Convenience link to Python source
-execute_process(COMMAND ln -s -h -f ${CMAKE_CURRENT_SOURCE_DIR} src
-    WORKING_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR})
+## --- Convenience link to Python source
+#execute_process(COMMAND ln -s -h -f ${CMAKE_CURRENT_SOURCE_DIR} src
+#    WORKING_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR})
 
 # -------------------------------------------------------------
 

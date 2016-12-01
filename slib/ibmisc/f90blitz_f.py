@@ -14,6 +14,11 @@
 # You should have received a copy of the GNU Lesser General Public License
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
+# This Python2 script is meant to be run by OTHER libraries that need
+# to interface between Fortran 90 and Blitz/C++ arrays.
+# It generates the required Fortran interface code.
+
+from __future__ import print_function
 import string
 import sys
 
@@ -80,10 +85,11 @@ def get_spec(ftype,ctype,rank) :
     return get_spec_tpl.substitute(d)
 
 # ---------------------------------------------------
-def get_module(fctypes, ranks) :
+def get_module(module_name, fctypes, ranks) :
     out = []
     out.append('''! ======== DO NOT EDIT!!!!  Machine Generated!!!!
-module f90blitz
+module %s\n''' % module_name)
+    out.append('''
 
 use, intrinsic :: iso_c_binding
 implicit none
@@ -102,7 +108,7 @@ implicit none
             out.append(get_spec(ftype,ctype,rank))
             out.append('\n\n')
 
-    out.append('\nend module f90blitz\n')
+    out.append('\nend module %s\n' % module_name)
 
     return string.join(out, '')
 # ---------------------------------------------------
@@ -120,8 +126,8 @@ def get_macros(fctypes, ranks) :
     return string.join(out,'\n')
 # ---------------------------------------------------
 
-if len(sys.argv) < 3 :
-    print 'Usage: %s <output.f90> <output.h>'
+if len(sys.argv) < 4 :
+    print('Usage: %s <module_name> <output.f90> <output.h>')
     sys.exit(-1)
 
 # Definitions will be generate for the cross product of fctypes and ranks.
@@ -133,16 +139,16 @@ fctypes = [
     ('integer', 'int')]
 ranks = [1,2,3]
 
-module = get_module(fctypes, ranks)
+module = get_module(sys.argv[1], fctypes, ranks)
 macros = get_macros(fctypes, ranks)
 
 #f90blitz_f_f90 = open('giss/f90blitz_f.f90', 'w')
-f90blitz_f_f90 = open(sys.argv[1], 'w')
+f90blitz_f_f90 = open(sys.argv[2], 'w')
 
 f90blitz_f_f90.write(module)
 f90blitz_f_f90.close()
 
 #f90blitz_f_h = open('../include/giss/f90blitz_f.h', 'w')
-f90blitz_f_h = open(sys.argv[2], 'w')
+f90blitz_f_h = open(sys.argv[3], 'w')
 f90blitz_f_h.write(macros)
 f90blitz_f_h.close()

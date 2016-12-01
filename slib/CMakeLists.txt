@@ -35,16 +35,17 @@ target_link_libraries(ibmisc ${EXTERNAL_LIBS})
 install(TARGETS ibmisc DESTINATION lib)
 
 # ------------ Header Files
-# install Ibmisc headers
-file(GLOB IBMISC_HEADERS "giss/*.hpp")
-
-# http://www.vtk.org/Wiki/CMake_FAQ#How_to_convert_a_semicolon_separated_list_to_a_whitespace_separated_string.3F
-foreach(arg ${IBMISC_HEADERS})
-  set(IBMISC_HEADERS_SPACES "${IBMISC_HEADERS_SPACES} ${arg}")
-endforeach(arg ${IBMISC_HEADERS})
+## install Ibmisc headers
+#file(GLOB IBMISC_HEADERS "ibmisc/*.hpp" )
+#
+## http://www.vtk.org/Wiki/CMake_FAQ#How_to_convert_a_semicolon_separated_list_to_a_whitespace_separated_string.3F
+#foreach(arg ${IBMISC_HEADERS})
+#  set(IBMISC_HEADERS_SPACES "${IBMISC_HEADERS_SPACES} ${arg}")
+#endforeach(arg ${IBMISC_HEADERS})
 
 install(DIRECTORY ${PROJECT_SOURCE_DIR}/slib/ DESTINATION include
           FILES_MATCHING PATTERN "*.hpp")
+install(FILES ${PROJECT_SOURCE_DIR}/slib/ibmisc/f90blitz_f.py DESTINATION include/ibmisc)
 
 
 # ------------- API Docs
@@ -67,7 +68,6 @@ IF (DOXYGEN_FOUND)
 #  WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR})
 
 ENDIF (DOXYGEN_FOUND)
-
 
 
 # Optional Items in libraries:
