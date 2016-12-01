@@ -24,6 +24,7 @@
 
 
 // Forward declaration of class boost::serialization::access
+// See: http://www.boost.org/doc/libs/1_62_0/libs/serialization/doc/index.html
 namespace boost {
 namespace serialization {
 class access;
@@ -51,21 +52,9 @@ public:
         ar & _dim_beginnings;
     }
 
-    std::array<size_t, RANK> shape;     // Extent of each dimension
+    std::array<size_t, RANK> shape;     // Extent of each dimension (always size_t, regardless of index_type)
     void set_shape(std::array<size_t, RANK> const &_shape) { shape = _shape; }
-#if 0
-    void reset_shape(std::array<size_t, RANK> const &_shape)
-    {
-        for (int k=0; k<RANK; ++k) {
-            if (shape[k] < 0) {
-                shape[k] = _shape[k];
-            } else if (shape[k] != _shape[k]) {
-                (*spsparse_error)(-1,
-                    "Trying to change shape[%d] from %d to %d", k, shape[k], _shape[k]);
-            }
-        shape = _shape;
-    }
-#endif
+
 
 protected:
     typedef VectorCooArray<IndexT, ValT, RANK> ThisVectorCooArrayT;

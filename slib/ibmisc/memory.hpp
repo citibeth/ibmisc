@@ -26,6 +26,9 @@
 
 namespace ibmisc {
 
+/** Create a unique_ptr from a function that returns a value.  Eg:
+    auto xptr(new_unique_ptr(make_x(...)));
+*/
 template<class ValT>
 std::unique_ptr<ValT> new_unique_ptr(ValT &&val)
     { return std::unique_ptr<ValT>(new ValT(std::move(val))); }

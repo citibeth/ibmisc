@@ -67,7 +67,7 @@ class OverwriteAccum
 public:
     OverwriteAccum(IterT &&_ii) : ii(std::move(_ii)) {}
 
-    void add(indices_type const &index, typename IterT::val_type const &val) {
+    void add(std::array<index_type,rank> const &index, typename IterT::val_type const &val) {
         ii.set_index(index);
         ii.val() = val;
         ++ii;
@@ -95,6 +95,9 @@ public:
     static const int rank = IN_RANK;
     static const int out_rank = AccumulatorT::rank;
 
+    typedef typename AccumulatorT::index_type index_type;
+    typedef typename AccumulatorT::val_type val_type;
+
 private:
     AccumulatorT sub;
     std::vector<int> perm;
@@ -104,58 +107,19 @@ public:
     PermuteAccum(AccumulatorT &&_sub, std::vector<int> const &_perm)
         : sub(std::move(_sub)), perm(_perm) {}
 
-    void add(std::array<int, IN_RANK> const &index, typename AccumulatorT::val_type const &val) {
+    void add(std::array<index_type,rank> const &index, val_type const &val) {
         for (int i=0; i<IN_RANK; ++i) out_idx[i] = index[perm[i]];
         sub.add(out_idx, val);
     }
 };
+
+template<int IN_RANK, class AccumulatorT>
+inline PermuteAccum<IN_RANK,AccumulatorT>
+permute_accum(AccumulatorT &&_sub, std::vector<int> const &_perm)
+    { return PermuteAccum<IN_RANK,AccumulatorT>(std::move(_sub), _perm); }
+
 // -----------------------------------------------------------
-/** @brief For output/conversion to dense arrays.
 
-Outputs to a blitz::Array.  Note that blitz:Array is quite flexible,
-and can be used to access almost any existing fixed-size data
-structure.
-
-Usage Example:
-@code
-VectorCooArray<int,double,2> A;
-blitz::Array<double,2> B(to_tiny(A.shape));
-DenseAccum<decltype(A)> Baccum(B);
-copy(Baccum, A);
-@endcode
-
-*/
-template<class VectorCooArrayT>
-struct DenseAccum
-{
-    SPSPARSE_LOCAL_TYPES(VectorCooArrayT);
-
-private:
-    DuplicatePolicy duplicate_policy;
-    blitz_type dense;
-    blitz::TinyVector<int, rank> bidx;
-
-public:
-    DenseAccum(blitz_type &_dense, DuplicatePolicy _duplicate_policy=DuplicatePolicy::ADD) : dense(_dense), duplicate_policy(_duplicate_policy) {}
-
-    void add(indices_type const &index, val_type const &val)
-    {
-        ibmisc::to_tiny<int, index_type, rank>(bidx, index);
-        val_type &oval(dense(bidx));
-
-        switch(duplicate_policy) {
-            case DuplicatePolicy::LEAVE_ALONE :
-                if (!std::isnan(oval)) oval = val;
-            break;
-            case DuplicatePolicy::ADD :
-                oval += val;
-            break;
-            case DuplicatePolicy::REPLACE :
-                oval = val;
-            break;
-        }
-    }
-};
 // -----------------------------------------------------------
 
 

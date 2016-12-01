@@ -2,7 +2,7 @@
 
 namespace ibmisc {
 
-void IndexingBase::make_strides()
+void Indexing::make_strides()
 {
     data[indices[rank()-1]].stride = 1;
     for (int d=rank()-2; d>=0; --d) {
@@ -12,14 +12,14 @@ void IndexingBase::make_strides()
     }
 }
 
-IndexingBase::IndexingBase(
+Indexing::Indexing(
     std::vector<IndexingData> &&_data,
     std::vector<int> &&_indices)
 : data(std::move(_data)),
     indices(std::move(_indices))
 { make_strides(); }
 
-long IndexingBase::extent() const
+long Indexing::extent() const
 {
     long ret = extent[0];
     for (int k=1; k<rank(); ++k) ret *= extent[k];
@@ -28,7 +28,7 @@ long IndexingBase::extent() const
 
 
 
-void IndexingBase::ncio(
+void Indexing::ncio(
     NcIO &ncio,
     std::string const &vname)
 {
@@ -62,8 +62,8 @@ void Domain::ncio(
 }
 
 bool in_domain(
-    DomainBase const &domain,
-    BaseIndexing const &indexing,
+    Domain const &domain,
+    Indexing const &indexing,
     IndexT ix)
 {
     long tuple[domain.rank()];

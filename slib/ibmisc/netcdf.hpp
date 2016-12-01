@@ -35,19 +35,20 @@ extern bool netcdf_debug;
 // ---------------------------------------------------
 // Convert template types to NetCDF types
 
+// http://www.unidata.ucar.edu/software/netcdf/netcdf-4/newdocs/netcdf.html
+// (byte, char, short, ushort, int, uint, int64, uint64, float or real, double, string) 
 template<class T>
-inline netCDF::NcType get_nc_type()
+inline std::string get_nc_type()
 {
     (*ibmisc_error)(-1,
         "get_nc_type(): Unknown type");
 }
 
-
 template<> inline netCDF::NcType get_nc_type<double>()
-    { return netCDF::ncDouble; }
+    { return "double"; }
 
 template<> inline netCDF::NcType get_nc_type<int>()
-    { return netCDF::ncInt; }
+    { return "int"; }
 // ---------------------------------------------------
 
 /** Used to keep track of future writes on NcDefine */
@@ -59,12 +60,6 @@ public:
     netCDF::NcGroup * const nc;
     char const rw;
     const bool define;
-
-    /** @param _mode:
-        'd' : Define and write (if user calls operator() later)
-        'w' : Write only
-        'r' : Read only (if user calls operator() later) */
-    NcIO(netCDF::NcGroup *_nc, char _mode);
 
     // mode can be (see https://docs.python.org/3/library/functions.html#open)
     // 'r' 	open for reading (default)
@@ -129,7 +124,8 @@ std::vector<netCDF::NcDim> get_or_add_dims(
 }
 
 // ---------------------------------------------------------
-/** Accumulator for dimension name and sizes. */
+/** Accumulator for dimension name and sizes.
+Used to concatenate dimensions from different places. */
 class NcDimSpec {
     std::vector<std::string> names;
     std::vector<size_t> extents;
@@ -146,6 +142,8 @@ public:
         extents.push_back(extent);
     }
 
+    /** Convert to an array dimensions, which can be passed to
+        get_or_add_var() */
     std::vector<netCDF::NcDim> to_dims(NcIO &ncio)
         { return get_or_add_dims(ncio, names, extents); }
 
@@ -236,7 +234,7 @@ void get_or_put_att(
     switch(rw) {
         case 'w':
             for (int i=0; i<len; ++i) cdata[i] = (data[i] ? 't' : 'f');
-            ncvar.putAtt(name, netCDF::ncChar, len, cdata);
+            ncvar.putAtt(name, "char", len, cdata);
         break;
         case 'r':
             auto att(ncvar.getAtt(name));
@@ -289,25 +287,25 @@ inline void get_or_put_att(
     int idata;
     if (data) idata = 1;
     else idata = 0;
-    get_or_put_att(ncvar, rw, name, netCDF::ncInt, &idata, 1);
+    get_or_put_att(ncvar, rw, name, "int", &idata, 1);
     if (rw == 'r') data = idata;
 }
 // ---------------------------------------
 template<class NcVarT, class AttrT>
 void get_or_put_att(
     NcVarT &ncvar, char rw,
-    const std::string &name, const netCDF::NcType &type,
+    const std::string &name, std::string const &sntype,
     std::vector<AttrT> &data);
 
 template<class NcVarT, class AttrT>
 void get_or_put_att(
     NcVarT &ncvar, char rw,
-    const std::string &name, const netCDF::NcType &type,
+    const std::string &name, std::string const &sntype,
     std::vector<AttrT> &data)
 {
     switch(rw) {
         case 'w':
-            ncvar.putAtt(name, type, data.size(), &data[0]);
+            ncvar.putAtt(name, sntype, data.size(), &data[0]);
         break;
         case 'r':
             auto att(ncvar.getAtt(name));
@@ -332,7 +330,7 @@ void get_or_put_att(
 {
     switch(rw) {
         case 'w':
-            ncvar.putAtt(name, netCDF::ncString, data.size(), &data[0]);
+            ncvar.putAtt(name, "string", data.size(), &data[0]);
         break;
         case 'r':
             auto att(ncvar.getAtt(name));

@@ -34,37 +34,45 @@ converting stuff to/from Eigen::SparseMatrix with dense index space.
 */
 
 // --------------------------------------------------------------
-/** Converts an Eigen::SparseMatrix to a rank-2 SpSparse structure.
-In the process, it translates for each dimension from the dense index
-space used by Eigen to a sparse index space used by SpSparse.
-
-@param ret OUT: Place to store the resulting SpSparse array.
-@param M IN: The Eigen structure to convert.
-@param dims IN: Dense-to-sparse index conversions for the two dimensions. */
-template<class AccumulatorT, class EigenSparseMatrixT>
-void eigenM_to_sparseM(
+/** Copies an Eigen SparseMatrix into a rank-2 Spsparse accumulator. */
+template<class AccumulatorT, class ValueT>
+extern void copy(
     AccumulatorT &ret,
-    EigenSparseMatrixT const &M,
-    std::array<SparseSet<
-        typename AccumulatorT::index_type,
-        typename EigenSparseMatrixT::Index> *, 2> const &dims);
+    Eigen::SparseMatrix<ValueT> const &M,
+    bool set_shape=true);
 
-template<class AccumulatorT, class EigenSparseMatrixT>
-void eigenM_to_sparseM( // MM = Matrix->Matrix
+template<class AccumulatorT, class ValueT>
+void copy(
     AccumulatorT &ret,
-    EigenSparseMatrixT const &M,
-    std::array<SparseSet<
-        typename AccumulatorT::index_type,
-        typename EigenSparseMatrixT::Index> *, 2> const &dims)
+    Eigen::SparseMatrix<ValueT> const &M,
+    bool set_shape=true)
 {
-    ret.set_shape({dims[0]->sparse_extent(), dims[1]->sparse_extent()});
+    if (set_shape) ret.set_shape({M.rows(), M.cols()});
+
+    // See here for note on iterating through Eigen::SparseMatrix
+    // http://eigen.tuxfamily.org/bz/show_bug.cgi?id=1104
     for (int k=0; k<M.outerSize(); ++k) {
     for (typename EigenSparseMatrixT::InnerIterator ii(M,k); ii; ++ii) {
-        ret.add({dims[0]->to_sparse(ii.row()), dims[1]->to_sparse(ii.col())}, ii.value());
+        ret.add({ii.row(), ii.col()}, ii.value());
     }}
 }
-// --------------------------------------------------------------
 
+
+/** Sum the rows or columns of an Eigen SparseMatrix.
+@param dimi 0: sum rows, 1: sum columns */
+template<class ValueT>
+inline blitz::Array<ValueT> sum(
+    Eigen::SparseMatrix<ValueT> const &M, int dimi)
+{
+    // Get our weight vector (in dense coordinate space)
+    typename Eigen::SparseMatrix<ValueT>::Index dim_size = (dimi == 0 ? M.rows() : M.cols());
+    blitz::Array<ValueT,1> ret;
+    copy(spsparse::permute_accum(spsparse::dense_accum(ret), {dimi}),
+        M, set_shape=true);
+
+    return ret;
+}
+// --------------------------------------------------------------
 template<class SparseMatrixT>
 struct _ES {
     typedef typename SparseMatrixT::index_type SparseIndexT;
@@ -138,19 +146,7 @@ typename _ES<SparseMatrixT>::EigenSparseMatrixT SparseTriplets<SparseMatrixT>::t
     return ret;
 }
 // --------------------------------------------------------
-template<class ValueT>
-inline blitz::Array<ValueT> sum(
-    Eigen::SparseMatrix<ValueT> const &M, int dimi)
-{
-    // Get our weight vector (in dense coordinate space)
-    typename Eigen::SparseMatrix<ValueT>::Index dim_size = (dimi == 0 ? M.rows() : M.cols());
-    blitz::Array<typename EigenSparseMatrixT::value_type,1> ret(dim_size);
-    ret = 0;
-    for (int k=0; k<M.outerSize(); ++k) {
-    for (typename EigenSparseMatrixT::InnerIterator ii(M,k); ii; ++ii) {
-        ret[dimi == 0 ? ii.row() : ii.col()] += ii.value();
-    }}
-}
+
 // --------------------------------------------------------------
 template<class ValueT>
 Eigen::SparseMatrix<ValueT> diag_matrix(
@@ -173,6 +169,19 @@ Eigen::SparseMatrix<ValueT> diag_matrix(
     M.setFromTriplets(triplets.begin(), triplets.end());
     return M;
 }
+
+template<class ValueT>
+Eigen::SparseMatrix<ValueT> diag_matrix(blitz::Array<ValueT,1> diag, bool invert)
+inline weight_matrix(blitz::Array<ValueT,1> weights)
+    { return diag_matrix(weights, false); }
+
+
+template<class ValueT>
+Eigen::SparseMatrix<ValueT> diag_matrix(blitz::Array<ValueT,1> diag, bool invert)
+inline scale_matrix(blitz::Array<ValueT,1> weights)
+    { return diag_matrix(weights, true); }
+// --------------------------------------------------------------
+
 
 template<class ValueT>
 Eigen::SparseMatrix<ValueT> diag_matrix(blitz::Array<ValueT,1> diag, bool invert)

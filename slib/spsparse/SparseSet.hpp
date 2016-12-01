@@ -41,8 +41,11 @@ public:
         _d2s.clear();
     }
 
-    bool in_sparse(SparseT sparse_ix) const
+    bool in_sparse(SparseT const &sparse_ix) const
         { return _s2d.find(sparse_ix) != _s2d.end(); }
+
+    bool in_dense(DenseT dense_ix) const
+        { return (dense_ix >= 0 && dense_ix < dense_extent()); }
 
     SparseT sparse_extent() const
         { return _sparse_extent; }

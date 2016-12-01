@@ -267,6 +267,74 @@ std::vector<T> tiny_to_vector(blitz::TinyVector<T, len> const &tiny)
     return ret;
 }
 #endif
+// ----------------------------------------------------------------
+// Accumulator for use with Spsparse
+/** @brief For output/conversion to dense arrays.
+
+Outputs to a blitz::Array.  Note that blitz:Array is quite flexible,
+and can be used to access almost any existing fixed-size data
+structure.
+
+Usage Example:
+@code
+VectorCooArray<int,double,2> A;
+blitz::Array<double,2> B(to_tiny(A.shape));
+BlitzAccum<decltype(A)> Baccum(B);
+copy(Baccum, A);
+@endcode
+
+*/
+template<class ValueT, int RANK, int DUPLICATE_POLICY = DuplicatePolicy::ADD>
+struct BlitzAccum
+{
+    static const int rank = RANK;
+    typedef int index_type;
+    typedef ValueT val_type;
+
+private:
+    blitz::Array<val_type,rank> dense;
+    blitz::TinyVector<int, rank> bidx;
+    bool shape_is_set;
+
+public:
+    BlitzAccum(blitz::Array<val_type,rank> &_dense)
+    : dense(_dense), shape_is_set(true) {}
+
+    void set_shape(std::array<size_t, RANK> const &_shape)
+    {
+        if (!shape_is_set) {
+            blitz::TinyVec<index_type,rank> shape_t;
+            to_tiny(shape_t, _shape);
+            dense.reference(blitz::Array<val_type,rank>(shape_t));
+            dense = 0;
+            shape_is_set = true;
+        }
+    }
+
+    inline void add(std::array<index_type,rank> const &index, val_type const &val)
+    {
+        ibmisc::to_tiny<int, index_type, rank>(bidx, index);
+        val_type &oval(dense(bidx));
+
+        switch(DUPLICATE_POLICY) {
+            case DuplicatePolicy::LEAVE_ALONE :
+                if (!std::isnan(oval)) oval = val;
+            break;
+            case DuplicatePolicy::ADD :
+                oval += val;
+            break;
+            case DuplicatePolicy::REPLACE :
+                oval = val;
+            break;
+        }
+    }
+};
+
+
+template<class ValueT, int RANK, int DUPLICATE_POLICY = DuplicatePolicy::ADD>
+inline BlitzAccum<ValueT,RANK,DUPLICATE_POLICY>
+dense_accum(blitz::Array<ValueT,RANK> &_dense)
+    { return BlitzAccum<ValueT,RANK,DUPLICATE_POLICY>(_dense); }
 
 
 

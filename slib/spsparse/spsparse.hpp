@@ -74,7 +74,7 @@ extern error_ptr spsparse_error;
 /** @brief Promote relevant template parameters.
 
 Used to propagate relevant template parameters throughout the
-different classes that need them.  Provides: rank, index_type, val_type, indices_type and blitz_type.
+different classes that need them.  Provides: rank, index_type, val_type.
 
 @note val_type is DIFFERENT from the standard STL value_type.  Standard STL value_type is the same as our index_type.
 
@@ -91,9 +91,7 @@ public:
 #define SPSPARSE_LOCAL_TYPES(ArrayOrIterT) \
     static const int rank = ArrayOrIterT::rank; \
     typedef typename ArrayOrIterT::index_type index_type; \
-    typedef typename ArrayOrIterT::val_type val_type; \
-    typedef std::array<index_type, rank> indices_type; \
-    typedef blitz::Array<val_type, rank> blitz_type
+    typedef typename ArrayOrIterT::val_type val_type;
 
 // -------------------------------------------------------------
 // Values for sort_order formal parameter below

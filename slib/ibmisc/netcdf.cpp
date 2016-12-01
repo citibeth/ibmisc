@@ -60,12 +60,6 @@ inline netCDF::NcFile::FileMode _filemode_to_netcdf(char mode)
         "Illegal filemode: '%c'", mode);
 }
 
-NcIO::NcIO(netCDF::NcGroup *_nc, char _mode) :
-    nc(_nc),
-    own_nc(false),
-    rw(_mode == 'd' ? 'w' : 'r'),
-    define(_mode == 'd') {}
-
 NcIO::NcIO(std::string const &filePath, char mode) :
     _mync(filePath, _filemode_to_netcdf(mode),
         netCDF::NcFile::FileFormat::nc4),

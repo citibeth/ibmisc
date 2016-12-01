@@ -43,34 +43,15 @@ The first parameter for an algorithm is always the output (an accumulator).  Int
 @param ret Accumulator for output.
 @param A Input. */
 template<class VectorCooArrayT, class AccumulatorT>
-void copy(AccumulatorT &ret, VectorCooArrayT const &A);
+void copy(AccumulatorT &ret, VectorCooArrayT const &A, bool set_shape=true);
 
 template<class VectorCooArrayT, class AccumulatorT>
-void copy(AccumulatorT &ret, VectorCooArrayT const &A)
+void copy(AccumulatorT &ret, VectorCooArrayT const &A, bool set_shape)
 {
+    if (set_shape) ret.set_shape(A.shape);
     std::array<int,VectorCooArrayT::rank> idx;
     for (auto ii=A.begin(); ii != A.end(); ++ii) {
         ret.add(ii.index(), ii.val());
-    }
-}
-// -----------------------------------------------------------
-/** @brief Transpose a sparse array (reorder its dimensions)
-@param ret Accumulator for output.
-@param A Input.
-@param perm Permutation on dimensions.  ret.dim[i] == A.dim[perm[i]] */
-template<class VectorCooArrayT, class AccumulatorT>
-void transpose(AccumulatorT &ret, VectorCooArrayT const &A, std::array<int,VectorCooArrayT::rank> const &perm);
-
-template<class VectorCooArrayT, class AccumulatorT>
-void transpose(AccumulatorT &ret, VectorCooArrayT const &A, std::array<int,VectorCooArrayT::rank> const &perm)
-{
-    std::array<int,VectorCooArrayT::rank> idx;
-    for (auto ii=A.begin(); ii != A.end(); ++ii) {
-        for (int new_k=0; new_k < VectorCooArrayT::rank; ++new_k) {
-            int old_k = perm[new_k];
-            idx[new_k] = ii.index(old_k);
-        }
-        ret.add(idx, ii.val());
     }
 }
 // -----------------------------------------------------------
@@ -336,57 +317,6 @@ finished:
     ret.set_sorted(sort_order);
 }
 // -----------------------------------------------------
-/** @brief Consolidates an array, if it is not already consolidated.
-Does not overwrite the original.
-@see spsparse::consolidate() */
-template<class ArrayT>
-class Consolidate
-{
-    static const int rank = ArrayT::rank;
-    std::unique_ptr<ArrayT> A2;     // If needed.
-    ArrayT const *Ap;                       // The final answer
-public:
-    /** 
-    @param A Matrix to consolidate. (must live at least as long as this).
-    @param sort_order Order of dimensions to sort.  Use {0,1} for row major.
-    @param duplicate_policy What to do when duplicate entries are encountered (ADD (default), LEAVE_ALONE, REPLACE).
-    @param zero_nan If true, treat NaNs as zeros in the matrix (i.e. remove them).  This will prevent NaNs from propagating in computations.
-    @see spsparse::consolidate() */
-    Consolidate(ArrayT const *A,
-        std::array<int, ArrayT::rank> const &sort_order,
-        DuplicatePolicy duplicate_policy = DuplicatePolicy::ADD,
-        bool zero_nan = false);
-
-    /** @brief Produces the consolidated array.
-
-    This might be the original array called in the constructor, if
-    that was properly consolidated; or it might be a new array created
-    in this class. */
-    ArrayT const &operator()() {
-        return *Ap;
-    }
-};
-
-// -------------------- Method Definitions
-template<class ArrayT>
-Consolidate<ArrayT>::
-    Consolidate(ArrayT const *A,
-        std::array<int, ArrayT::rank> const &sort_order,
-        DuplicatePolicy duplicate_policy,
-        bool zero_nan)
-    {
-        if (A->sort_order == sort_order) {
-            // A is already consolidated, use it...
-            Ap = A;
-        } else {
-            // Must consolidate A...
-            A2 = A->new_blank();
-            Ap = A2.get();
-            consolidate(*A2, *A, sort_order, duplicate_policy, zero_nan);
-        }
-    }
-
-
 // -------------------------------------------------------------
 // --------------------------------------------------------
 /** @brief Internal class used by spsparse::sorted_permutation(). */

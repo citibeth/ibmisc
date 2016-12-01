@@ -44,6 +44,8 @@ void nc_write_spsparse(
     ArrayT *A,
     std::string const &vname)
 {
+    typedef std::array<typename ArrayT::index_type, ArrayT::rank> indices_type;
+
     std::array<size_t, ArrayT::rank> shape;     // Extent of each dimension
 
     netCDF::NcVar indices_v = nc->getVar(vname + ".indices");
@@ -52,8 +54,8 @@ void nc_write_spsparse(
     std::vector<size_t> startp = {0, 0};        // SIZE, RANK
     std::vector<size_t> countp = {1, A->rank};  // Write RANK elements at a time
     for (auto ii = A->begin(); ii != A->end(); ++ii, ++startp[0]) {
-        typename ArrayT::indices_type index = ii.index();
-        typename ArrayT::val_type val = ii.val();
+        auto index(ii.index());
+        auto val(ii.val());
 
         indices_v.putVar(startp, countp, &index[0]);
         vals_v.putVar(startp, countp, &val);
@@ -118,10 +120,10 @@ void ncio_spsparse(
         dims = ibmisc::get_or_add_dims(ncio, dim_names, {A.size(), A.rank});
 
         auto info_v = get_or_add_var(ncio, vname + ".info", "int64", {});
-        info_v.putAtt("shape", netCDF::ncUint64, A.rank, &A.shape[0]);
+        info_v.putAtt("shape", "uint64", A.rank, &A.shape[0]);
 
         get_or_add_var(ncio, vname + ".indices", "int64", dims);
-        get_or_add_var(ncio, vname + ".vals", netCDF::ncDouble, {dims[0]});
+        get_or_add_var(ncio, vname + ".vals", "double", {dims[0]});
         ncio += std::bind(&nc_write_spsparse<ArrayT>, ncio.nc, &A, vname);
     } else {
         dims = ibmisc::get_dims(ncio, dim_names);
