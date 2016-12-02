@@ -24,15 +24,19 @@
 namespace ibmisc {
 
 
+class Indexing;
+
 /** Fields describing one dimension */
 struct IndexingData {
+    friend class Indexing;
+
     std::string const name;    // Name of this dimension
     long const base;           // First element in this dimension
     long const extent;         // Number of elements in this dimension
 private:
     long _stride;         // (DERIVED) Stride (in #elements) for this dimension
 public:
-    long stride() { return _stride; }
+    long stride() const { return _stride; }
 
     IndexingData(std::string const &_name, long _base, long _extent) :
         name(_name), base(_base), extent(_extent) {}
@@ -43,7 +47,7 @@ without to_tuple() and to_index() methods.  Functions that can rely on
 Indexing don't need to be templates themselves. */
 class Indexing
 {
-protected:
+public:
     std::vector<IndexingData> data;
 
     /** Index IDs sorted by descending stride. {0,1,...} for row-major,
@@ -53,13 +57,11 @@ protected:
     (NOTE: This is the reverse of Blitz stor.ordering()) */
     std::vector<int> indices;
 
+protected:
     /** Computes the stride for each dimension. */
     void make_strides();
 
 public:
-    Indexing() : IndexingBase()
-    {}
-
     /** By convention, indices are always in "alphabetical" order,
         regardless of the underlying storage.  This may be
         Fortran-order or C-order, depending.  Thus:
@@ -70,6 +72,21 @@ public:
     Indexing(
         std::vector<IndexingData> &&_data,
         std::vector<int> &&_indices);
+
+
+    /** By convention, indices are always in "alphabetical" order,
+        regardless of the underlying storage.  This may be
+        Fortran-order or C-order, depending.  Thus:
+
+        ModelE: im,jm,ihc
+        Ice model: ix,iy
+    */
+    Indexing(
+        std::vector<std::string> const &_name,
+        std::vector<long> const &_base,
+        std::vector<long> const &_extent,
+        std::vector<int> &&_indices);
+
 
     /** Number of dimensions in this indexing */
     size_t rank() const { return data.size(); }
@@ -96,9 +113,9 @@ public:
     template<class TupleT>
     long tuple_to_index(TupleT const *tuple) const
     {
-        IndexT ix = 0;
+        long ix = 0;
         for (int k=0; k<rank(); ++k)
-            ix += (tuple[k]-base[k]) * strides[k];
+            ix += (tuple[k]-data[k].base) * data[k].stride();
         return ix;
     }
 
@@ -106,8 +123,8 @@ public:
     long tuple_to_index(std::vector<TupleT> const &tuple) const
         { return tuple_to_index(&tuple[0]); }
 
-    template<class TupleT>
-    long tuple_to_index(std::array<TupleT> const &tuple) const
+    template<class TupleT, size_t RANK>
+    long tuple_to_index(std::array<TupleT,RANK> const &tuple) const
         { return tuple_to_index(&tuple[0]); }
 
     template<class TupleT>
@@ -115,46 +132,22 @@ public:
     {
         for (int d=0; d< rank()-1; ++d) {       // indices by descending stride
             int const k = indices[d];
-            TupleT tuple_k = ix / strides[k];
-            ix -= tuple_k*strides[k];
-            tuple[k] = tuple_k + base[k];
+            TupleT tuple_k = ix / data[k].stride();
+            ix -= tuple_k * data[k].stride();
+            tuple[k] = tuple_k + data[k].base;
         }
         tuple[indices[rank()-1]] = ix;
     }
 
 
     template<class TupleT, int RANK>
-    std::array<TupleT,RANK> index_to_tuple(IndexT ix) const
+    std::array<TupleT,RANK> index_to_tuple(long ix) const
     {
         std::array<TupleT, RANK> ret;
         index_to_tuple(&ret[0], ix);
         return ret;
     }
 };
-
-
-/** By convention, indices are always in "alphabetical" order,
-    regardless of the underlying storage.  This may be
-    Fortran-order or C-order, depending.  Thus:
-
-    ModelE: im,jm,ihc
-    Ice model: ix,iy
-*/
-template<class TupleT>
-Indexing make_indexing(
-    std::vector<std::string> const &_name,
-    std::vector<TupleT> const &_base,
-    std::vector<TupleT> const &_extent,
-    std::vector<int> &&_indices)
-{
-    std::vector<IndexingData> data;
-    for (size_t i=0; i<_base.size(); ++i)
-        data.push_back(IndexingData(_name[i], _base[i], _extent[i]));
-    Indexing ret(std::move(data), std::move(indices));
-    make_strides();
-    return ret;
-}
-
 
 
 
@@ -167,11 +160,11 @@ NcDimSpec &append(NcDimSpec &dim_spec, Indexing &indexing,
 {
     // Default permutation puts largest stride first for NetCDF
     std::vector<int> const *permutation =
-        (_permutation.size() != 0 ? &permutation : &indexing.indices);
+        (_permutation.size() != 0 ? &_permutation : &indexing.indices);
 
     for (size_t i=0; i<indexing.rank(); ++i) {
         int dimi = (*permutation)[i];
-        dim_spec.append(indexing[dimi].name, indexing[dimi].extent);
+        dim_spec.push_back(indexing[dimi].name, indexing[dimi].extent);
     }
 
     return dim_spec;
@@ -188,11 +181,11 @@ blitz::Array<ValT,RANK> Indexing::make_blitz()
     blitz::TinyVector<int, RANK> _lbounds, _extent;
     blitz::GeneralArrayStorage<RANK> _stor;
     for (int i=0; i<RANK; ++i) {
-        _lbounds[i] = base[i];
-        _extent[i] = extent[i];
+        _lbounds[i] = data[i].base;
+        _extent[i] = data[i].extent;
         _stor.ordering()[RANK-i] = indices[i];
     }
-    return blitz::Array<ArrT,RANK>(_lbounds, _extent, _stor);
+    return blitz::Array<ValT,RANK>(_lbounds, _extent, _stor);
 }
 
 /** Creates a blitz::Array on existing memory, according to our indexing. */
@@ -205,15 +198,15 @@ blitz::Array<ValT,RANK> Indexing::to_blitz(ValT *data)
     blitz::TinyVector<int, RANK> _shape, _stride;
     blitz::GeneralArrayStorage<RANK> _stor;
     for (int i=0; i<RANK; ++i) {
-        _shape[i] = extent[i];
-        _stride[i] = strides[i];
-        _stor.base()[i] = base[i];
+        _shape[i] = data[i].extent;
+        _stride[i] = data[i].stride;
+        _stor.base()[i] = data[i].base;
         // Ordering is not needed because we're using stride
         // stor.ordering()[i] = i;      // Fortran ordering, blitz++ manual p31
     }
 
-    return blitz::Array<ArrT,RANK>(data, _shape, _stride,
-        blitz::neverDeleteData, stor);
+    return blitz::Array<ValT,RANK>(data, _shape, _stride,
+        blitz::neverDeleteData, _stor);
 }
 // ==============================================================
 struct DomainData {
@@ -230,8 +223,11 @@ public:
 
     Domain() {}
 
-    template<class TupleT>
-    Domain(std::vector<TupleT> const &_low, std::vector<TupleT> const &_high);
+    Domain(std::vector<long> const &_low, std::vector<long> const &_high);
+
+    /** @return Information on the ix'th dimension */
+    DomainData const &operator[](size_t ix) const
+        { return data[ix]; }
 
     int rank() const { return data.size(); }
 
@@ -240,14 +236,13 @@ public:
     template<class TupleT>
     bool in_domain(TupleT const *tuple) const;
 
-    template<class TupleT, int RANK>
+    template<class TupleT, size_t RANK>
     bool in_domain(std::array<TupleT, RANK> const &tuple) const
         { return in_domain(&tuple[0]); }
 
 };
 
-template<class TupleT>
-Domain::Domain(std::vector<TupleT> const &_low, std::vector<TupleT> const &_high)
+Domain::Domain(std::vector<long> const &_low, std::vector<long> const &_high)
 {
     for (size_t i=0; i<_low.size(); ++i)
         data.push_back(DomainData(_low[i], _high[i]));
@@ -266,8 +261,8 @@ bool Domain::in_domain(TupleT const *tuple) const
 
 extern bool in_domain(
     Domain const &domain,
-    BaseIndexing const &indexing,
-    IndexT ix);
+    Indexing const &indexing,
+    long ix);
 
 // ============================================
 

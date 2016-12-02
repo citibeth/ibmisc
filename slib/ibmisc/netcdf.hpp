@@ -44,11 +44,15 @@ inline std::string get_nc_type()
         "get_nc_type(): Unknown type");
 }
 
-template<> inline netCDF::NcType get_nc_type<double>()
+template<> inline std::string get_nc_type<double>()
     { return "double"; }
 
-template<> inline netCDF::NcType get_nc_type<int>()
+template<> inline std::string get_nc_type<int>()
     { return "int"; }
+// ---------------------------------------------------
+/** Converts a string to a NetCDF type */
+inline netCDF::NcType nc_type(netCDF::NcVar ncvar, std::string sntype)
+    { return ncvar.getParentGroup().getType(sntype, netCDF::NcGroup::ParentsAndCurrent); }
 // ---------------------------------------------------
 
 /** Used to keep track of future writes on NcDefine */
@@ -67,6 +71,11 @@ public:
     // 'x' 	open for exclusive creation, failing if the file already exists
     // 'a' 	open for writing, appending to the end of the file if it exists
     NcIO(std::string const &filePath, char mode);
+
+    /** Converts a string to a NetCDF type */
+    inline netCDF::NcType nc_type(std::string sntype)
+        { return nc->getType(sntype, netCDF::NcGroup::ParentsAndCurrent); }
+
 
     void operator+=(std::function<void ()> const &fn);
 
@@ -147,17 +156,11 @@ public:
     std::vector<netCDF::NcDim> to_dims(NcIO &ncio)
         { return get_or_add_dims(ncio, names, extents); }
 
-}
+};
 
 
 // ===========================================================
 // Variable Wrangling
-netCDF::NcVar get_or_add_var(
-    NcIO &ncio,
-    std::string const &vname,
-    netCDF::NcType const &nc_type,
-    std::vector<netCDF::NcDim> const &dims);
-
 netCDF::NcVar get_or_add_var(
     NcIO &ncio,
     std::string const &vname,
@@ -191,18 +194,18 @@ void get_or_put_var(netCDF::NcVar &ncvar, char rw,
 template<class NcVarT, class AttrT>
 void get_or_put_att(
     NcVarT &ncvar, char rw,
-    const std::string &name, const netCDF::NcType &type,
+    const std::string &name, std::string const &stype,
     AttrT *data, size_t len);
 
 template<class NcVarT, class AttrT>
 void get_or_put_att(
     NcVarT &ncvar, char rw,
-    const std::string &name, const netCDF::NcType &type,
+    const std::string &name, std::string const &stype,
     AttrT *data, size_t len)
 {
     switch(rw) {
         case 'w':
-            ncvar.putAtt(name, type, len, data);
+            ncvar.putAtt(name, stype, len, data);
         break;
         case 'r':
             auto att(ncvar.getAtt(name));
@@ -303,9 +306,10 @@ void get_or_put_att(
     const std::string &name, std::string const &sntype,
     std::vector<AttrT> &data)
 {
+    auto type(nc_type(ncvar, sntype));
     switch(rw) {
         case 'w':
-            ncvar.putAtt(name, sntype, data.size(), &data[0]);
+            ncvar.putAtt(name, type, data.size(), &data[0]);
         break;
         case 'r':
             auto att(ncvar.getAtt(name));
@@ -328,9 +332,10 @@ void get_or_put_att(
     const std::string &name,
     std::vector<std::string> &data)
 {
+    auto string_t(nc_type(ncvar, "string"));
     switch(rw) {
         case 'w':
-            ncvar.putAtt(name, "string", data.size(), &data[0]);
+            ncvar.putAtt(name, string_t, data.size(), &data[0]);
         break;
         case 'r':
             auto att(ncvar.getAtt(name));
@@ -345,6 +350,17 @@ void get_or_put_att(
             }
         break;
     }
+}
+
+// ---------------------------------------
+template<class NcVarT, class AttrT, size_t LEN>
+void get_or_put_att(
+    NcVarT &ncvar, char rw,
+    const std::string &name, std::string const &sntype,
+    std::array<AttrT,LEN> &data)
+{
+    auto data_v(to_vector(data));
+    return get_or_put_att(ncvar, rw, name, sntype, data_v);
 }
 
 // ---------------------------------------
@@ -507,31 +523,9 @@ blitz::Array<TypeT, RANK> nc_read_blitz(
     return val;
 }
 
-
-
 /** Define and write a blitz::Array. */
 template<class TypeT, int RANK>
-void ncio_blitz(
-    NcIO &ncio,
-    blitz::Array<TypeT, RANK> &val,
-    bool alloc,
-    std::string const &vname,
-    netCDF::NcType const &nc_type,
-    std::vector<netCDF::NcDim> const &dims)
-{
-    netCDF::NcVar ncvar = get_or_add_var(ncio, vname, nc_type, dims);
-
-    // const_cast allows us to re-use nc_rw_blitz for read and write
-    ncio += std::bind(&nc_rw_blitz<TypeT, RANK>,
-        ncio.nc, ncio.rw, &val, alloc, vname);
-
-    return ncvar;
-}
-
-
-/** Define and write a blitz::Array. */
-template<class TypeT, int RANK>
-void ncio_blitz(
+netCDF::NcVar ncio_blitz(
     NcIO &ncio,
     blitz::Array<TypeT, RANK> &val,
     bool alloc,
@@ -620,10 +614,10 @@ void ncio_vector(
     std::vector<TypeT> &val,
     bool alloc,         // Should we allocate val?
     std::string const &vname,
-    netCDF::NcType const &nc_type,
+    std::string const &snc_type,
     std::vector<netCDF::NcDim> const &dims)
 {
-    get_or_add_var(ncio, vname, nc_type, dims);
+    get_or_add_var(ncio, vname, snc_type, dims);
 
     ncio += std::bind(&nc_rw_vector<TypeT>, ncio.nc, ncio.rw, &val, alloc, vname);
 }

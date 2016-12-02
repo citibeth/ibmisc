@@ -20,6 +20,7 @@
 #define SPSPARSE_NETCDF_HPP
 
 #include <functional>
+#include <ibmisc/ibmisc.hpp>
 #include <ibmisc/netcdf.hpp>
 #include <spsparse/array.hpp>
 
@@ -120,7 +121,8 @@ void ncio_spsparse(
         dims = ibmisc::get_or_add_dims(ncio, dim_names, {A.size(), A.rank});
 
         auto info_v = get_or_add_var(ncio, vname + ".info", "int64", {});
-        info_v.putAtt("shape", "uint64", A.rank, &A.shape[0]);
+        ibmisc::get_or_put_att(info_v, 'w', "shape", "uint64", A.shape);
+//        info_v.putAtt("shape", ibmisc::nc_type("uint64"), A.rank, &A.shape[0]);
 
         get_or_add_var(ncio, vname + ".indices", "int64", dims);
         get_or_add_var(ncio, vname + ".vals", "double", {dims[0]});
@@ -135,7 +137,7 @@ void ncio_spsparse(
         // Check the rank in NetCDF matches SpSparse rank
         size_t rank = shape_a.getAttLength();
         if (rank != ArrayT::rank) {
-            (*spsparse_error)(-1,
+            (*ibmisc::ibmisc_error)(-1,
                 "Trying to read NetCDF sparse array of rank %ld into SpSparse array of rank %d",
                 rank, ArrayT::rank);
         }
@@ -144,7 +146,7 @@ void ncio_spsparse(
             // Allocate + Read
 
             // Check the shape of the sparse array
-            std::array<size_t, ArrayT::rank> shape;
+            std::array<long, ArrayT::rank> shape;
             shape_a.getValues(&shape[0]);
 
             // Reserve space for the non-zero elements

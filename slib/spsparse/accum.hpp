@@ -88,35 +88,50 @@ copy(p, A);
 @endcode
 
 */
-template<int IN_RANK, class AccumulatorT>
+template<class AccumulatorT,size_t IN_RANK>
 class PermuteAccum
 {
 public:
-    static const int rank = IN_RANK;
-    static const int out_rank = AccumulatorT::rank;
+    static const size_t rank = IN_RANK;
+    static const size_t out_rank = AccumulatorT::rank;
 
     typedef typename AccumulatorT::index_type index_type;
     typedef typename AccumulatorT::val_type val_type;
 
 private:
-    AccumulatorT sub;
-    std::vector<int> perm;
+    AccumulatorT * const sub;
+    std::array<int,out_rank> perm;
     std::array<int, out_rank> out_idx;
 
 public:
-    PermuteAccum(AccumulatorT &&_sub, std::vector<int> const &_perm)
-        : sub(std::move(_sub)), perm(_perm) {}
+    PermuteAccum(AccumulatorT *_sub, std::array<int,out_rank> const &_perm)
+        : sub(_sub), perm(_perm) {}
+
+    void set_shape(std::array<size_t, rank> const &_shape)
+    {
+        std::array<size_t, out_rank> oshape;
+        for (int i=0; i<out_rank; ++i) oshape[i] = _shape[perm[i]];
+        sub->set_shape(oshape);
+    }
 
     void add(std::array<index_type,rank> const &index, val_type const &val) {
-        for (int i=0; i<IN_RANK; ++i) out_idx[i] = index[perm[i]];
-        sub.add(out_idx, val);
+        for (int i=0; i<out_rank; ++i) out_idx[i] = index[perm[i]];
+        sub->add(out_idx, val);
     }
 };
+// -----------------------------------------------------------
+template<size_t X>
+struct in_rank {
+    static const size_t x=X;
+};
 
-template<int IN_RANK, class AccumulatorT>
-inline PermuteAccum<IN_RANK,AccumulatorT>
-permute_accum(AccumulatorT &&_sub, std::vector<int> const &_perm)
-    { return PermuteAccum<IN_RANK,AccumulatorT>(std::move(_sub), _perm); }
+template<class AccumulatorT,size_t IN_RANK>
+inline PermuteAccum<AccumulatorT,IN_RANK>
+permute_accum(
+    AccumulatorT *_sub,
+    in_rank<IN_RANK> const in_rank_dummy,
+    std::array<int, AccumulatorT::rank> const &_perm)
+    { return PermuteAccum<AccumulatorT,IN_RANK>(_sub, _perm); }
 
 // -----------------------------------------------------------
 

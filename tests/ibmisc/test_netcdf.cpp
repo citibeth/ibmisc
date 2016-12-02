@@ -65,7 +65,7 @@ TEST_F(NetcdfTest, get_or_add_dim) {
     std::string fname("__netcdf_get_or_add_dim_test.nc");
     tmpfiles.push_back(fname);
     ::remove(fname.c_str());
-    NcIO ncio(fname, NcFile::replace);
+    NcIO ncio(fname, 'w');
     NcDim dim1 = get_or_add_dim(ncio, "dim1", 1);
     NcDim dim2 = get_or_add_dim(ncio, "dim2", 2);
     NcDim dimU = get_or_add_dim(ncio, "dimU");
@@ -89,12 +89,12 @@ TEST_F(NetcdfTest, get_or_add_dim) {
     // Try to reset from unlimited
     EXPECT_THROW(get_or_add_dim(ncio, "dimU", 17), ibmisc::Exception);
 
-    get_or_add_var(ncio, "var1", netCDF::ncInt, {dim1});
-    get_or_add_var(ncio, "var1", netCDF::ncInt, {dim1});
-    get_or_add_var(ncio, "var1", netCDF::ncInt, {dim1b});
+    get_or_add_var(ncio, "var1", "int", {dim1});
+    get_or_add_var(ncio, "var1", "int", {dim1});
+    get_or_add_var(ncio, "var1", "int", {dim1b});
     NcDim dim1c = get_or_add_dim(ncio, "dim1c", 1);
-    EXPECT_THROW(get_or_add_var(ncio, "var1", netCDF::ncInt, {dim1c}), ibmisc::Exception);
-    EXPECT_THROW(get_or_add_var(ncio, "var1", netCDF::ncInt, {dim2}), ibmisc::Exception);
+    EXPECT_THROW(get_or_add_var(ncio, "var1", "int", {dim1c}), ibmisc::Exception);
+    EXPECT_THROW(get_or_add_var(ncio, "var1", "int", {dim2}), ibmisc::Exception);
 
 }
 
@@ -118,10 +118,10 @@ TEST_F(NetcdfTest, blitz)
     // ---------- Write
     printf("Writing\n");
     {
-    ibmisc::NcIO ncio(fname, NcFile::replace);
+    ibmisc::NcIO ncio(fname, 'w');
     auto dims = ibmisc::get_or_add_dims(ncio, A, {"dim4", "dim5"});
-    ibmisc::ncio_blitz(ncio, A, true, "A", netCDF::ncDouble, dims);
-    ibmisc::ncio_blitz(ncio, B, true, "B", netCDF::ncDouble, dims);
+    ibmisc::ncio_blitz(ncio, A, true, "A", "double", dims);
+    ibmisc::ncio_blitz(ncio, B, true, "B", "double", dims);
 
     auto info_v = get_or_add_var(ncio, "info", "int64", {});
     get_or_put_att(info_v, ncio.rw, "strings", strings);
@@ -136,8 +136,8 @@ TEST_F(NetcdfTest, blitz)
     blitz::Array<double,2> A2, B2;
     std::vector<std::string> strings2;
     auto dims = ibmisc::get_or_add_dims(ncio, A, {"dim4", "dim5"});
-    ibmisc::ncio_blitz(ncio, A2, true, "A", netCDF::ncDouble, dims);
-    ibmisc::ncio_blitz(ncio, B2, true, "B", netCDF::ncDouble, dims);
+    ibmisc::ncio_blitz(ncio, A2, true, "A", "double", dims);
+    ibmisc::ncio_blitz(ncio, B2, true, "B", "double", dims);
 
     auto info_v = get_or_add_var(ncio, "info", "int64", {});
     get_or_put_att(info_v, ncio.rw, "strings", strings2);
@@ -168,9 +168,9 @@ TEST_F(NetcdfTest, vector)
     // ---------- Write
     printf("Writing\n");
     {
-        ibmisc::NcIO ncio(fname, NcFile::replace);
+        ibmisc::NcIO ncio(fname, 'w');
         auto dim = ibmisc::get_or_add_dim(ncio, "dim1", vec.size());
-        ibmisc::ncio_vector(ncio, vec, true, "vec", netCDF::ncDouble, {dim});
+        ibmisc::ncio_vector(ncio, vec, true, "vec", "double", {dim});
         ncio.close();
     }
 
@@ -179,7 +179,7 @@ TEST_F(NetcdfTest, vector)
         std::vector<double> vec2;
         ibmisc::NcIO ncio(fname, NcFile::read);
         auto dim = ibmisc::get_or_add_dim(ncio, "dim1", vec2.size());
-        ibmisc::ncio_vector(ncio, vec2, true, "vec", netCDF::ncDouble, {dim});
+        ibmisc::ncio_vector(ncio, vec2, true, "vec", "double", {dim});
         ncio.close();
 
         EXPECT_EQ(vec, vec2);

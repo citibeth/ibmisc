@@ -20,7 +20,6 @@
 
 #include <gtest/gtest.h>
 #include <ibmisc/iter.hpp>
-#include <ibmisc/SegmentVector.hpp>
 #include <iostream>
 #include <cstdio>
 #include <memory>
@@ -113,32 +112,6 @@ TEST_F(IterTest, second_iter)
         EXPECT_EQ(*ii, (double)i);
         EXPECT_EQ(ii.key(), i);
     }
-}
-// -----------------------------------------------------------
-TEST_F(IterTest, segment_vector)
-{
-    SegmentVector<std::string> svec(2);
-    EXPECT_EQ(svec.end(), svec.begin());
-    EXPECT_EQ(0, svec.size());
-
-
-    svec.segment(1).push_back("unit");
-    svec.segment(0).push_back("A");
-    svec.segment(0).push_back("B");
-    EXPECT_EQ(3, svec.size());
-
-    EXPECT_EQ("A", svec[0]);
-    EXPECT_EQ("B", svec[1]);
-    EXPECT_EQ("unit", svec[2]);
-
-    auto ii(svec.begin());
-    EXPECT_EQ("A", *ii);
-    ++ii;
-    EXPECT_EQ("B", *ii);
-    ++ii;
-    EXPECT_EQ("unit", *ii);
-    ++ii;
-    EXPECT_EQ(svec.end(), ii);
 }
 // -----------------------------------------------------------
 

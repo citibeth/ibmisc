@@ -104,6 +104,7 @@ std::cout << ret2 << std::endl;
 // ------------------------------------------------------
 void test_random_MM_multiply(unsigned int dsize, int seed)
 {
+printf("AA1\n");
     std::default_random_engine generator(seed);
     auto dim_distro(std::bind(std::uniform_int_distribution<int>(0,dsize-1), generator));
     auto val_distro(std::bind(std::uniform_real_distribution<double>(0,1), generator));
@@ -133,9 +134,9 @@ void test_random_MM_multiply(unsigned int dsize, int seed)
 // std::cout << "C: " << C << std::endl;
 
     // --------- Compare to dense matrix multiplication
-    auto Ad(A.to_dense());
-    auto Bd(B.to_dense());
-    auto Cd(C.to_dense());
+    auto Ad(ibmisc::to_blitz(A));
+    auto Bd(ibmisc::to_blitz(B));
+    auto Cd(ibmisc::to_blitz(C));
 
     double usum = 0;
     for (int i=0; i<dsize; ++i) {
@@ -147,6 +148,7 @@ void test_random_MM_multiply(unsigned int dsize, int seed)
         EXPECT_DOUBLE_EQ(sum, Cd(i,j));
         usum += sum;
     }}
+
     printf("MM seed = %d  sizes = [%ld, %ld, %ld]  usum = %f\n", seed, A.size(), B.size(), C.size(), usum);
 }
 
@@ -181,9 +183,9 @@ void test_random_MV_multiply(unsigned int dsize, int seed)
         B);
 
     // --------- Compare to dense matrix multiplication
-    auto Ad(A.to_dense());
-    auto Bd(B.to_dense());
-    auto Cd(C.to_dense());
+    auto Ad(ibmisc::to_blitz(A));
+    auto Bd(ibmisc::to_blitz(B));
+    auto Cd(ibmisc::to_blitz(C));
 
     double usum = 0;
     bool err = false;
@@ -233,9 +235,9 @@ void test_random_VV_multiply(unsigned int dsize, int seed)
     multiply_ele(C, A, B);
 
     // --------- Compare to dense matrix multiplication
-    auto Ad(A.to_dense());
-    auto Bd(B.to_dense());
-    auto Cd(C.to_dense());
+    auto Ad(ibmisc::to_blitz(A));
+    auto Bd(ibmisc::to_blitz(B));
+    auto Cd(ibmisc::to_blitz(C));
 
     double usum = 0;
     bool err = false;
@@ -265,7 +267,7 @@ TEST_F(SpSparseTest, random_VV_multiply)
 // -----------------------------------------------------------
 TEST_F(SpSparseTest, eigen_conv)
 {
-    size_t dsize = 17;
+    long dsize = 17;
     SparseSet<int,int> dimi;
     SparseSet<int,int> dimj;
     SparseTriplets<VectorCooMatrix<int, double>> A({&dimi, &dimj});
@@ -319,9 +321,9 @@ void test_random_MM_multiply_eigen(unsigned int dsize, int seed)
     eigenM_to_sparseM(C, Ce, {&dimi, &dimk});
 
     // --------- Compare to dense matrix multiplication
-    auto Ad(A.M.to_dense());
-    auto Bd(B.M.to_dense());
-    auto Cd(C.to_dense());
+    auto Ad(ibmisc::to_blitz(A.M));
+    auto Bd(ibmisc::to_blitz(B.M));
+    auto Cd(ibmisc::to_blitz(C));
     double usum = 0;
     for (int i=0; i<dsize; ++i) {
     for (int j=0; j<dsize; ++j) {

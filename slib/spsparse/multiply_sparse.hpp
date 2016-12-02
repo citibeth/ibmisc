@@ -243,18 +243,18 @@ void multiply(
 
     // Check inner dimensions
     if (A.shape[adims[1]] != B.shape[bdims[0]]) {
-        (*spsparse_error)(-1, "Inner dimensions for A (%ld) and B (%ld) must match!", A.shape[adims[1]], B.shape[bdims[0]]);
+        (*ibmisc::ibmisc_error)(-1, "Inner dimensions for A (%ld) and B (%ld) must match!", A.shape[adims[1]], B.shape[bdims[0]]);
     }
 
     if (scalei && A.shape[adims[0]] != scalei->shape[0]) {
-        (*spsparse_error)(-1, "Dimension for scalei (%ld) must match A.shape[0]=%ld\n", scalei->shape[0], A.shape[adims[0]]);
+        (*ibmisc::ibmisc_error)(-1, "Dimension for scalei (%ld) must match A.shape[0]=%ld\n", scalei->shape[0], A.shape[adims[0]]);
     }
 
     if (scalej && A.shape[adims[1]] != scalej->shape[0]) {
-        (*spsparse_error)(-1, "Dimension for scalej (%ld) must match A.shape[1]=%ld\n", scalej->shape[0], A.shape[adims[1]]);
+        (*ibmisc::ibmisc_error)(-1, "Dimension for scalej (%ld) must match A.shape[1]=%ld\n", scalej->shape[0], A.shape[adims[1]]);
     }
     if (scalek && B.shape[bdims[1]] != scalek->shape[0]) {
-        (*spsparse_error)(-1, "Dimension for scalek (%ld) must match B.shape[1]=%ld\n", scalek->shape[0], B.shape[bdims[1]]);
+        (*ibmisc::ibmisc_error)(-1, "Dimension for scalek (%ld) must match B.shape[1]=%ld\n", scalek->shape[0], B.shape[bdims[1]]);
     }
 
 
@@ -381,7 +381,7 @@ void multiply(
 
     // Check inner dimensions
     if (A.shape[a_sort_order[1]] != V.shape[0]) {
-        (*spsparse_error)(-1, "Inner dimensions for A (%ld) and V (%ld) must match!", A.shape[a_sort_order[1]], V.shape[0]);
+        (*ibmisc::ibmisc_error)(-1, "Inner dimensions for A (%ld) and V (%ld) must match!", A.shape[a_sort_order[1]], V.shape[0]);
     }
 
     // Short-circuit return on empty output

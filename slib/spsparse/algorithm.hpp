@@ -63,7 +63,7 @@ std::vector<size_t> dim_beginnings(VectorCooArrayT const &A)
 
     // Check that we're sorted by SOME dimension.
     if (A.sort_order[0] < 0) {
-        (*spsparse_error)(-1, "dim_beginnings() required the VectorCooArray is sorted first.");
+        (*ibmisc::ibmisc_error)(-1, "dim_beginnings() required the VectorCooArray is sorted first.");
     }
 
     // Get beginning of each row in a (including sentinel at end)

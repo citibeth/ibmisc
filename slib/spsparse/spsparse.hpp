@@ -21,8 +21,7 @@
 
 #include <exception>
 #include <iostream>
-
-#include <ibmisc/blitz.hpp>
+#include <cmath>
 
 namespace spsparse {
 
@@ -55,22 +54,6 @@ public:
     virtual const char* what() const noexcept
         { return "spsparse::Exception()"; }
 };
-
-
-// This is not possible in C++11
-//extern std::function<void(int, const char *, ...)> error;
-
-// Use this instead.
-// http://www.thecodingforums.com/threads/function-pointers-to-printf.317925/
-/** @brief Printf-like signature of error handle functions to be used by SpSparse. */
-typedef void (*error_ptr) (int retcode, char const *str, ...);
-
-/** @brief Error handler used by SpSparse.  May be changed by user's
-main program, to fit into some larger error handling system (eg:
-Everytrace).
-
-https://github.com/citibob/everytrace */
-extern error_ptr spsparse_error;
 
 /** @brief Promote relevant template parameters.
 
@@ -120,7 +103,7 @@ inline bool isnone(NumT const n, bool const zero_nan=false)
 }
 
 // ----------------------------------------------------------
-} // Namespace
+} // Namespace spsparse
 
 // -------------------------------------------------------------
 /** Hack to write std::array to ostream. */
@@ -146,5 +129,6 @@ std::ostream &stream(std::ostream &os, T const * const a, int RANK)
 }
 
 /** @} */
+
 
 #endif // Guard

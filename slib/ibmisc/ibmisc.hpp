@@ -27,13 +27,25 @@
 @brief Basic stuff common to all ibmisc */
 namespace ibmisc {
 
-typedef std::runtime_error Exception;
+//typedef std::runtime_error Exception;
 
 std::string vsprintf(const char* format, std::va_list args);
 
 std::string sprintf(const char* format, ...) __attribute__ ((format (printf, 1, 2)));
 
+/** @brief Excpetion thrown by the default IBMisc error handler. */
+class Exception : public std::exception
+{
+    std::string msg;
+public:
+    Exception(std::string const &&_msg) : msg(std::move(_msg)) {}
+        
+    virtual ~Exception()
+        {}
 
+    virtual const char* what() const noexcept
+        { return msg.c_str(); }
+};
 
 // Use this instead.
 // http://www.thecodingforums.com/threads/function-pointers-to-printf.317925/

@@ -55,7 +55,7 @@ public:
         std::stringstream buf;
         if (_sparse_extent != -1 && _sparse_extent != extent) {
             buf << "Cannot change sparse_extent from " << _sparse_extent << " to " << extent;
-            (*spsparse_error)(-1, "%s", buf.str().c_str());
+            (*ibmisc::ibmisc_error)(-1, "%s", buf.str().c_str());
         }
         _sparse_extent = extent;
     }
@@ -94,7 +94,7 @@ public:
     SparseT to_sparse(DenseT const &dval) const
     {
         if (dval < 0 || dval >= _d2s.size()) {
-            (*spsparse_error)(-1,
+            (*ibmisc::ibmisc_error)(-1,
                 "Value %ld is out of range (0, %ld)", dval, _d2s.size());
         }
         return _d2s[dval];
@@ -123,7 +123,7 @@ public:
     MappedArray(std::array<SparseSetT *, rank> const &_dims) : dims(_dims) {}
 
     /** Sets the shape of the underlying matrix (and dimension maps) */
-    void set_shape(std::array<size_t, rank> const &shape)
+    void set_shape(std::array<long, rank> const &shape)
     {
         M.set_shape(shape);
         for (int k=0; k<rank; ++k) dims[k]->set_sparse_extent(shape[k]);

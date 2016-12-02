@@ -55,9 +55,26 @@ inline netCDF::NcFile::FileMode _filemode_to_netcdf(char mode)
         case 'w' : return netCDF::NcFile::FileMode::replace;
         case 'x' : return netCDF::NcFile::FileMode::newFile;
         case 'a' : return netCDF::NcFile::FileMode::write;
+
+        // Hack: the netCDF labels can also be coerced to char
+        case netCDF::NcFile::FileMode::read:
+        case netCDF::NcFile::FileMode::replace:
+        case netCDF::NcFile::FileMode::newFile:
+        case netCDF::NcFile::FileMode::write:
+            return (netCDF::NcFile::FileMode)mode;
     }
     (*ibmisc_error)(-1,
         "Illegal filemode: '%c'", mode);
+}
+inline char _filemode_to_rw(char mode)
+{
+    switch(mode) {
+        case 'r' :
+        case netCDF::NcFile::FileMode::read:
+            return 'r';
+        default:
+            return 'w';
+    }
 }
 
 NcIO::NcIO(std::string const &filePath, char mode) :
@@ -65,7 +82,7 @@ NcIO::NcIO(std::string const &filePath, char mode) :
         netCDF::NcFile::FileFormat::nc4),
     own_nc(true),
     nc(&_mync),
-    rw(mode == 'r' ? 'r' : 'w'),
+    rw(_filemode_to_rw(mode)),
     define(rw == 'w') {}
 
 void NcIO::operator+=(std::function<void ()> const &fn)
@@ -179,18 +196,6 @@ std::vector<netCDF::NcDim> get_or_add_dims(
     return ret;
 }
 // ====================================================
-/** This works only for NetCDF-3 types.  See:
-   https://github.com/Unidata/netcdf-cxx4/issues/30 */
-netCDF::NcVar get_or_add_var(
-    NcIO &ncio,
-    std::string const &vname,
-    netCDF::NcType const &nc_type,
-    std::vector<netCDF::NcDim> const &dims)
-{
-    std::string snc_type(nc_type.getName());
-    return get_or_add_var(ncio, vname, snc_type, dims);
-}
-
 /** This works for all valid NetCDF types. */
 netCDF::NcVar get_or_add_var(
     NcIO &ncio,

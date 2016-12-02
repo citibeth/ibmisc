@@ -61,7 +61,8 @@ void exception_error(int retcode, const char *format, ...)
     va_start(args, format);
     std::string str{ibmisc::vsprintf(format, args)};
     va_end(args);
-    throw std::runtime_error(std::move(str));
+    throw ibmisc::Exception(std::move(str));
+//    throw std::runtime_error(std::move(str));
 }
 
 #ifdef USE_EVERYTRACE

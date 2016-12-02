@@ -62,17 +62,16 @@ protected:
 
 TEST_F(IndexingTest, indexing_column_major_test)
 {
-    Indexing<int, long> ind(
+    Indexing ind(
+        {"d0", "d1"},    // Names
         {0,0},      // Base
         {5,4},      // Extent
         {1,0});     // Column major
-    std::array<int,2> tuple;
+    std::array<int,2> tuple{3,2};
+    long ix2 = ind.tuple_to_index(tuple);
+    auto tuple2(ind.index_to_tuple<int,2>(ix2));
 
-    tuple = {3,2};
-    long ix2 = ind.tuple_to_index<2>(tuple);
-    std::array<int,2> tuple2 = ind.index_to_tuple<2>(ix2);
-
-    EXPECT_EQ(20, ind.size());
+    EXPECT_EQ(20, ind.extent());
     EXPECT_EQ(13, ix2);
     EXPECT_EQ(tuple, tuple2);
 
@@ -80,18 +79,18 @@ TEST_F(IndexingTest, indexing_column_major_test)
 
 TEST_F(IndexingTest, indexing_row_major_test)
 {
-    Indexing<int, long> ind(
+    Indexing ind(
+        {"d0", "d1"},
         {0,0},      // Base
         {4,5},      // Extent
         {0,1});     // Row major
     std::array<int,2> tuple;
 
     tuple = {3,2};
-    long ix2 = ind.tuple_to_index<2>(tuple);
-    std::array<int,2> tuple2;
-    tuple2 = ind.index_to_tuple<2>(ix2);
+    long ix2 = ind.tuple_to_index(tuple);
+    auto tuple2(ind.index_to_tuple<int,2>(ix2));
 
-    EXPECT_EQ(20, ind.size());
+    EXPECT_EQ(20, ind.extent());
     EXPECT_EQ(17, ix2);
     EXPECT_EQ(tuple, tuple2);
 
@@ -105,11 +104,12 @@ TEST_F(IndexingTest, indexing_netcdf)
 
     NcIO ncio(fname, NcFile::replace);
 
-    Indexing<int, long> ind(
+    Indexing ind(
+        {"d0", "d1"},
         {0,0},      // Base
         {4,5},      // Extent
         {0,1});     // Row major
-    ind.ncio(ncio, ncInt, "indexing");  
+    ind.ncio(ncio, "indexing");  
 
     ncio.close();
 }
@@ -117,21 +117,23 @@ TEST_F(IndexingTest, indexing_netcdf)
 // -----------------------------------------------------------
 TEST_F(IndexingTest, domain)
 {
-    Indexing<int, long> ind(
+    Indexing ind(
+        {"d0", "d1"},
         {0,0},      // Base
         {4,5},      // Extent
         {0,1});     // Row major
 
-    Domain<int> domain({3,3}, {4,5});
+    Domain domain({3,3}, {4,5});
 
-    EXPECT_TRUE(domain.in_domain<2>({3,4}));
-    EXPECT_FALSE(domain.in_domain<2>({3,5}));
-    EXPECT_FALSE(domain.in_domain<2>({0,0}));
+    bool x;
+    x = domain.in_domain<int,2>({3,4}); EXPECT_TRUE(x);
+    x = domain.in_domain<int,2>({3,5}); EXPECT_FALSE(x);
+    x = domain.in_domain<int,2>({0,0}); EXPECT_FALSE(x);
 
-    EXPECT_FALSE(in_domain(&domain, &ind, 0L));
-    EXPECT_FALSE(in_domain(&domain, &ind, 15L));
-    EXPECT_TRUE(in_domain(&domain, &ind, 19L));
-    EXPECT_FALSE(in_domain(&domain, &ind, 20L));
+    x = in_domain(domain, ind, 0L); EXPECT_FALSE(x);
+    x = in_domain(domain, ind, 15L); EXPECT_FALSE(x);
+    x = in_domain(domain, ind, 19L); EXPECT_TRUE(x);
+    x = in_domain(domain, ind, 20L); EXPECT_FALSE(x);
 
 }
 // -----------------------------------------------------------

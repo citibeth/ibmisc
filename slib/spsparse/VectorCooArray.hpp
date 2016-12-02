@@ -54,8 +54,8 @@ public:
         ar & _dim_beginnings;
     }
 
-    std::array<size_t, RANK> shape;     // Extent of each dimension (always size_t, regardless of index_type)
-    void set_shape(std::array<size_t, RANK> const &_shape) { shape = _shape; }
+    std::array<long, RANK> shape;     // Extent of each dimension (always size_t, regardless of index_type)
+    void set_shape(std::array<long, RANK> const &_shape) { shape = _shape; }
 
 
 protected:
@@ -76,7 +76,7 @@ public:
 
     VectorCooArray();
 
-    VectorCooArray(std::array<size_t, RANK> const &_shape);
+    VectorCooArray(std::array<long, RANK> const &_shape);
 
     std::unique_ptr<ThisVectorCooArrayT> new_blank() const
         { return std::unique_ptr<ThisVectorCooArrayT>(new ThisVectorCooArrayT(shape)); }
@@ -209,7 +209,7 @@ VectorCooArray<IndexT, ValT, RANK>::
 
 template<class IndexT, class ValT, int RANK>
 VectorCooArray<IndexT, ValT, RANK>::
-    VectorCooArray(std::array<size_t, RANK> const &_shape)
+    VectorCooArray(std::array<long, RANK> const &_shape)
     : shape(_shape), edit_mode(true), dim_beginnings_set(false), sort_order() {
         sort_order[0] = -1;
     }
@@ -276,10 +276,10 @@ void VectorCooArray<IndexT, ValT, RANK>::reserve(size_t size) {
 
 // ------------------------------------------------------------------------
 template<class IndexT, class ValT, int RANK>
-    void VectorCooArray<IndexT, ValT, RANK>::add(std::array<IndexT, RANK> const index, ValT const &val)
+    void VectorCooArray<IndexT, ValT, RANK>::add(std::array<IndexT, RANK> const index, ValT const val)
     {
         if (!edit_mode) {
-            (*spsparse_error)(-1, "Must be in edit mode to use VectorCooArray::add()");
+            (*ibmisc::ibmisc_error)(-1, "Must be in edit mode to use VectorCooArray::add()");
         }
 
         // Check bounds
@@ -297,7 +297,7 @@ template<class IndexT, class ValT, int RANK>
                     buf << " ";
                 }
                 buf << ")";
-                (*spsparse_error)(-1, buf.str().c_str());
+                (*ibmisc::ibmisc_error)(-1, buf.str().c_str());
             }
         }
 
@@ -359,17 +359,32 @@ using VectorCooVector = VectorCooArray<IndexT, ValT, 1>;
 @param ret Accumulator for output.
 @param A Input. */
 template<class AccumulatorT, class IndexT, class ValT, int RANK>
-void copy(AccumulatorT &ret, VectorCooArray<IndexT,ValT,RANK> const &A, bool set_shape=true);
+extern void copy(AccumulatorT &ret, VectorCooArray<IndexT,ValT,RANK> const &A, bool set_shape=true);
 
 template<class AccumulatorT, class IndexT, class ValT, int RANK>
-void copy(AccumulatorT &ret, VectorCooArray<IndexT,ValT,RANK> const &A)
+void copy(AccumulatorT &ret, VectorCooArray<IndexT,ValT,RANK> const &A, bool set_shape)
 {
     if (set_shape) ret.set_shape(A.shape);
-    std::array<int,VectorCooArrayT::rank> idx;
+    std::array<int,AccumulatorT::rank> idx;
     for (auto ii=A.begin(); ii != A.end(); ++ii) {
         ret.add(ii.index(), ii.val());
     }
 }
+// ---------------------------------------------------------------------------
+/** Convert spsparse-object to blitz, as long as it has an associated copy() function. */
+#define __VectorCooArrayT VectorCooArray<typename SourceT::index_type, typename SourceT::val_type, SourceT::rank>
+
+template<class SourceT>
+extern __VectorCooArrayT to_spsparse(SourceT const &M);
+
+template<class SourceT>
+__VectorCooArrayT to_spsparse(SourceT const &M)
+{
+    __VectorCooArrayT ret;
+    copy(ret, M, true);
+    return ret;
+}
+#undef __VectorCooArrayT
 // ---------------------------------------------------------------------------
 
 

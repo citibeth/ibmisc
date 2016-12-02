@@ -69,7 +69,7 @@ TEST_F(SpSparseTest, VectorCooArray) {
     try {
         arr1.add({17}, 4.);
         FAIL() << "Excpected spsparse::Exception";
-    } catch(spsparse::Exception const &err) {
+    } catch(ibmisc::Exception const &err) {
     } catch(...) {
         FAIL() << "Excpected spsparse::Exception";
     }
@@ -247,7 +247,7 @@ TEST_F(SpSparseTest, dense)
     arr2.add({2,4}, 17.);
     arr2.add({6,4}, 10.);
 
-    blitz::Array<double, 2> dense(arr2.to_blitz());
+    blitz::Array<double, 2> dense(ibmisc::to_blitz(arr2));
     int i,j;
     double sum=0;
     for (int i=0; i<20; ++i) {
@@ -274,10 +274,7 @@ TEST_F(SpSparseTest, dense_to_blitz)
 
     VectorCooArrayT sparse1({4,5});
     copy(sparse1, dense1);
-
-    BlitzAccum<double,2> dense2_accum(0);
-    copy(dense2_accum, sparse1);
-    auto dense2(dense2_accum.to_blitz());
+    auto dense2(ibmisc::to_blitz(sparse1));
 
     for (int i=0; i<dense1.extent(0); ++i) {
     for (int j=0; j<dense1.extent(0); ++j) {
