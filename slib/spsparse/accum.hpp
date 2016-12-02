@@ -107,9 +107,9 @@ public:
     PermuteAccum(AccumulatorT *_sub, std::array<int,out_rank> const &_perm)
         : sub(_sub), perm(_perm) {}
 
-    void set_shape(std::array<size_t, rank> const &_shape)
+    void set_shape(std::array<long, rank> const &_shape)
     {
-        std::array<size_t, out_rank> oshape;
+        std::array<long, out_rank> oshape;
         for (int i=0; i<out_rank; ++i) oshape[i] = _shape[perm[i]];
         sub->set_shape(oshape);
     }
