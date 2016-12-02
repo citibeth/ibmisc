@@ -18,6 +18,7 @@
 
 // https://github.com/google/googletest/blob/master/googletest/docs/Primer.md
 
+#include <cstddef>
 #include <gtest/gtest.h>
 #include <spsparse/VectorCooArray.hpp>
 #include <spsparse/SparseSet.hpp>
@@ -298,17 +299,66 @@ TEST_F(SpSparseTest, sparse_set)
     arr2.add({1,3}, 17.);
 
     // Make a SparseSet for each of its dimensions
-    SparseSet<int,int> ss0;
-    ss0.set_sparse_extent(arr2.shape[0]);
-    ss0.add_sorted(arr2.dim_begin(0), arr2.dim_end(0));
+    SparseSet<int,int> dim0;
+    dim0.set_sparse_extent(arr2.shape[0]);
+    dim0.add_sorted(arr2.dim_begin(0), arr2.dim_end(0));
 
-    EXPECT_EQ(3, ss0.dense_extent());
-    EXPECT_EQ(1, ss0.to_sparse(0));
-    EXPECT_EQ(2, ss0.to_sparse(1));
-    EXPECT_EQ(6, ss0.to_sparse(2));
-    EXPECT_EQ(0, ss0.to_dense(1));
-    EXPECT_EQ(1, ss0.to_dense(2));
-    EXPECT_EQ(2, ss0.to_dense(6));
+    EXPECT_EQ(3, dim0.dense_extent());
+    EXPECT_EQ(1, dim0.to_sparse(0));
+    EXPECT_EQ(2, dim0.to_sparse(1));
+    EXPECT_EQ(6, dim0.to_sparse(2));
+    EXPECT_EQ(0, dim0.to_dense(1));
+    EXPECT_EQ(1, dim0.to_dense(2));
+    EXPECT_EQ(2, dim0.to_dense(6));
+
+    // Test to_dense
+    VectorCooArrayT arr2d;
+    auto acc1(sparse_transform_accum(
+            &arr2d, SparseTransform::TO_DENSE,
+            make_array(&dim0, nullptr)));
+    copy(acc1, arr2);
+
+    {
+    auto ii(arr2d.begin());
+    EXPECT_EQ(2, ii.index(0));
+    EXPECT_EQ(4, ii.index(1));
+    ++ii;
+    EXPECT_EQ(0, ii.index(0));
+    EXPECT_EQ(0, ii.index(1));
+    ++ii;
+    EXPECT_EQ(1, ii.index(0));
+    EXPECT_EQ(4, ii.index(1));
+    ++ii;
+    EXPECT_EQ(0, ii.index(0));
+    EXPECT_EQ(3, ii.index(1));
+    ++ii;
+    EXPECT_EQ(ii, arr2d.end());
+    }
+
+    // Test to_sparse
+    {
+    VectorCooArrayT arr3;
+    auto acc3(sparse_transform_accum(
+            &arr3, SparseTransform::TO_SPARSE,
+            make_array(&dim0, nullptr)));
+    copy(acc3, arr2d);
+
+    auto ii(arr3.begin());
+    EXPECT_EQ(6, ii.index(0));
+    EXPECT_EQ(4, ii.index(1));
+    ++ii;
+    EXPECT_EQ(1, ii.index(0));
+    EXPECT_EQ(0, ii.index(1));
+    ++ii;
+    EXPECT_EQ(2, ii.index(0));
+    EXPECT_EQ(4, ii.index(1));
+    ++ii;
+    EXPECT_EQ(1, ii.index(0));
+    EXPECT_EQ(3, ii.index(1));
+    ++ii;
+    EXPECT_EQ(ii, arr3.end());
+    }
+
 }
 
 

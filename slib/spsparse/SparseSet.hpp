@@ -100,6 +100,96 @@ public:
         return _d2s[dval];
     }
 };
+
+// -----------------------------------------------------------
+enum class SparseTransform {ID, TO_DENSE, TO_SPARSE};
+
+template<class AccumulatorT,class SparseSetT>
+class SparseTransformAccum
+{
+    struct Data {
+        SparseSetT const * const sparse_set;
+        SparseTransform transform;
+
+        Data(SparseSetT *_sparse_set, SparseTransform _transform) :
+            sparse_set(_sparse_set), transform(_transform) {}
+    };
+
+public:
+    SPSPARSE_LOCAL_TYPES(AccumulatorT);
+
+private:
+    AccumulatorT * const sub;
+    std::vector<Data> data;
+
+public:
+    /** @param _transform
+        SparseTransform::TO_DENSE
+        SparseTransform::TO_SPARSE
+    @param sparse_sets
+        0 if that dimension is not to be transformed
+    */
+    SparseTransformAccum(
+        AccumulatorT *_sub,
+        SparseTransform _transform,
+        std::array<SparseSetT *, (size_t)rank> const sparse_sets);
+
+    /** Merge shape we're given with shape from transforms. */
+    void set_shape(std::array<long, rank> shape)
+    {
+        for (int i=0; i<rank; ++i) {
+            switch(data[i].transform) {
+                case SparseTransform::TO_DENSE:
+                    shape[i] = data[i].sparse_set->dense_extent();
+                    break;
+                case SparseTransform::TO_SPARSE:
+                    shape[i] = data[i].sparse_set->sparse_extent();
+                    break;
+            }
+        }
+        sub->set_shape(shape);
+    }
+
+    void add(std::array<index_type,rank> index, val_type const &val)
+    {
+        for (int i=0; i<rank; ++i) {
+            switch(data[i].transform) {
+                case SparseTransform::TO_DENSE:
+                    index[i] = data[i].sparse_set->to_dense(index[i]);
+                    break;
+                case SparseTransform::TO_SPARSE:
+                    index[i] = data[i].sparse_set->to_sparse(index[i]);
+                    break;
+            }
+        }
+        sub->add(index, val);
+    }
+};
+
+template<class AccumulatorT,class SparseSetT>
+SparseTransformAccum<AccumulatorT,SparseSetT>::SparseTransformAccum(
+    AccumulatorT *_sub,
+    SparseTransform transform,
+    std::array<SparseSetT *, (size_t)rank> const sparse_sets)    // 0 if we don't want to densify/sparsify that dimension
+    : sub(_sub)
+{
+    for (int i=0; i<rank; ++i) {
+        data.push_back(Data(sparse_sets[i],
+            sparse_sets[i] ? transform : SparseTransform::ID));
+    }
+}
+
+#define SparseTransformAccumT SparseTransformAccum<AccumulatorT,SparseSetT>
+template<class AccumulatorT,class SparseSetT>
+inline SparseTransformAccumT sparse_transform_accum(
+        AccumulatorT *sub,
+        SparseTransform transform,
+        std::array<SparseSetT *, AccumulatorT::rank> const &sparse_sets)
+{
+    return SparseTransformAccumT(sub, transform, sparse_sets);
+}
+#undef SparseTransformAccumT
+
 // -------------------------------------------------------
 /** A data sructure that acts like a normal SpSparse Accumulator.  BUT:
   1) When stuff is added to it, it also updates corresponding dimension maps (SparseSet).
@@ -130,12 +220,17 @@ public:
     }
 
     /** Adds an item. */
-    void add(std::array<SparseIndexT, rank> const index, ValT const val)
+    void add(std::array<SparseIndexT, rank> const &index, ValT const val)
     {
         M.add(index, val);
         for (int k=0; k<rank; ++k) dims[k]->add(index[k]);
     }
 
 };
+
+// -----------------------------------------------------------
+
+
+
 
 }   // Namespace
