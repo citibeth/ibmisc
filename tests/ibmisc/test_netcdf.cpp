@@ -116,7 +116,6 @@ TEST_F(NetcdfTest, blitz)
     std::vector<std::string> strings = {"s1", "s2"};
 
     // ---------- Write
-    printf("Writing\n");
     {
     ibmisc::NcIO ncio(fname, 'w');
     auto dims = ibmisc::get_or_add_dims(ncio, A, {"dim4", "dim5"});
@@ -124,13 +123,12 @@ TEST_F(NetcdfTest, blitz)
     ibmisc::ncio_blitz(ncio, B, true, "B", "double", dims);
 
     auto info_v = get_or_add_var(ncio, "info", "int64", {});
-    get_or_put_att(info_v, ncio.rw, "strings", strings);
+    get_or_put_att(info_v, ncio.rw, "strings", "", strings);    // Type ignored here
 
     ncio.close();
     }
 
     // ---------- Read
-    printf("Reading\n");
     ibmisc::NcIO ncio(fname, NcFile::read);
 
     blitz::Array<double,2> A2, B2;
@@ -140,7 +138,7 @@ TEST_F(NetcdfTest, blitz)
     ibmisc::ncio_blitz(ncio, B2, true, "B", "double", dims);
 
     auto info_v = get_or_add_var(ncio, "info", "int64", {});
-    get_or_put_att(info_v, ncio.rw, "strings", strings2);
+    get_or_put_att(info_v, ncio.rw, "strings", "", strings2);
 
     ncio.close();
 
@@ -166,7 +164,6 @@ TEST_F(NetcdfTest, vector)
     for (int i=0; i<4; ++i) vec.push_back(i+1);
 
     // ---------- Write
-    printf("Writing\n");
     {
         ibmisc::NcIO ncio(fname, 'w');
         auto dim = ibmisc::get_or_add_dim(ncio, "dim1", vec.size());
@@ -174,7 +171,6 @@ TEST_F(NetcdfTest, vector)
         ncio.close();
     }
 
-    printf("Reading\n");
     {
         std::vector<double> vec2;
         ibmisc::NcIO ncio(fname, NcFile::read);

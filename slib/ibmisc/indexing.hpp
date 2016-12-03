@@ -40,6 +40,8 @@ public:
 
     IndexingData(std::string const &_name, long _base, long _extent) :
         name(_name), base(_base), extent(_extent) {}
+
+    bool operator==(IndexingData const &other);
 };
 
 /** Base class for Indexing<..> template: most of the core functionality,
@@ -47,7 +49,7 @@ without to_tuple() and to_index() methods.  Functions that can rely on
 Indexing don't need to be templates themselves. */
 class Indexing
 {
-public:
+protected:
     std::vector<IndexingData> data;
 
     /** Index IDs sorted by descending stride. {0,1,...} for row-major,
@@ -55,13 +57,18 @@ public:
     permute.hpp) if you want the indices listed by descending
     stride.
     (NOTE: This is the reverse of Blitz stor.ordering()) */
-    std::vector<int> indices;
+    std::vector<int> _indices;
 
-protected:
     /** Computes the stride for each dimension. */
     void make_strides();
 
 public:
+    /** Default constructor; for when we are reading from a file. */
+    Indexing() {}
+    std::vector<int> const &indices() { return _indices; };
+
+    bool operator==(Indexing const &other);
+
     /** By convention, indices are always in "alphabetical" order,
         regardless of the underlying storage.  This may be
         Fortran-order or C-order, depending.  Thus:
@@ -71,7 +78,7 @@ public:
     */
     Indexing(
         std::vector<IndexingData> &&_data,
-        std::vector<int> &&_indices);
+        std::vector<int> &&indices);
 
 
     /** By convention, indices are always in "alphabetical" order,
@@ -85,7 +92,7 @@ public:
         std::vector<std::string> const &_name,
         std::vector<long> const &_base,
         std::vector<long> const &_extent,
-        std::vector<int> &&_indices);
+        std::vector<int> &&indices);
 
 
     /** Number of dimensions in this indexing */
@@ -131,12 +138,12 @@ public:
     void index_to_tuple(TupleT *tuple, long ix) const
     {
         for (int d=0; d< rank()-1; ++d) {       // indices by descending stride
-            int const k = indices[d];
+            int const k = _indices[d];
             TupleT tuple_k = ix / data[k].stride();
             ix -= tuple_k * data[k].stride();
             tuple[k] = tuple_k + data[k].base;
         }
-        tuple[indices[rank()-1]] = ix;
+        tuple[_indices[rank()-1]] = ix;
     }
 
 
@@ -160,7 +167,7 @@ NcDimSpec &append(NcDimSpec &dim_spec, Indexing &indexing,
 {
     // Default permutation puts largest stride first for NetCDF
     std::vector<int> const *permutation =
-        (_permutation.size() != 0 ? &_permutation : &indexing.indices);
+        (_permutation.size() != 0 ? &_permutation : &indexing.indices());
 
     for (size_t i=0; i<indexing.rank(); ++i) {
         int dimi = (*permutation)[i];
@@ -183,14 +190,16 @@ blitz::Array<ValT,RANK> Indexing::make_blitz()
     for (int i=0; i<RANK; ++i) {
         _lbounds[i] = data[i].base;
         _extent[i] = data[i].extent;
-        _stor.ordering()[RANK-i] = indices[i];
+        _stor.ordering()[RANK-i-1] = _indices[i];    // Reverse order
+
     }
+
     return blitz::Array<ValT,RANK>(_lbounds, _extent, _stor);
 }
 
 /** Creates a blitz::Array on existing memory, according to our indexing. */
 template<class ValT, int RANK>
-blitz::Array<ValT,RANK> Indexing::to_blitz(ValT *data)
+blitz::Array<ValT,RANK> Indexing::to_blitz(ValT *memory)
 {
     if (rank() != RANK) (*ibmisc_error)(-1,
         "Rank mismatch: %d vs %d", rank(), RANK);
@@ -199,13 +208,13 @@ blitz::Array<ValT,RANK> Indexing::to_blitz(ValT *data)
     blitz::GeneralArrayStorage<RANK> _stor;
     for (int i=0; i<RANK; ++i) {
         _shape[i] = data[i].extent;
-        _stride[i] = data[i].stride;
+        _stride[i] = data[i].stride();
         _stor.base()[i] = data[i].base;
         // Ordering is not needed because we're using stride
         // stor.ordering()[i] = i;      // Fortran ordering, blitz++ manual p31
     }
 
-    return blitz::Array<ValT,RANK>(data, _shape, _stride,
+    return blitz::Array<ValT,RANK>(memory, _shape, _stride,
         blitz::neverDeleteData, _stor);
 }
 // ==============================================================
@@ -214,6 +223,7 @@ struct DomainData {
     long const high;   // First "excluded" element in each index
 
     DomainData(long _low, long _high) : low(_low), high(_high) {}
+    bool operator==(DomainData const &other);
 };
 
 /** Defines the boundaries of an MPI domain.  A simple hypercube in n-D space... */
@@ -224,6 +234,7 @@ public:
     Domain() {}
 
     Domain(std::vector<long> const &_low, std::vector<long> const &_high);
+    bool operator==(Domain const &other);
 
     /** @return Information on the ix'th dimension */
     DomainData const &operator[](size_t ix) const

@@ -83,7 +83,27 @@ TEST_F(MemoryTest, string_printf)
     EXPECT_EQ("Hello 17", s2);
 }
 
+static int ndestroy = 0;
 
+class MyClass {
+public:
+    ~MyClass() { ++ndestroy; }
+};
+
+TEST_F(MemoryTest, tmp_alloc)
+{
+    {
+        TmpAlloc tmp;
+        auto *s = tmp.newptr<std::string>("Hello world");
+        EXPECT_EQ(*s, "Hello world");
+
+        tmp.newptr<MyClass>();
+        EXPECT_EQ(ndestroy, 0);
+    }
+    EXPECT_EQ(ndestroy, 1);
+
+
+}
 // -----------------------------------------------------------
 // -----------------------------------------------------------
 

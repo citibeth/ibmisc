@@ -19,7 +19,7 @@
 #pragma once
 
 // See: http://stackoverflow.com/questions/11002641/dynamic-casting-for-unique-ptr
-
+#include <functional>
 #include <memory>
 #include <typeinfo>
 #include <boost/variant.hpp>
@@ -32,6 +32,15 @@ namespace ibmisc {
 template<class ValT>
 std::unique_ptr<ValT> new_unique_ptr(ValT &&val)
     { return std::unique_ptr<ValT>(new ValT(std::move(val))); }
+
+template<class ValT>
+std::unique_ptr<ValT> new_unique_ptr()
+    { return std::unique_ptr<ValT>(new ValT); }
+
+template<class ValT>
+std::shared_ptr<ValT> new_shared_ptr()
+    { return std::shared_ptr<ValT>(new ValT); }
+
 
 // http://ficksworkshop.com/blog/14-coding/86-how-to-static-cast-std-unique-ptr 
 template<typename D, typename B>
@@ -142,6 +151,40 @@ public:
         { return &operator*(); }
 };
 // --------------------------------------------------------------
+
+/** An allocatoer that retains ownership of everything it allocates;
+and de-allocates all those things when it is destroyed. */
+class TmpAlloc {
+    std::vector<std::function<void()>> deleters;
+
+    template<class T>
+    static void del(T *t)
+        { delete t; }
+
+public:
+    template<class T, typename... Args>
+    T *newptr(Args... args)
+    {
+        T *ret = new T(args...);
+        deleters.push_back(std::bind(&TmpAlloc::del<T>, ret));
+        return ret;
+    }
+
+    template<class T, typename... Args>
+    T &make(Args... args)
+        { return *newptr<T>(args...); }
+
+    ~TmpAlloc() { free(); }
+    void free() {
+        for (auto ii(deleters.begin()); ii != deleters.end(); ++ii) {
+            (*ii)();
+        }
+        deleters.clear();
+    }
+
+};
+
+
 
 }   // namespace ibmisc
 

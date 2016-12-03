@@ -20,12 +20,14 @@
 #define IBMISC_NETCDF_HPP
 
 #include <netcdf>
+#include <boost/any.hpp>
 #include <functional>
 #include <tuple>
 #include <memory>
 #include <ibmisc/ibmisc.hpp>
 #include <ibmisc/blitz.hpp>
 #include <ibmisc/enum.hpp>
+#include <ibmisc/memory.hpp>
 #include <type_traits>
 
 namespace ibmisc {
@@ -58,9 +60,11 @@ inline netCDF::NcType nc_type(netCDF::NcVar ncvar, std::string sntype)
 /** Used to keep track of future writes on NcDefine */
 class NcIO {
     std::vector<std::function<void ()>> _io;
+
     netCDF::NcFile _mync;  // NcFile lacks proper move constructor
     bool own_nc;
 public:
+    TmpAlloc tmp;    // Data kept around for the write phase
     netCDF::NcGroup * const nc;
     char const rw;
     const bool define;
@@ -320,16 +324,21 @@ void get_or_put_att(
 }
 
 // ---------------------------------------
+
+/** Overloaded function just for std::vector<std::string>, due to
+    non-standard way NetCDF4-C++ handles that data type. */
 template<class NcVarT>
-void get_or_put_att(
+extern void get_or_put_att(
     NcVarT &ncvar, char rw,
     const std::string &name,
+    std::string const &sntype,    // Ignored here...
     std::vector<std::string> &data);
 
 template<class NcVarT>
 void get_or_put_att(
     NcVarT &ncvar, char rw,
     const std::string &name,
+    std::string const &sntype,    // Ignored here...
     std::vector<std::string> &data)
 {
     auto string_t(nc_type(ncvar, "string"));
@@ -338,6 +347,9 @@ void get_or_put_att(
             ncvar.putAtt(name, string_t, data.size(), &data[0]);
         break;
         case 'r':
+            // String arrays are inexplicably returned as arrays
+            // of char * that must be manually freed.  Convert
+            // to civilized std::vector<std::string>
             auto att(ncvar.getAtt(name));
             auto N(att.getAttLength());
             std::vector<char *> cstrs(N);
@@ -568,8 +580,6 @@ void nc_rw_vector(
     bool alloc,
     std::string const &vname)
 {
-    if (netcdf_debug) fprintf(stderr, "BEGIN nc_rw_vector(%s)\n", vname.c_str());
-
     netCDF::NcVar ncvar = nc->getVar(vname);
     _check_nc_rank(ncvar, 1);
 
@@ -592,8 +602,6 @@ void nc_rw_vector(
             ncvar.putVar(startp, countp, &(*val)[0]);
         break;
     }
-
-    if (netcdf_debug) fprintf(stderr, "END nc_rw_vector(%s)\n", vname.c_str());
 }
 
 template<class TypeT>

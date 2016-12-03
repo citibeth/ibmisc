@@ -104,7 +104,6 @@ std::cout << ret2 << std::endl;
 // ------------------------------------------------------
 void test_random_MM_multiply(unsigned int dsize, int seed)
 {
-printf("AA1\n");
     std::default_random_engine generator(seed);
     auto dim_distro(std::bind(std::uniform_int_distribution<int>(0,dsize-1), generator));
     auto val_distro(std::bind(std::uniform_real_distribution<double>(0,1), generator));

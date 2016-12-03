@@ -94,6 +94,7 @@ void NcIO::operator+=(std::function<void ()> const &fn)
 void NcIO::operator()() {
     for (auto ii=_io.begin(); ii != _io.end(); ++ii) (*ii)();
     _io.clear();
+    tmp.free();
 }
 
 void NcIO::close() {

@@ -21,43 +21,19 @@
 #include <gtest/gtest.h>
 #include <ibmisc/indexing.hpp>
 #include <ibmisc/IndexSet.hpp>
+#include <ibmisc/Test.hpp>
 #include <iostream>
-#include <cstdio>
 #include <memory>
-#include <map>
 
 using namespace ibmisc;
 using namespace netCDF;
 
 // The fixture for testing class Foo.
-class IndexingTest : public ::testing::Test {
+class IndexingTest : public ibmisc::Test {
 protected:
-    std::vector<std::string> tmpfiles;
 
     // You can do set-up work for each test here.
-    IndexingTest() {}
-
-    // You can do clean-up work that doesn't throw exceptions here.
-    virtual ~IndexingTest()
-    {
-        for (auto ii(tmpfiles.begin()); ii != tmpfiles.end(); ++ii) {
-            ::remove(ii->c_str());
-        }
-    }
-
-    // If the constructor and destructor are not enough for setting up
-    // and cleaning up each test, you can define the following methods:
-
-    // Code here will be called immediately after the constructor (right
-    // before each test).
-    virtual void SetUp() {}
-
-    // Code here will be called immediately after each test (right
-    // before the destructor).
-    virtual void TearDown() {}
-
-//    // The mock bar library shaed by all tests
-//    MockBar m_bar;
+    IndexingTest() : ibmisc::Test(true) {}    // keep=true
 };
 
 TEST_F(IndexingTest, indexing_column_major_test)
@@ -98,20 +74,100 @@ TEST_F(IndexingTest, indexing_row_major_test)
 
 TEST_F(IndexingTest, indexing_netcdf)
 {
-    std::string fname("__netcdf_indexing_test.nc");
-    tmpfiles.push_back(fname);
-    ::remove(fname.c_str());
+    std::string fname(tmp_fname("__netcdf_indexing_test.nc"));
 
-    NcIO ncio(fname, NcFile::replace);
 
     Indexing ind(
         {"d0", "d1"},
         {0,0},      // Base
         {4,5},      // Extent
         {0,1});     // Row major
-    ind.ncio(ncio, "indexing");  
+    {
+        NcIO ncio(fname, NcFile::replace);
+        ind.ncio(ncio, "indexing");  
+        ncio.close();
+    }
 
-    ncio.close();
+    Indexing ind2;
+    {
+        NcIO ncio(fname, 'r');
+        ind2.ncio(ncio, "indexing");
+        ncio.close();
+    }
+
+    EXPECT_TRUE(ind2 == ind);
+
+}
+
+TEST_F(IndexingTest, make_blitzcol_major)
+{
+    Indexing ind(
+        {"d0", "d1"},
+        {1,2},      // Base
+        {4,5},      // Extent
+        {1,0});     // Column major
+
+    auto arr(ind.make_blitz<double,2>());
+    EXPECT_EQ(arr.lbound(0), 1);
+    EXPECT_EQ(arr.lbound(1), 2);
+    EXPECT_EQ(arr.ubound(0), 4);
+    EXPECT_EQ(arr.ubound(1), 6);
+    EXPECT_EQ(1, &arr(2,2) - &arr(1,2));
+    EXPECT_EQ(4, &arr(1,3) - &arr(1,2));
+
+}
+TEST_F(IndexingTest, make_blitzrow_major)
+{
+    Indexing ind(
+        {"d0", "d1"},
+        {1,2},      // Base
+        {4,5},      // Extent
+        {0,1});     // Column major
+
+    auto arr(ind.make_blitz<double,2>());
+    EXPECT_EQ(arr.lbound(0), 1);
+    EXPECT_EQ(arr.lbound(1), 2);
+    EXPECT_EQ(arr.ubound(0), 4);
+    EXPECT_EQ(arr.ubound(1), 6);
+    EXPECT_EQ(5, &arr(2,2) - &arr(1,2));
+    EXPECT_EQ(1, &arr(1,3) - &arr(1,2));
+}
+
+TEST_F(IndexingTest, to_blitzcol_major)
+{
+    Indexing ind(
+        {"d0", "d1"},
+        {1,2},      // Base
+        {4,5},      // Extent
+        {1,0});     // Column major
+
+    double mem[20];
+    auto arr(ind.to_blitz<double,2>(&mem[0]));
+    EXPECT_EQ(arr.lbound(0), 1);
+    EXPECT_EQ(arr.lbound(1), 2);
+    EXPECT_EQ(arr.ubound(0), 4);
+    EXPECT_EQ(arr.ubound(1), 6);
+    EXPECT_EQ(1, &arr(2,2) - &arr(1,2));
+    EXPECT_EQ(4, &arr(1,3) - &arr(1,2));
+
+}
+TEST_F(IndexingTest, to_blitzrow_major)
+{
+    Indexing ind(
+        {"d0", "d1"},
+        {1,2},      // Base
+        {4,5},      // Extent
+        {0,1});     // Column major
+
+    double mem[20];
+    auto arr(ind.to_blitz<double,2>(&mem[0]));
+    EXPECT_EQ(arr.lbound(0), 1);
+    EXPECT_EQ(arr.lbound(1), 2);
+    EXPECT_EQ(arr.ubound(0), 4);
+    EXPECT_EQ(arr.ubound(1), 6);
+    EXPECT_EQ(5, &arr(2,2) - &arr(1,2));
+    EXPECT_EQ(1, &arr(1,3) - &arr(1,2));
+
 }
 
 // -----------------------------------------------------------
@@ -136,6 +192,31 @@ TEST_F(IndexingTest, domain)
     x = in_domain(domain, ind, 20L); EXPECT_FALSE(x);
 
 }
+
+TEST_F(IndexingTest, domain_netcdf)
+{
+    std::string fname(tmp_fname("__netcdf_domain_test.nc"));
+
+    Domain domain({3,3}, {4,5});
+
+    {
+        NcIO ncio(fname, NcFile::replace);
+        domain.ncio(ncio, "domain");  
+        ncio.close();
+    }
+
+    Domain domain2;
+    {
+        NcIO ncio(fname, 'r');
+        domain2.ncio(ncio, "domain");
+        ncio.close();
+    }
+
+    EXPECT_TRUE(domain2 == domain);
+
+}
+
+
 // -----------------------------------------------------------
 
 
