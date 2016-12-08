@@ -186,10 +186,10 @@ TEST_F(IndexingTest, domain)
     x = domain.in_domain<int,2>({3,5}); EXPECT_FALSE(x);
     x = domain.in_domain<int,2>({0,0}); EXPECT_FALSE(x);
 
-    x = in_domain(domain, ind, 0L); EXPECT_FALSE(x);
-    x = in_domain(domain, ind, 15L); EXPECT_FALSE(x);
-    x = in_domain(domain, ind, 19L); EXPECT_TRUE(x);
-    x = in_domain(domain, ind, 20L); EXPECT_FALSE(x);
+    x = in_domain(&domain, &ind, 0L); EXPECT_FALSE(x);
+    x = in_domain(&domain, &ind, 15L); EXPECT_FALSE(x);
+    x = in_domain(&domain, &ind, 19L); EXPECT_TRUE(x);
+    x = in_domain(&domain, &ind, 20L); EXPECT_FALSE(x);
 
 }
 

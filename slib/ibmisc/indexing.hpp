@@ -65,7 +65,8 @@ protected:
 public:
     /** Default constructor; for when we are reading from a file. */
     Indexing() {}
-    std::vector<int> const &indices() { return _indices; };
+    std::vector<int> const &indices() const { return _indices; };
+    std::vector<IndexingData> const &dims() const { return data; }
 
     bool operator==(Indexing const &other);
 
@@ -271,8 +272,8 @@ bool Domain::in_domain(TupleT const *tuple) const
 }
 
 extern bool in_domain(
-    Domain const &domain,
-    Indexing const &indexing,
+    Domain const *domain,
+    Indexing const *indexing,
     long ix);
 
 // ============================================

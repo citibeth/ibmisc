@@ -209,7 +209,7 @@ void get_or_put_att(
 {
     switch(rw) {
         case 'w':
-            ncvar.putAtt(name, stype, len, data);
+            ncvar.putAtt(name, nc_type(ncvar, stype), len, data);
         break;
         case 'r':
             auto att(ncvar.getAtt(name));
@@ -241,7 +241,7 @@ void get_or_put_att(
     switch(rw) {
         case 'w':
             for (int i=0; i<len; ++i) cdata[i] = (data[i] ? 't' : 'f');
-            ncvar.putAtt(name, "char", len, cdata);
+            ncvar.putAtt(name, nc_type(ncvar, "char"), len, cdata);
         break;
         case 'r':
             auto att(ncvar.getAtt(name));

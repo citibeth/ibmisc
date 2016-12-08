@@ -214,6 +214,17 @@ template<class ValueT>
 inline Eigen::SparseMatrix<ValueT> scale_matrix(blitz::Array<ValueT,1> weights)
     { return diag_matrix(weights, true); }
 // --------------------------------------------------------------
+template<class ValueT>
+inline Eigen::SparseMatrix<ValueT> weight_matrix(Eigen::SparseMatrix<ValueT> const &M, int dimi)
+    { return diag_matrix(sum(M, dimi), false); }
+
+template<class ValueT>
+inline Eigen::SparseMatrix<ValueT> scale_matrix(Eigen::SparseMatrix<ValueT> const &M, int dimi)
+    { return diag_matrix(sum(M, dimi), true); }
+
+// --------------------------------------------------------------
+
+// --------------------------------------------------------------
 
 
 /** @} */

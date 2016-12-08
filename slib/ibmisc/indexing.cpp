@@ -134,13 +134,13 @@ void Domain::ncio(
 }
 
 bool in_domain(
-    Domain const &domain,
-    Indexing const &indexing,
+    Domain const *domain,
+    Indexing const *indexing,
     long ix)
 {
-    long tuple[domain.rank()];
-    indexing.index_to_tuple(tuple, ix);
-    return domain.in_domain(tuple);
+    long tuple[domain->rank()];
+    indexing->index_to_tuple(tuple, ix);
+    return domain->in_domain(tuple);
 }
 
 
