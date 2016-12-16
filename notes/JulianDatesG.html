@@ -1,0 +1,114 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN">
+<html><head>
+  <meta name="GENERATOR" content="Adobe PageMill 2.0 Mac">
+  <title>Julian Day Calculations (Gregorian Calendar)</title></head>
+<body>
+
+<h1 align="center">Julian Day Numbers</h1>
+
+<p></p><hr align="left">The Julian Day Count is a uniform count of days from a
+remote epoch in the past (-4712 January 1, 12 hours Greenwich Mean Time
+(Julian proleptic Calendar) = 4713 BCE January 1, 12 hours GMT (Julian proleptic
+Calendar) = 4714 BCE November 24, 12 hours GMT (Gregorian proleptic Calendar)).
+At this instant, the Julian Day Number is 0. It is convenient for astronomers
+to use since it is not necessary to worry about odd numbers of days in a
+month, leap years, etc. Once you have the Julian Day Number of a particular
+date in history, it is easy to calculate time elapsed between it and any
+other Julian Day Number.<br>
+<br>
+The Julian Day Count has nothing to do with the Julian Calendar introduced
+by Julius Caesar. It is named for Julius Scaliger, the father of Josephus
+Justus Scaliger, who invented the concept. It can also be thought of as
+a logical follow-on to the old Egyptian civil calendar, which also used
+years of constant lengths. <br>
+<br>
+Scaliger chose the particular date in the remote past because it was before
+recorded history and because in that year, three important cycles coincided
+with their first year of the cycle: The 19-year Metonic Cycle, the 15-year
+Indiction Cycle (a Roman Taxation Cycle) and the 28-year Solar Cycle (the
+length of time for the old Julian Calendar to repeat exactly).<br>
+<br>
+It is easy (with your calculator) to calculate the Julian Day Number of
+any date given on the Gregorian Calendar. The Julian Day Number so calculated
+will be for 0 hours, GMT, on that date. Here's how to do it:<br>
+<br>
+1) Express the date as Y M D, where Y is the year, M is the month number
+(Jan = 1, Feb = 2, etc.), and D is the day in the month.<br>
+<br>
+2) If the month is January or February, subtract 1 from the year to get
+a new Y, and add 12 to the month to get a new M. (Thus, we are thinking
+of January and February as being the 13th and 14th month of the previous
+year).<br>
+<br>
+3) Dropping the fractional part of all results of <i>all</i> <i>multiplications
+and divisions</i>, let<p></p>
+
+<pre>  A = Y/100<br>  B = A/4<br>  C = 2-A+B<br>  E = 365.25x(Y+4716)<br>  F = 30.6001x(M+1)<br>  JD= C+D+E+F-1524.5</pre>
+
+<p>This is the Julian Day Number for the beginning of the date in question
+at 0 hours, Greenwich time. Note that this always gives you a half day extra.
+That is because the Julian Day begins at <i>noon</i>, Greenwich time. This
+is convenient for astronomers (who until recently only observed at night),
+but it is confusing.<br>
+<br>
+Example: If the date is 1582 October 15,</p>
+
+<pre>  Y = 1582<br>  M = 10<br>  D = 15<br>  A = 15<br>  B = 3<br>  C = -10<br>  E = 2300344<br>  F = 336<br>  JD = 2299160.5</pre>
+
+<p>To convert a Julian Day Number to a Gregorian date, assume that it is
+for 0 hours, Greenwich time (so that it ends in 0.5). Do the following calculations,
+again dropping the fractional part of all multiplicatons and divisions.
+<i>Note: This method will not give dates accurately on the Gregorian Proleptic
+Calendar, i.e., the calendar you get by extending the Gregorian calendar
+backwards to years earlier than 1582. using the Gregorian leap year rules.
+In particular, the method fails if Y&lt;400.</i> Thanks to a correspondent, Bo Du, for some ideas that have improved this calculation.</p>
+
+<pre>  Q = JD+0.5<br>  Z = Integer part of Q<br>  W = (Z - 1867216.25)/36524.25<br>  X = W/4<br>  A = Z+1+W-X<br>  B = A+1524<br>  C = (B-122.1)/365.25<br>  D = 365.25xC<br>  E = (B-D)/30.6001<br>  F = 30.6001xE<br>  Day of month = B-D-F+(Q-Z)<br>  Month = E-1 or E-13 (must get number less than or equal to 12)<br>  Year = C-4715 (if Month is January or February) or C-4716 (otherwise)</pre>
+
+<p>Example: Check the first calculation by starting with JD = 2299160.5</p>
+
+<pre>  Q = 2299161<br>  Z = 2299161<br>  W = 11<br>  X = 2<br>  A = 2299171<br>  B = 2300695<br>  C = 6298<br>  D = 2300344<br>  E = 11<br>  F = 336<br>  Day of Month = 15<br>  Month = 10<br>  Year = 1582</pre>
+
+<p><i>Practice:</i> Calculate the Julian Day Number for 0 hours GMT on the
+date of your birthday. Check your result by calculating the date of your
+birthday from the Julian Day Number.<br>
+<br>
+<i>Remark:</i> You can do the calculation of Julian Calendar Date--&gt;Julian
+Day Number by ignoring the calculation of A and B, and setting C=0; to go
+from Julian Day Number to Julian Calendar Date, bypass the calculation of
+W and X and simply set A=Z. These calculations are useful also when converting
+between the Gregorian and Julian calendars (e.g., to correlate dates on
+the Julian Calendar in England prior to 1752 with dates on the Gregorian
+calendar). For example, to go from Gregorian to Julian calendar date, convert
+the Gregorian date to Julian Day Number, then convert the Julian Day Number
+to Julian calendar date. This method even works for dates prior to 1582
+and correctly gives years prior to the Common Era as negative years (with
+year 0 corresponding to 1 BCE, year -1 corresponding to 2 BCE, etc.) However,
+it does <i>not</i> work with negative Julian Day Numbers and does <i>not</i>
+work when going <i>to</i> the Gregorian calendar for years before 400 CE
+.<br>
+<br>
+To assist you in practicing Julian Day Number conversions, I have made up
+a page that contains a <a href="JulianDateCalc.html">Julian Day Number Calculator</a>.
+You can put any date in the Common Era (that is, AD) into this calculator,
+and it will give you the Julian Day Number, on both the Julian Calendar
+and the Gregorian Calendars. Or, you can put in a Julian Day Number and
+it will compute the calendar date. Have fun!<br>
+</p><hr align="left">This page was served to you by Quasar, a PowerMac 6100/60.
+It was last modified on 980126. <br>
+<script language="javascript"><!--
+// SpamProof Mail Script 1.0 by Joseph McLean <flux@thecentre.com> - freeware
+// Linktext is the text you want folks to see and click upon.
+// email1 & email2 are the text on either side of your email address's @ sign.
+
+var linktext = "Email Me!";
+var email1 = "bill";
+var email2 = "clyde.as.utexas.edu";
+
+document.write("This site maintained by Bill Jefferys, <a href=" + "mail" + "to:" + email1 + "@" + email2 + ">" +
+email1 + '@' + email2 + "</a>.")
+//--></script>My home page is located <a href="../index.html">here</a>.<br>
+<br>
+This page Copyright (C) 1996-1998 by William H. Jefferys. All Rights Reserved.<br>
+<hr align="left">
+</body></html>

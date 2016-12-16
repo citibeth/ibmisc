@@ -41,4 +41,18 @@ inline bool ends_with(std::string const &fullString, std::string const &ending)
     }
 }
 
+bool replace(std::string& str, const std::string& from, const std::string& to);
+
+// Convert Fortran to C++ string
+inline std::string f_to_cpp(char *fstr, size_t len)
+{
+    // Starting from last character, find first non-blank
+    char *c;
+    for (c=fstr+len-1; *c == ' ' && c > fstr; --c) ;
+
+    // Copy to a C++ string
+    return std::string (fstr, c+1-fstr);
+}
+
+
 }

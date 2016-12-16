@@ -20,6 +20,7 @@
 
 #include <cstddef>
 #include <gtest/gtest.h>
+#include <ibmisc/array.hpp>
 #include <spsparse/VectorCooArray.hpp>
 #include <spsparse/SparseSet.hpp>
 #include <iostream>
@@ -315,7 +316,7 @@ TEST_F(SpSparseTest, sparse_set)
     VectorCooArrayT arr2d;
     auto acc1(sparse_transform_accum(
             &arr2d, SparseTransform::TO_DENSE,
-            make_array(&dim0, nullptr)));
+            ibmisc::make_array(&dim0, nullptr)));
     copy(acc1, arr2);
 
     {
@@ -340,7 +341,7 @@ TEST_F(SpSparseTest, sparse_set)
     VectorCooArrayT arr3;
     auto acc3(sparse_transform_accum(
             &arr3, SparseTransform::TO_SPARSE,
-            make_array(&dim0, nullptr)));
+            ibmisc::make_array(&dim0, nullptr)));
     copy(acc3, arr2d);
 
     auto ii(arr3.begin());

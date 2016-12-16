@@ -66,7 +66,7 @@ if (USE_BOOST)
     # find_package(Boost COMPONENTS operators optional iterator preprocessor)
     find_package(Boost)
     add_definitions(-DUSE_BOOST)
-    include_directories(${BOOST_INCLUDE_DIRS})
+    include_directories(${BOOST_INCLUDE_DIR})
     list(APPEND EXTERNAL_LIBS ${BOOST_LIBRARIES})
 endif()
 # -----------------------------------------------------

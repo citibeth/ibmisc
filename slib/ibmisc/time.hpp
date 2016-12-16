@@ -23,7 +23,6 @@
 namespace ibmisc {
 namespace time {
 
-
 /*
 Member      Type            Meaning         Range
 tm_sec      int seconds after the minute    0-60*
@@ -77,4 +76,7 @@ public:
         int mday() const { return tm_mday; }
     };
 
-}}
+}
+
+
+}

@@ -97,7 +97,7 @@ void Indexing::ncio(
 // ------------------------------------------------
 
 bool DomainData::operator==(DomainData const &other) {
-    return (low == other.low && high == other.high);
+    return (begin == other.begin && end == other.end);
 }
 bool Domain::operator==(Domain const &other) {
     if (data.size() != other.data.size()) return false;
@@ -111,25 +111,25 @@ void Domain::ncio(
     NcIO &ncio,
     std::string const &vname)
 {
-    auto &low(ncio.tmp.make<vector<long>>());
-    auto &high(ncio.tmp.make<vector<long>>());
+    auto &begin(ncio.tmp.make<vector<long>>());
+    auto &end(ncio.tmp.make<vector<long>>());
 
     if (ncio.rw == 'w') for (size_t i=0; i<rank(); ++i) {
         DomainData const &data((*this)[i]);
-        low.push_back(data.low);
-        high.push_back(data.high);
+        begin.push_back(data.begin);
+        end.push_back(data.end);
     }
 
     auto info_v = get_or_add_var(ncio, vname, "int64", {});
-    get_or_put_att(info_v, ncio.rw, "low", "int64", low);
-    get_or_put_att(info_v, ncio.rw, "high", "int64", high);
+    get_or_put_att(info_v, ncio.rw, "begin", "int64", begin);
+    get_or_put_att(info_v, ncio.rw, "end", "int64", end);
 
     if (ncio.rw == 'r') {
         data.clear();
-        for (size_t i=0; i<low.size(); ++i) {
-            data.push_back(DomainData(low[i], high[i]));
+        for (size_t i=0; i<begin.size(); ++i) {
+            data.push_back(DomainData(begin[i], end[i]));
         }
-        ncio.tmp.free();    // Free low and high if reading
+        ncio.tmp.free();    // Free begin and end if reading
     }
 }
 

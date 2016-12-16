@@ -106,20 +106,6 @@ void to_tiny(blitz::TinyVector<TinyT, RANK> &ret, std::array<ArrayT, RANK> const
     for (int k=0; k<RANK; ++k) ret[k] = arr[k];
 }
 // ------------------------------------------------------------------
-// https://gist.github.com/klmr/2775736
-// Might be in upcoming C++ standard
-// http://en.cppreference.com/w/cpp/experimental/make_array
-template <typename... T>
-constexpr auto make_array(T&&... values) ->
-        std::array<
-            typename std::decay<
-                typename std::common_type<T...>::type>::type,
-            sizeof...(T)> {
-    return std::array<
-        typename std::decay<
-            typename std::common_type<T...>::type>::type,
-        sizeof...(T)>{std::forward<T>(values)...};
-}
 
 
 template<class ArrayT, class TinyT, int RANK>

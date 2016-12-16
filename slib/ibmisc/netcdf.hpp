@@ -76,6 +76,8 @@ public:
     // 'a' 	open for writing, appending to the end of the file if it exists
     NcIO(std::string const &filePath, char mode);
 
+    ~NcIO() { close(); }
+
     /** Converts a string to a NetCDF type */
     inline netCDF::NcType nc_type(std::string sntype)
         { return nc->getType(sntype, netCDF::NcGroup::ParentsAndCurrent); }

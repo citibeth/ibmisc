@@ -220,10 +220,10 @@ blitz::Array<ValT,RANK> Indexing::to_blitz(ValT *memory)
 }
 // ==============================================================
 struct DomainData {
-    long const low;    // First "included" element in each index
-    long const high;   // First "excluded" element in each index
+    long const begin;    // First "included" element in each index
+    long const end;   // First "excluded" element in each index
 
-    DomainData(long _low, long _high) : low(_low), high(_high) {}
+    DomainData(long _begin, long _end) : begin(_begin), end(_end) {}
     bool operator==(DomainData const &other);
 };
 
@@ -234,7 +234,7 @@ public:
 
     Domain() {}
 
-    Domain(std::vector<long> const &_low, std::vector<long> const &_high);
+    Domain(std::vector<long> const &_begin, std::vector<long> const &_end);
     bool operator==(Domain const &other);
 
     /** @return Information on the ix'th dimension */
@@ -254,10 +254,10 @@ public:
 
 };
 
-Domain::Domain(std::vector<long> const &_low, std::vector<long> const &_high)
+Domain::Domain(std::vector<long> const &_begin, std::vector<long> const &_end)
 {
-    for (size_t i=0; i<_low.size(); ++i)
-        data.push_back(DomainData(_low[i], _high[i]));
+    for (size_t i=0; i<_begin.size(); ++i)
+        data.push_back(DomainData(_begin[i], _end[i]));
 }
 
 template<class TupleT>
@@ -265,7 +265,7 @@ bool Domain::in_domain(TupleT const *tuple) const
 {
     for (int k=0; k<rank(); ++k) {
         auto &datak(data[k]);
-        if ((tuple[k] < datak.low) || (tuple[k] >= datak.high))
+        if ((tuple[k] < datak.begin) || (tuple[k] >= datak.end))
             return false;
     }
     return true;

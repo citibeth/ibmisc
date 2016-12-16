@@ -100,9 +100,7 @@ void NcIO::operator()() {
 void NcIO::close() {
     if (own_nc) {
         (*this)();
-        _mync.close();
-    } else {
-        (*ibmisc_error)(-1, "NcIO::close() only valid on NcGroups it owns.");
+        _mync.close();    // NcFile::close() is idempotent
     }
 }
 
