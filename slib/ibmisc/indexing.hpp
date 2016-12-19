@@ -163,7 +163,7 @@ public:
 @param permutation Permutation to apply to dims from indexing.
        If none given, then indexing.indices will be used
        (resulting in dimensions in decreasing stride order) */
-NcDimSpec &append(NcDimSpec &dim_spec, Indexing &indexing,
+NcDimSpec &append(NcDimSpec &dim_spec, Indexing const &indexing,
     std::vector<int> const &_permutation = {})
 {
     // Default permutation puts largest stride first for NetCDF

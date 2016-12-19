@@ -223,9 +223,7 @@ blitz::Array<T, rank> f_to_c(blitz::Array<T, rank> &arr)
         (*ibmisc_error)(-1, \
             "blitz.hpp, ibmisc::reshape(): Total dimension mismatch, src=%ld, dest=%ld\n", src_n, dest_n); \
     } \
- \
-    /* Do the reshaping */ \
-    return blitz::Array<T,dest_ndim>(src.data(), dest_shape, blitz::neverDeleteData)
+ 
 
 
 
@@ -235,7 +233,12 @@ template<class T, int src_ndim, int dest_ndim>
 extern blitz::Array<T, dest_ndim> reshape(
     blitz::Array<T, src_ndim> &src,
     blitz::TinyVector<int,dest_ndim> const &dest_shape)
-{ RESHAPE_BODY; }
+{
+    RESHAPE_BODY;
+
+    /* Do the reshaping */
+    return blitz::Array<T,dest_ndim>(src.data(), dest_shape, blitz::neverDeleteData);
+}
 
 /** Reshape an array.  As long as src and dest have same total number
 of elements.  Assumes a dense array on both sides. */
@@ -243,7 +246,13 @@ template<class T, int src_ndim, int dest_ndim>
 extern blitz::Array<T, dest_ndim> const reshape(
     blitz::Array<T, src_ndim> const &src,
     blitz::TinyVector<int,dest_ndim> const &dest_shape)
-{ RESHAPE_BODY; }
+{
+    RESHAPE_BODY;
+
+    /* Do the reshaping */
+    return (blitz::Array<T,dest_ndim> const)(src.data(), dest_shape, blitz::neverDeleteData);
+
+}
 
 #undef RESHAPE_BODY
 
