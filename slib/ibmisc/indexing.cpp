@@ -107,6 +107,14 @@ bool Domain::operator==(Domain const &other) {
     return true;
 }
 
+Domain::Domain(std::vector<long> const &_begin, std::vector<long> const &_end)
+{
+    for (size_t i=0; i<_begin.size(); ++i)
+        data.push_back(DomainData(_begin[i], _end[i]));
+}
+
+
+
 void Domain::ncio(
     NcIO &ncio,
     std::string const &vname)
@@ -143,6 +151,25 @@ bool in_domain(
     return domain->in_domain(tuple);
 }
 
+// ====================================================
+/** Adds the dimensions specified by indexing to a NcDimSpec.
+@param permutation Permutation to apply to dims from indexing.
+       If none given, then indexing.indices will be used
+       (resulting in dimensions in decreasing stride order) */
+NcDimSpec &append(NcDimSpec &dim_spec, Indexing const &indexing,
+    std::vector<int> const &_permutation)
+{
+    // Default permutation puts largest stride first for NetCDF
+    std::vector<int> const *permutation =
+        (_permutation.size() != 0 ? &_permutation : &indexing.indices());
+
+    for (size_t i=0; i<indexing.rank(); ++i) {
+        int dimi = (*permutation)[i];
+        dim_spec.push_back(indexing[dimi].name, indexing[dimi].extent);
+    }
+
+    return dim_spec;
+}
 
 
 };

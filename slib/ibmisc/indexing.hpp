@@ -30,9 +30,9 @@ class Indexing;
 struct IndexingData {
     friend class Indexing;
 
-    std::string const name;    // Name of this dimension
-    long const base;           // First element in this dimension
-    long const extent;         // Number of elements in this dimension
+    std::string name;    // Name of this dimension
+    long base;           // First element in this dimension
+    long extent;         // Number of elements in this dimension
 private:
     long _stride;         // (DERIVED) Stride (in #elements) for this dimension
 public:
@@ -164,19 +164,7 @@ public:
        If none given, then indexing.indices will be used
        (resulting in dimensions in decreasing stride order) */
 NcDimSpec &append(NcDimSpec &dim_spec, Indexing const &indexing,
-    std::vector<int> const &_permutation = {})
-{
-    // Default permutation puts largest stride first for NetCDF
-    std::vector<int> const *permutation =
-        (_permutation.size() != 0 ? &_permutation : &indexing.indices());
-
-    for (size_t i=0; i<indexing.rank(); ++i) {
-        int dimi = (*permutation)[i];
-        dim_spec.push_back(indexing[dimi].name, indexing[dimi].extent);
-    }
-
-    return dim_spec;
-}
+    std::vector<int> const &_permutation = {});
 
 
 /** Allocates a blitz::Array according to the indexing described here. */
@@ -253,12 +241,6 @@ public:
         { return in_domain(&tuple[0]); }
 
 };
-
-Domain::Domain(std::vector<long> const &_begin, std::vector<long> const &_end)
-{
-    for (size_t i=0; i<_begin.size(); ++i)
-        data.push_back(DomainData(_begin[i], _end[i]));
-}
 
 template<class TupleT>
 bool Domain::in_domain(TupleT const *tuple) const
