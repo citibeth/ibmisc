@@ -27,6 +27,12 @@ if (USE_UDUNITS2)
         ibmisc/udunits2.cpp)
 endif()
 
+if (USE_EVERYTRACE)
+    add_library (icebin SHARED ${EVERYTRACE_c_REFADDR} ${IBMISC_SOURCE})
+else()
+    add_library(ibmisc SHARED ${IBMISC_SOURCE})
+endif()
+
 add_library(ibmisc SHARED
     ${EVERYTRACE_REFADDR}   # Blank if not USE_EVERYTRACE
     ${IBMISC_SOURCE})
