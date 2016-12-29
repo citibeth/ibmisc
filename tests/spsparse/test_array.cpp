@@ -249,7 +249,7 @@ TEST_F(SpSparseTest, dense)
     arr2.add({2,4}, 17.);
     arr2.add({6,4}, 10.);
 
-    blitz::Array<double, 2> dense(ibmisc::to_blitz(arr2));
+    blitz::Array<double, 2> dense(spsparse::to_blitz(arr2));
     int i,j;
     double sum=0;
     for (int i=0; i<20; ++i) {
@@ -275,8 +275,8 @@ TEST_F(SpSparseTest, dense_to_blitz)
     dense1(0,1) = 7.0;
 
     VectorCooArrayT sparse1({4,5});
-    copy(sparse1, dense1);
-    auto dense2(ibmisc::to_blitz(sparse1));
+    spcopy(sparse1, dense1);
+    auto dense2(spsparse::to_blitz(sparse1));
 
     for (int i=0; i<dense1.extent(0); ++i) {
     for (int j=0; j<dense1.extent(0); ++j) {
@@ -317,7 +317,7 @@ TEST_F(SpSparseTest, sparse_set)
     auto acc1(sparse_transform_accum(
             &arr2d, SparseTransform::TO_DENSE,
             ibmisc::make_array(&dim0, nullptr)));
-    copy(acc1, arr2);
+    spcopy(acc1, arr2);
 
     {
     auto ii(arr2d.begin());
@@ -342,7 +342,7 @@ TEST_F(SpSparseTest, sparse_set)
     auto acc3(sparse_transform_accum(
             &arr3, SparseTransform::TO_SPARSE,
             ibmisc::make_array(&dim0, nullptr)));
-    copy(acc3, arr2d);
+    spcopy(acc3, arr2d);
 
     auto ii(arr3.begin());
     EXPECT_EQ(6, ii.index(0));

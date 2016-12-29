@@ -21,6 +21,7 @@
 #include <spsparse/SparseSet.hpp>
 #include <spsparse/VectorCooArray.hpp>
 #include <spsparse/accum.hpp>
+#include <spsparse/blitz.hpp>
 #include <Eigen/SparseCore>
 
 namespace spsparse {
@@ -36,13 +37,13 @@ converting stuff to/from Eigen::SparseMatrix with dense index space.
 // --------------------------------------------------------------
 /** Copies an Eigen SparseMatrix into a rank-2 Spsparse accumulator. */
 template<class AccumulatorT, class ValueT>
-extern void copy(
+extern void spcopy(
     AccumulatorT &ret,
     Eigen::SparseMatrix<ValueT> const &M,
     bool set_shape=true);
 
 template<class AccumulatorT, class ValueT>
-void copy(
+void spcopy(
     AccumulatorT &ret,
     Eigen::SparseMatrix<ValueT> const &M,
     bool set_shape=true)
@@ -57,39 +58,26 @@ void copy(
     }}
 }
 // --------------------------------------------------------------
-/* ***** TODO: Change this to a general-purpose accumulator that translates indices and stores them in the dims. See SparseTriplets (below) for the OPPOSITE of what we want here... */
-
-/** Converts an Eigen::SparseMatrix to a rank-2 SpSparse structure.
-In the process, it translates for each dimension from the dense index
-space used by Eigen to a sparse index space used by SpSparse.
-
-@param ret OUT: Place to store the resulting SpSparse array.
-@param M IN: The Eigen structure to convert.
-@param dims IN: Dense-to-sparse index conversions for the two dimensions. */
-template<class AccumulatorT, class EigenSparseMatrixT>
-void eigenM_to_sparseM(
+template<class AccumulatorT, int _Rows>
+inline void spcopy(
     AccumulatorT &ret,
-    EigenSparseMatrixT const &M,
-    std::array<SparseSet<
-        typename AccumulatorT::index_type,
-        typename EigenSparseMatrixT::Index> *, 2> const &dims);
+    Eigen::Matrix<typename AccumulatorT::val_type, _Rows, 1> const &M,    // eg. Eigen::VectorXd
+    bool set_shape=true);
 
-template<class AccumulatorT, class EigenSparseMatrixT>
-void eigenM_to_sparseM( // MM = Matrix->Matrix
+
+/** Copy from dense Eigen column vectors */
+template<class AccumulatorT, int _Rows>
+inline void spcopy(
     AccumulatorT &ret,
-    EigenSparseMatrixT const &M,
-    std::array<SparseSet<
-        typename AccumulatorT::index_type,
-        typename EigenSparseMatrixT::Index> *, 2> const &dims)
+    Eigen::Matrix<typename AccumulatorT::val_type, _Rows, 1> const &M,    // eg. Eigen::VectorXd
+    bool set_shape)
 {
-    ret.set_shape({dims[0]->sparse_extent(), dims[1]->sparse_extent()});
-    for (int k=0; k<M.outerSize(); ++k) {
-    for (typename EigenSparseMatrixT::InnerIterator ii(M,k); ii; ++ii) {
-        ret.add({dims[0]->to_sparse(ii.row()), dims[1]->to_sparse(ii.col())}, ii.value());
-    }}
+    for (size_t i=0; i<M.rows(); ++i) {
+        ret.add({(typename AccumulatorT::index_type)i}, M(i,0));
+    }
 }
-// --------------------------------------------------------------
 
+// --------------------------------------------------------------
 /** Sum the rows or columns of an Eigen SparseMatrix.
 @param dimi 0: sum rows, 1: sum columns */
 template<class ValueT>
@@ -98,9 +86,9 @@ inline blitz::Array<ValueT,1> sum(
 {
     // Get our weight vector (in dense coordinate space)
     blitz::Array<double,1> ret;
-    auto accum1(ibmisc::blitz_accum_new(&ret));
+    auto accum1(spsparse::blitz_accum_new(&ret));
     auto accum2(permute_accum(&accum1, in_rank<2>(), {dimi}));
-    copy(accum2, M, true);
+    spcopy(accum2, M, true);
 
     return ret;
 }
@@ -148,7 +136,7 @@ public:
     @param transpose Set to 'T' to make the result be a transpose of
         our internal M.  Use '.' for no transpose.
     @param invert Set to true to make the result be an element-wise
-        multiplicative ineverse of M. */
+        multiplicative inverse of M. */
     typename _ES<SparseMatrixT>::EigenSparseMatrixT to_eigen(char transpose='.', bool invert=false) const;
 
 
@@ -178,8 +166,21 @@ typename _ES<SparseMatrixT>::EigenSparseMatrixT SparseTriplets<SparseMatrixT>::t
     return ret;
 }
 // --------------------------------------------------------
+template <class SparseMatrixT>
+typename _ES<SparseMatrixT>::EigenSparseMatrixT SparseTriplets<SparseMatrixT>::eigen_scale_matrix(int dimi) const
+{
+    std::vector<EigenTripletT> triplets;
 
-// --------------------------------------------------------------
+    for (auto ii=super::M.begin(); ii != super::M.end(); ++ii) {
+        auto densei = super::dims[dimi]->to_dense(ii.index(dimi));
+        triplets.push_back(EigenTripletT(densei, densei, ii.val()));
+    }
+    auto extent = super::dims[dimi]->dense_extent();
+    EigenSparseMatrixT ret(extent, extent);
+    ret.setFromTriplets(triplets.begin(), triplets.end());
+    return ret;
+}
+// --------------------------------------------------------
 template<class ValueT>
 Eigen::SparseMatrix<ValueT> diag_matrix(
     blitz::Array<ValueT,1> const &diag, bool invert);

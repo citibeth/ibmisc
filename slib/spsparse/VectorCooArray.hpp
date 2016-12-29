@@ -359,10 +359,10 @@ using VectorCooVector = VectorCooArray<IndexT, ValT, 1>;
 @param ret Accumulator for output.
 @param A Input. */
 template<class AccumulatorT, class IndexT, class ValT, int RANK>
-extern void copy(AccumulatorT &ret, VectorCooArray<IndexT,ValT,RANK> const &A, bool set_shape=true);
+extern void spcopy(AccumulatorT &ret, VectorCooArray<IndexT,ValT,RANK> const &A, bool set_shape=true);
 
 template<class AccumulatorT, class IndexT, class ValT, int RANK>
-void copy(AccumulatorT &ret, VectorCooArray<IndexT,ValT,RANK> const &A, bool set_shape)
+void spcopy(AccumulatorT &ret, VectorCooArray<IndexT,ValT,RANK> const &A, bool set_shape)
 {
     if (set_shape) ret.set_shape(A.shape);
     std::array<int,AccumulatorT::rank> idx;
@@ -371,7 +371,7 @@ void copy(AccumulatorT &ret, VectorCooArray<IndexT,ValT,RANK> const &A, bool set
     }
 }
 // ---------------------------------------------------------------------------
-/** Convert spsparse-object to blitz, as long as it has an associated copy() function. */
+/** Convert spsparse-object to blitz, as long as it has an associated spcopy() function. */
 #define __VectorCooArrayT VectorCooArray<typename SourceT::index_type, typename SourceT::val_type, SourceT::rank>
 
 template<class SourceT>
@@ -381,7 +381,7 @@ template<class SourceT>
 __VectorCooArrayT to_spsparse(SourceT const &M)
 {
     __VectorCooArrayT ret;
-    copy(ret, M, true);
+    spcopy(ret, M, true);
     return ret;
 }
 #undef __VectorCooArrayT

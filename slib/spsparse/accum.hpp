@@ -84,7 +84,7 @@ Usage Example:
 @code
 VectorCooArray<int,double,2> A,B;
 PermuteAccum<A::rank, decltype(B)> p(B, {1,0});
-copy(p, A);
+spcopy(p, A);
 @endcode
 
 */
@@ -148,7 +148,7 @@ Usage Example:
 @code
 VectorCooArray<int,double,2> A;
 ScalarAccumulator<decltype(A)> s;
-copy(s, A);
+spcopy(s, A);
 printf("Sum = %g\n", s.val);
 @endcode
 */

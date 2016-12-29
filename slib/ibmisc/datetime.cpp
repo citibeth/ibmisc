@@ -29,6 +29,12 @@ const std::array<int,13> Cal365::month_start = init_month_start();
 Cal365 cal365;    // Singleton
 
 // ------------------------------------------------------
+
+Cal365::~Cal365() {}
+
+std::string Cal365::to_cf() const
+    { return "365_day"; }
+
 /** Produces a Juliay Day-like number. */
 JDate Cal365::to_jdate(Date const &da) const
 {
@@ -88,7 +94,7 @@ JDatetime TimeUnit::to_jdatetime(double tm)
     }
 }
 
-std::string TimeUnit::to_cf()
+std::string TimeUnit::to_cf() const
 {
     switch(uniti) {
     case TimeElement::SECOND : {

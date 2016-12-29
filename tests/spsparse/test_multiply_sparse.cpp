@@ -133,9 +133,9 @@ void test_random_MM_multiply(unsigned int dsize, int seed)
 // std::cout << "C: " << C << std::endl;
 
     // --------- Compare to dense matrix multiplication
-    auto Ad(ibmisc::to_blitz(A));
-    auto Bd(ibmisc::to_blitz(B));
-    auto Cd(ibmisc::to_blitz(C));
+    auto Ad(spsparse::to_blitz(A));
+    auto Bd(spsparse::to_blitz(B));
+    auto Cd(spsparse::to_blitz(C));
 
     double usum = 0;
     for (int i=0; i<dsize; ++i) {
@@ -182,9 +182,9 @@ void test_random_MV_multiply(unsigned int dsize, int seed)
         B);
 
     // --------- Compare to dense matrix multiplication
-    auto Ad(ibmisc::to_blitz(A));
-    auto Bd(ibmisc::to_blitz(B));
-    auto Cd(ibmisc::to_blitz(C));
+    auto Ad(spsparse::to_blitz(A));
+    auto Bd(spsparse::to_blitz(B));
+    auto Cd(spsparse::to_blitz(C));
 
     double usum = 0;
     bool err = false;
@@ -234,9 +234,9 @@ void test_random_VV_multiply(unsigned int dsize, int seed)
     multiply_ele(C, A, B);
 
     // --------- Compare to dense matrix multiplication
-    auto Ad(ibmisc::to_blitz(A));
-    auto Bd(ibmisc::to_blitz(B));
-    auto Cd(ibmisc::to_blitz(C));
+    auto Ad(spsparse::to_blitz(A));
+    auto Bd(spsparse::to_blitz(B));
+    auto Cd(spsparse::to_blitz(C));
 
     double usum = 0;
     bool err = false;
@@ -278,7 +278,7 @@ TEST_F(SpSparseTest, eigen_conv)
     auto Ae(A.to_eigen());
 
     VectorCooMatrix<int, double> A2;
-    eigenM_to_sparseM(A2, Ae, {&dimi, &dimj});
+    sparse_copy(A2, Ae, SparseTransform::TO_SPARSE, make_array(&dimi, &dimj));
 
     A.M.consolidate({0,1});
     A2.consolidate({0,1});
@@ -317,12 +317,12 @@ void test_random_MM_multiply_eigen(unsigned int dsize, int seed)
     Ce = Ae * Be;
 
     VectorCooMatrix<int, double> C({A.M.shape[0], B.M.shape[1]});
-    eigenM_to_sparseM(C, Ce, {&dimi, &dimk});
+    sparse_copy(C, Ce, SparseTransform::TO_SPARSE, make_array(&dimi, &dimk));
 
     // --------- Compare to dense matrix multiplication
-    auto Ad(ibmisc::to_blitz(A.M));
-    auto Bd(ibmisc::to_blitz(B.M));
-    auto Cd(ibmisc::to_blitz(C));
+    auto Ad(spsparse::to_blitz(A.M));
+    auto Bd(spsparse::to_blitz(B.M));
+    auto Cd(spsparse::to_blitz(C));
     double usum = 0;
     for (int i=0; i<dsize; ++i) {
     for (int j=0; j<dsize; ++j) {

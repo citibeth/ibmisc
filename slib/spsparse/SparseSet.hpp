@@ -21,6 +21,8 @@
 #include <unordered_map>
 #include <algorithm>
 #include <spsparse/spsparse.hpp>
+#include <ibmisc/array.hpp>
+#include <spsparse/blitz.hpp>
 
 namespace spsparse {
 
@@ -138,6 +140,9 @@ public:
     void set_shape(std::array<long, rank> shape)
     {
         for (int i=0; i<rank; ++i) {
+            // Use the shape we were given, if no transform for this dimension
+            if (!data[i].sparse_set) continue;
+
             switch(data[i].transform) {
                 case SparseTransform::TO_DENSE:
                     shape[i] = data[i].sparse_set->dense_extent();
@@ -153,6 +158,9 @@ public:
     void add(std::array<index_type,rank> index, val_type const &val)
     {
         for (int i=0; i<rank; ++i) {
+            // Use the index we were given, if no transform for this dimension
+            if (!data[i].sparse_set) continue;
+
             switch(data[i].transform) {
                 case SparseTransform::TO_DENSE:
                     index[i] = data[i].sparse_set->to_dense(index[i]);
@@ -189,6 +197,44 @@ inline SparseTransformAccumT sparse_transform_accum(
     return SparseTransformAccumT(sub, transform, sparse_sets);
 }
 #undef SparseTransformAccumT
+
+
+
+template<class AccumulatorT, class SrcT, class SparseT, class DenseT>
+void sparse_copy(AccumulatorT &ret, SrcT const &src,
+    SparseTransform direction,
+    std::array<spsparse::SparseSet<SparseT, DenseT> *, AccumulatorT::rank> dims,
+    bool set_shape=true);
+
+template<class AccumulatorT, class SrcT, class SparseT, class DenseT>
+void sparse_copy(AccumulatorT &ret, SrcT const &src,
+    SparseTransform direction,
+    std::array<spsparse::SparseSet<SparseT, DenseT> *, AccumulatorT::rank> dims,
+    bool set_shape)
+{
+    auto accum(sparse_transform_accum(&ret, direction, dims));
+    spcopy(accum, src, set_shape);
+}
+
+
+
+
+template<class AccumulatorT, class SrcT, class SparseT, class DenseT>
+void sparse_copy(AccumulatorT &ret, SrcT const &src,
+    SparseTransform direction,
+    std::array<spsparse::SparseSet<SparseT, DenseT> const *, AccumulatorT::rank> dims,
+    bool set_shape=true);
+
+template<class AccumulatorT, class SrcT, class SparseT, class DenseT>
+void sparse_copy(AccumulatorT &ret, SrcT const &src,
+    SparseTransform direction,
+    std::array<spsparse::SparseSet<SparseT, DenseT> const *, AccumulatorT::rank> dims,
+    bool set_shape)
+{
+    auto accum(sparse_transform_accum(&ret, direction, dims));
+    spcopy(accum, src, set_shape);
+}
+
 
 // -------------------------------------------------------
 /** A data sructure that acts like a normal SpSparse Accumulator.  BUT:

@@ -190,6 +190,9 @@ inline Time to_time(JTime jt) {
 struct Calendar {
     virtual ~Calendar();
 
+    /** Used in the NetCDF `calendar` attribute (eg: "365_day"). */
+    virtual std::string to_cf() const = 0;
+
     virtual JDate to_jdate(Date const &da) const = 0;
     virtual Date to_date(JDate jda) const = 0;
 
@@ -211,6 +214,9 @@ struct Cal365 : public Calendar {
     static const std::array<int,12> month_len;
     static const std::array<int,13> month_start;
 
+    virtual ~Cal365();
+
+    std::string to_cf() const;
     JDate to_jdate(Date const &cda) const;
     Date to_date(JDate da) const;
 };
@@ -232,7 +238,7 @@ public:
     TimeUnit(Calendar const *_cal, Datetime const &_base, TimeElement _uniti);
 
     /** Produces a CF-compliant string describing this unit for time. */
-    std::string to_cf();
+    std::string to_cf() const;
 
     JDatetime to_jdatetime(double tm);
 
