@@ -191,7 +191,7 @@ public:
 
 /** Serves as accumulator and iterable storage */
 template<class IndexT, class ValT, int RANK>
-class TupleVector : public std::vector<Tuple<IndexT,ValT,RANK>>
+class TupleList : public std::vector<Tuple<IndexT,ValT,RANK>>
 {
 public:
     typedef std::vector<Tuple<IndexT,ValT,RANK>> super;
@@ -230,9 +230,9 @@ public:
     // -------------------------------------------------
 
 
-    TupleVector() {}
+    TupleList() {}
 
-    TupleVector(std::array<long,RANK> _shape)
+    TupleList(std::array<long,RANK> _shape)
         { set_shape(_shape); }
 
     // So this can serve as a Spsparse Accumulator
@@ -273,14 +273,14 @@ public:
 };
 
 template<class IndexT, class ValT>
-using TripletVector = TupleVector<IndexT,ValT,2>;
+using TripletVector = TupleList<IndexT,ValT,2>;
 
 
 template<class AccumulatorT, class IndexT, class ValT, int RANK>
-extern void spcopy(AccumulatorT &ret, TupleVector<IndexT,ValT,RANK> const &A, bool set_shape = true);
+extern void spcopy(AccumulatorT &ret, TupleList<IndexT,ValT,RANK> const &A, bool set_shape = true);
 
 template<class AccumulatorT, class IndexT, class ValT, int RANK>
-void spcopy(AccumulatorT &ret, TupleVector<IndexT,ValT,RANK> const &A, bool set_shape)
+void spcopy(AccumulatorT &ret, TupleList<IndexT,ValT,RANK> const &A, bool set_shape)
 {
     if (set_shape) ret.set_shape(A.shape);
     std::array<int,AccumulatorT::rank> idx;

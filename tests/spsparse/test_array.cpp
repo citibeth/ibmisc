@@ -57,9 +57,9 @@ protected:
 };
 
 
-TEST_F(SpSparseTest, TupleVector) {
-    // Make a simple TupleVector
-    TupleVector<int, double, 1> arr1({4});
+TEST_F(SpSparseTest, TupleList) {
+    // Make a simple TupleList
+    TupleList<int, double, 1> arr1({4});
     arr1.add({1}, 2.);
     arr1.add({3}, 6.);
     EXPECT_EQ(2, arr1.size());
@@ -81,7 +81,7 @@ TEST_F(SpSparseTest, TupleVector) {
     }
 
     // Test Move Constructor
-    TupleVector<int, double, 1> arr2(std::move(arr1));
+    TupleList<int, double, 1> arr2(std::move(arr1));
     EXPECT_EQ(2, arr1.size());
     {
         auto ii(arr1.begin());
@@ -94,8 +94,8 @@ TEST_F(SpSparseTest, TupleVector) {
 
 TEST_F(SpSparseTest, dense)
 {
-    typedef TupleVector<int, double, 2> TupleVectorT;
-    TupleVectorT arr2({20,10});
+    typedef TupleList<int, double, 2> TupleListT;
+    TupleListT arr2({20,10});
 
     arr2.add({1,0}, 15.);
     arr2.add({1,3}, 17.);
@@ -119,7 +119,7 @@ TEST_F(SpSparseTest, dense)
 
 TEST_F(SpSparseTest, dense_to_blitz)
 {
-    typedef TupleVector<int, double, 2> TupleVectorT;
+    typedef TupleList<int, double, 2> TupleListT;
 
     blitz::Array<double,2> dense1(4,5);
     dense1 = 0;
@@ -127,7 +127,7 @@ TEST_F(SpSparseTest, dense_to_blitz)
     dense1(2,4) = 6.0;
     dense1(0,1) = 7.0;
 
-    TupleVectorT sparse1({4,5});
+    TupleListT sparse1({4,5});
     spcopy(sparse1, dense1);
     auto dense2(spsparse::to_blitz(sparse1));
 
@@ -144,8 +144,8 @@ TEST_F(SpSparseTest, dense_to_blitz)
 TEST_F(SpSparseTest, sparse_set)
 {
     // Construct a SparseMatrix
-    typedef TupleVector<int, double, 2> TupleVectorT;
-    TupleVectorT arr2({20,10});
+    typedef TupleList<int, double, 2> TupleListT;
+    TupleListT arr2({20,10});
 
     arr2.add({6,4}, 10.);
     arr2.add({1,0}, 15.);
@@ -168,7 +168,7 @@ TEST_F(SpSparseTest, sparse_set)
     EXPECT_EQ(2, dim0.to_dense(6));
 
     // Test to_dense
-    TupleVectorT arr2d;
+    TupleListT arr2d;
     auto acc1(sparse_transform_accum(
             &arr2d, SparseTransform::TO_DENSE,
             ibmisc::make_array(&dim0, nullptr)));
@@ -193,7 +193,7 @@ TEST_F(SpSparseTest, sparse_set)
 
     // Test to_sparse
     {
-    TupleVectorT arr3;
+    TupleListT arr3;
     auto acc3(sparse_transform_accum(
             &arr3, SparseTransform::TO_SPARSE,
             ibmisc::make_array(&dim0, nullptr)));
