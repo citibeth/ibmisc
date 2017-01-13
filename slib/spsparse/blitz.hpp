@@ -40,24 +40,24 @@ spcopy(Baccum, A);
 @endcode
 
 */
-template<class ValueT, int RANK>
+template<class ValT, int RANK>
 struct BlitzAccum
 {
     static const int rank = RANK;
     typedef int index_type;
-    typedef ValueT value_type;
+    typedef ValT val_type;
 
 private:
-    blitz::Array<value_type,rank> * const result;
+    blitz::Array<val_type,rank> * const result;
     DuplicatePolicy duplicate_policy;
     bool shape_is_set;
     double fill_value;
 
 public:
     BlitzAccum(
-        blitz::Array<value_type,rank> * const _dense,
+        blitz::Array<val_type,rank> * const _dense,
         bool reset_shape,    // Should we re-allocate on set_shape() call?
-        ValueT _fill_value,
+        ValT _fill_value,
         DuplicatePolicy _duplicate_policy)
     : result(_dense), shape_is_set(!reset_shape),
         fill_value(_fill_value), duplicate_policy(_duplicate_policy)
@@ -66,24 +66,24 @@ public:
 
     void set_shape(std::array<long, RANK> const &_shape);
 
-    inline void add(std::array<index_type,rank> const &index, value_type const &val);
+    inline void add(std::array<index_type,rank> const &index, val_type const &val);
 };
 
-template<class ValueT, int RANK>
-void BlitzAccum<ValueT,RANK>::set_shape(std::array<long, RANK> const &_shape)
+template<class ValT, int RANK>
+void BlitzAccum<ValT,RANK>::set_shape(std::array<long, RANK> const &_shape)
 {
     if (!shape_is_set) {
         blitz::TinyVector<int,rank> shape_t;
         for (int i=0; i<RANK; ++i) shape_t[i] = _shape[i];
-        result->reference(blitz::Array<value_type,rank>(shape_t));
+        result->reference(blitz::Array<val_type,rank>(shape_t));
         *result = fill_value;
         shape_is_set = true;
     }
 }
 
 
-template<class ValueT, int RANK>
-inline void BlitzAccum<ValueT,RANK>::add(std::array<index_type,rank> const &index, value_type const &val)
+template<class ValT, int RANK>
+inline void BlitzAccum<ValT,RANK>::add(std::array<index_type,rank> const &index, val_type const &val)
 {
     // Check bounds...
     blitz::TinyVector<int, rank> bidx;
@@ -94,7 +94,7 @@ inline void BlitzAccum<ValueT,RANK>::add(std::array<index_type,rank> const &inde
             i, ix, result->lbound(i), result->ubound(i));
         bidx[i] = index[i];
     }
-    value_type &oval((*result)(bidx));
+    val_type &oval((*result)(bidx));
 
     switch(duplicate_policy) {
         case DuplicatePolicy::LEAVE_ALONE :
@@ -116,18 +116,18 @@ inline void BlitzAccum<ValueT,RANK>::add(std::array<index_type,rank> const &inde
 
 
 
-template<class ValueT, int RANK>
-inline BlitzAccum<ValueT, RANK> blitz_accum_new(
-    blitz::Array<ValueT, RANK> * const _dense,
-    ValueT _fill_value=0,
+template<class ValT, int RANK>
+inline BlitzAccum<ValT, RANK> blitz_accum_new(
+    blitz::Array<ValT, RANK> * const _dense,
+    ValT _fill_value=0,
     DuplicatePolicy _duplicate_policy = DuplicatePolicy::ADD)
-{ return BlitzAccum<ValueT,RANK>(_dense, true, _fill_value, _duplicate_policy); }
+{ return BlitzAccum<ValT,RANK>(_dense, true, _fill_value, _duplicate_policy); }
 
-template<class ValueT, int RANK>
-inline BlitzAccum<ValueT, RANK> blitz_accum_existing(
-    blitz::Array<ValueT, RANK> * const _dense,
+template<class ValT, int RANK>
+inline BlitzAccum<ValT, RANK> blitz_accum_existing(
+    blitz::Array<ValT, RANK> * const _dense,
     DuplicatePolicy _duplicate_policy = DuplicatePolicy::ADD)
-{ return BlitzAccum<ValueT,RANK>(_dense, false, 0, _duplicate_policy); }
+{ return BlitzAccum<ValT,RANK>(_dense, false, 0, _duplicate_policy); }
 
 // ----------------------------------------------------------
 
@@ -156,14 +156,14 @@ void spcopy(AccumulatorT &ret,
 // ----------------------------------------------------------
 /** Convert spsparse-object to blitz, as long as it has an associated spcopy() function. */
 template<class SourceT>
-extern blitz::Array<typename SourceT::value_type, SourceT::rank>
+extern blitz::Array<typename SourceT::val_type, SourceT::rank>
 to_blitz(SourceT const &M);
 
 template<class SourceT>
-extern blitz::Array<typename SourceT::value_type, SourceT::rank>
+extern blitz::Array<typename SourceT::val_type, SourceT::rank>
 to_blitz(SourceT const &M)
 {
-    blitz::Array<typename SourceT::value_type, SourceT::rank> ret;
+    blitz::Array<typename SourceT::val_type, SourceT::rank> ret;
     auto accum1(blitz_accum_new(&ret));
     spcopy(accum1, M, true);
     return ret;

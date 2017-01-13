@@ -178,7 +178,7 @@ public:
         sub->set_shape(shape);
     }
 
-    void add(std::array<index_type,rank> index, value_type const &val)
+    void add(std::array<index_type,rank> index, val_type const &val)
     {
         for (int i=0; i<rank; ++i) {
             // Use the index we were given, if no transform for this dimension

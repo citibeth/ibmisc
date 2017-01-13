@@ -85,7 +85,7 @@ void nc_read_spsparse(
     std::vector<size_t> startp = {0, 0};        // SIZE, RANK
     std::vector<size_t> countp = {1, AccumulatorT::rank};   // Write RANK elements at a time
     std::array<typename AccumulatorT::index_type, AccumulatorT::rank> index;
-    typename AccumulatorT::value_type val;
+    typename AccumulatorT::val_type val;
 
     for (; startp[0]<size; ++startp[0]) {
         indices_v.getVar(startp, countp, &index[0]);

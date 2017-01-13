@@ -34,16 +34,16 @@ namespace spsparse {
 
 // --------------------------------------------------------------
 /** Copies an Eigen SparseMatrix into a rank-2 Spsparse accumulator. */
-template<class AccumulatorT, class ValueT>
+template<class AccumulatorT, class ValT>
 extern void spcopy(
     AccumulatorT &ret,
-    Eigen::SparseMatrix<ValueT> const &M,
+    Eigen::SparseMatrix<ValT> const &M,
     bool set_shape=true);
 
-template<class AccumulatorT, class ValueT>
+template<class AccumulatorT, class ValT>
 void spcopy(
     AccumulatorT &ret,
-    Eigen::SparseMatrix<ValueT> const &M,
+    Eigen::SparseMatrix<ValT> const &M,
     bool set_shape=true)
 {
     if (set_shape) ret.set_shape({M.rows(), M.cols()});
@@ -51,7 +51,7 @@ void spcopy(
     // See here for note on iterating through Eigen::SparseMatrix
     // http://eigen.tuxfamily.org/bz/show_bug.cgi?id=1104
     for (int k=0; k<M.outerSize(); ++k) {
-    for (typename Eigen::SparseMatrix<ValueT>::InnerIterator ii(M,k); ii; ++ii) {
+    for (typename Eigen::SparseMatrix<ValT>::InnerIterator ii(M,k); ii; ++ii) {
         ret.add({ii.row(), ii.col()}, ii.value());
     }}
 }
@@ -78,9 +78,9 @@ inline void spcopy(
 // --------------------------------------------------------------
 /** Sum the rows or columns of an Eigen SparseMatrix.
 @param dimi 0: sum rows, 1: sum columns */
-template<class ValueT>
-inline blitz::Array<ValueT,1> sum(
-    Eigen::SparseMatrix<ValueT> const &M, int dimi)
+template<class ValT>
+inline blitz::Array<ValT,1> sum(
+    Eigen::SparseMatrix<ValT> const &M, int dimi)
 {
     // Get our weight vector (in dense coordinate space)
     blitz::Array<double,1> ret;
@@ -91,24 +91,24 @@ inline blitz::Array<ValueT,1> sum(
     return ret;
 }
 // --------------------------------------------------------------
-template<class ValueT>
-Eigen::SparseMatrix<ValueT> diag_matrix(
-    blitz::Array<ValueT,1> const &diag, bool invert);
+template<class ValT>
+Eigen::SparseMatrix<ValT> diag_matrix(
+    blitz::Array<ValT,1> const &diag, bool invert);
 
-template<class ValueT>
-Eigen::SparseMatrix<ValueT> diag_matrix(
-    blitz::Array<ValueT,1> const &diag, bool invert)
+template<class ValT>
+Eigen::SparseMatrix<ValT> diag_matrix(
+    blitz::Array<ValT,1> const &diag, bool invert)
 {
     int n = diag.extent(0);
 
     // Invert weight vector into Eigen-format scale matrix
-    std::vector<Eigen::Triplet<ValueT>> triplets;
+    std::vector<Eigen::Triplet<ValT>> triplets;
     for (int i=0; i < diag.extent(0); ++i) {
-        triplets.push_back(Eigen::Triplet<ValueT>(
+        triplets.push_back(Eigen::Triplet<ValT>(
             i, i, invert ? 1./diag(i) : diag(i)));
     }
 
-    Eigen::SparseMatrix<ValueT> M(diag.extent(0), diag.extent(0));
+    Eigen::SparseMatrix<ValT> M(diag.extent(0), diag.extent(0));
     M.setFromTriplets(triplets.begin(), triplets.end());
     return M;
 }
@@ -116,59 +116,59 @@ Eigen::SparseMatrix<ValueT> diag_matrix(
 // --------------------------------------------------------------
 
 
-template<class ValueT>
-inline Eigen::SparseMatrix<ValueT> weight_matrix(blitz::Array<ValueT,1> weights)
+template<class ValT>
+inline Eigen::SparseMatrix<ValT> weight_matrix(blitz::Array<ValT,1> weights)
     { return diag_matrix(weights, false); }
 
 
-template<class ValueT>
-inline Eigen::SparseMatrix<ValueT> scale_matrix(blitz::Array<ValueT,1> weights)
+template<class ValT>
+inline Eigen::SparseMatrix<ValT> scale_matrix(blitz::Array<ValT,1> weights)
     { return diag_matrix(weights, true); }
 // --------------------------------------------------------------
-template<class ValueT>
-inline Eigen::SparseMatrix<ValueT> weight_matrix(Eigen::SparseMatrix<ValueT> const &M, int dimi)
+template<class ValT>
+inline Eigen::SparseMatrix<ValT> weight_matrix(Eigen::SparseMatrix<ValT> const &M, int dimi)
     { return diag_matrix(sum(M, dimi), false); }
 
-template<class ValueT>
-inline Eigen::SparseMatrix<ValueT> scale_matrix(Eigen::SparseMatrix<ValueT> const &M, int dimi)
+template<class ValT>
+inline Eigen::SparseMatrix<ValT> scale_matrix(Eigen::SparseMatrix<ValT> const &M, int dimi)
     { return diag_matrix(sum(M, dimi), true); }
 
 // --------------------------------------------------------------
 /** An N-dimensional generalization of Eigen::Triplet */
-template<class IndexT, class ValueT, int RANK>
+template<class IndexT, class ValT, int RANK>
 class Tuple {
     std::array<IndexT, RANK> _index;
-    ValueT _value;
+    ValT _value;
 public:
     IndexT &index(int i)
         { return i; }
     std::array<IndexT, RANK> &index()
         { return _index; }
 
-    ValueT &value()
+    ValT &value()
         { return _value; }
 
     Tuple(std::array<IndexT, RANK> const &index,
-        ValueT const &value)
+        ValT const &value)
         : _index(index), _value(value) {}
 
     // ----- For Eigen::SparseMatrix::setFromTriplets()
-    ValueT row() const
+    ValT row() const
         { return index(0); }
-    ValueT col() const
+    ValT col() const
         { return index(1); }
 };
 
 
 /** Serves as accumulator and iterable storage */
-template<class IndexT, class ValueT, int RANK>
-class TupleVector : public std::vector<Tuple<IndexT,ValueT,RANK>>
+template<class IndexT, class ValT, int RANK>
+class TupleVector : public std::vector<Tuple<IndexT,ValT,RANK>>
 {
 public:
-    typedef std::vector<Tuple<IndexT,ValueT,RANK>> super;
+    typedef std::vector<Tuple<IndexT,ValT,RANK>> super;
     static const int rank = RANK;
     typedef IndexT index_type;
-    typedef ValueT value_type;
+    typedef ValT val_type;
 
     
     std::array<long, rank> shape;
@@ -183,7 +183,7 @@ public:
     void set_shape(std::array<long, rank> _shape)
         { shape = _shape; }
 
-    void add(std::array<index_type,rank> const &index, ValueT const &value)
+    void add(std::array<index_type,rank> const &index, ValT const &value)
     {
         // Check bounds
         for (int i=0; i<RANK; ++i) {
@@ -204,20 +204,20 @@ public:
             }
         }
 
-        super::push_back(Tuple<IndexT,ValueT,RANK>(index, value));
+        super::push_back(Tuple<IndexT,ValT,RANK>(index, value));
     }
 
     // see: http://eigen.tuxfamily.org/bz/show_bug.cgi?id=1370
-    Eigen::SparseMatrix<ValueT,0,IndexT> to_eigen()
+    Eigen::SparseMatrix<ValT,0,IndexT> to_eigen()
     {
-        Eigen::SparseMatrix<ValueT,0,IndexT> M(shape[0], shape[1]);
+        Eigen::SparseMatrix<ValT,0,IndexT> M(shape[0], shape[1]);
         M.setFromTriplets(super::begin(), super::end());
         return M;
     }
 };
 
-template<class IndexT, class ValueT>
-using TripletVector = TupleVector<IndexT,ValueT,2>;
+template<class IndexT, class ValT>
+using TripletVector = TupleVector<IndexT,ValT,2>;
 
 // ---------------------------------------------
 
@@ -231,7 +231,7 @@ class EigenSparseMatrixIterator :
     typedef EigenSparseMatrixIterator<ARGS> IteratorT;
 public:
     typedef _StorageIndex index_type;
-    typedef _Scalar value_type;
+    typedef _Scalar val_type;
     static const int RANK = 2;
 
     Eigen::SparseMatrix<ARGS> const &M;

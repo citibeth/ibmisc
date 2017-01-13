@@ -46,9 +46,9 @@ enum class DuplicatePolicy {
 /** @brief Promote relevant template parameters.
 
 Used to propagate relevant template parameters throughout the
-different classes that need them.  Provides: rank, index_type, value_type.
+different classes that need them.  Provides: rank, index_type, val_type.
 
-@note value_type is DIFFERENT from the standard STL value_type.  Standard STL value_type is the same as our index_type.
+@note val_type is DIFFERENT from the standard STL val_type.  Standard STL val_type is the same as our index_type.
 
 Code Example
 @code
@@ -63,7 +63,7 @@ public:
 #define SPSPARSE_LOCAL_TYPES(ArrayOrIterT) \
     static const int rank = ArrayOrIterT::rank; \
     typedef typename ArrayOrIterT::index_type index_type; \
-    typedef typename ArrayOrIterT::value_type value_type;
+    typedef typename ArrayOrIterT::val_type val_type;
 
 // -------------------------------------------------------------
 
@@ -111,7 +111,7 @@ class DimIndexIter : public ibmisc::forward_iterator<typename IterT::index_type,
 public:
     static int const rank = IterT::rank;
     typedef typename IterT::index_type index_type;
-    typedef typename IterT::value_type value_type;
+    typedef typename IterT::val_type val_type;
 
 private:
     IterT sub;
@@ -120,7 +120,7 @@ private:
 public:
     DimIndexIter(IterT &&ii, int _dim) : sub(std::move(ii)), dim(_dim) {}
 
-    value_type operator*()
+    val_type operator*()
         { return sub->index(dim); }
 
     DimIndexIter &operator++()

@@ -67,7 +67,7 @@ class OverwriteAccum
 public:
     OverwriteAccum(IterT &&_ii) : ii(std::move(_ii)) {}
 
-    void add(std::array<index_type,rank> const &index, typename IterT::value_type const &val) {
+    void add(std::array<index_type,rank> const &index, typename IterT::val_type const &val) {
         ii.set_index(index);
         ii.val() = val;
         ++ii;
@@ -96,7 +96,7 @@ public:
     static const size_t out_rank = AccumulatorT::rank;
 
     typedef typename AccumulatorT::index_type index_type;
-    typedef typename AccumulatorT::value_type value_type;
+    typedef typename AccumulatorT::val_type val_type;
 
 private:
     AccumulatorT * const sub;
@@ -114,7 +114,7 @@ public:
         sub->set_shape(oshape);
     }
 
-    void add(std::array<index_type,rank> const &index, value_type const &val) {
+    void add(std::array<index_type,rank> const &index, val_type const &val) {
         for (int i=0; i<out_rank; ++i) out_idx[i] = index[perm[i]];
         sub->add(out_idx, val);
     }
@@ -156,10 +156,10 @@ template<class VectorCooArrayT>
 struct ScalarAccumulator {
     SPSPARSE_LOCAL_TYPES(VectorCooArrayT);
 
-    value_type val;
+    val_type val;
     ScalarAccumulator() : val(0) {}
 
-    void add(const std::array<index_type, rank> &index, value_type const &_val)
+    void add(const std::array<index_type, rank> &index, val_type const &_val)
         { this->val += _val; }
 };
 
