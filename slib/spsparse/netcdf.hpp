@@ -120,7 +120,8 @@ void ncio_spsparse(
         dims = ibmisc::get_or_add_dims(ncio, dim_names, {A.size(), A.rank});
 
         auto info_v = get_or_add_var(ncio, vname + ".info", "int64", {});
-        ibmisc::get_or_put_att(info_v, 'w', "shape", "uint64", A.shape);
+        auto shape(A.shape());
+        ibmisc::get_or_put_att(info_v, 'w', "shape", "uint64", shape);
 //        info_v.putAtt("shape", ibmisc::nc_type("uint64"), A.rank, &A.shape[0]);
 
         get_or_add_var(ncio, vname + ".indices", "int64", dims);

@@ -68,7 +68,7 @@ TEST_F(SpSparseTest, TupleList) {
         EXPECT_EQ(1, ii->index(0));
         EXPECT_EQ(2., ii->value());
         ++ii;
-        EXPECT_EQ(3, ii->index(1));
+        EXPECT_EQ(3, ii->index(0));
     }
 
     // Test bounds checking
@@ -82,13 +82,14 @@ TEST_F(SpSparseTest, TupleList) {
 
     // Test Move Constructor
     TupleList<int, double, 1> arr2(std::move(arr1));
-    EXPECT_EQ(2, arr1.size());
+    EXPECT_EQ(0, arr1.size());
+    EXPECT_EQ(2, arr2.size());
     {
-        auto ii(arr1.begin());
+        auto ii(arr2.begin());
         EXPECT_EQ(1, ii->index(0));
         EXPECT_EQ(2., ii->value());
         ++ii;
-        EXPECT_EQ(3, ii->index(1));
+        EXPECT_EQ(3, ii->index(0));
     }
 }
 
@@ -154,7 +155,7 @@ TEST_F(SpSparseTest, sparse_set)
 
     // Make a SparseSet for each of its dimensions
     SparseSet<int,int> dim0;
-    dim0.set_sparse_extent(arr2.shape[0]);
+    dim0.set_sparse_extent(arr2.shape()[0]);
     dim0.add_sorted(
         dim_index_iter(arr2.begin(), 0),
         dim_index_iter(arr2.end(), 0));
@@ -220,7 +221,8 @@ TEST_F(SpSparseTest, sparse_set)
 
 int main(int argc, char **argv) {
 #ifdef USE_EVERYTRACE
-    everytrace_init();
+    everytrace_init();    // Don't want everytrace for this test, it eats exceptions
+    ibmisc_error = ibmisc::exception_error;
 #endif
     ::testing::InitGoogleTest(&argc, argv);
     return RUN_ALL_TESTS();

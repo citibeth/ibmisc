@@ -23,6 +23,7 @@
 #include <iostream>
 #include <cstdio>
 #include <netcdf>
+#include <everytrace.h>
 
 using namespace ibmisc;
 using namespace netCDF;
@@ -185,6 +186,10 @@ TEST_F(NetcdfTest, vector)
 
 
 int main(int argc, char **argv) {
+#ifdef USE_EVERYTRACE
+    everytrace_init();    // Don't want everytrace for this test, it eats exceptions
+    ibmisc_error = ibmisc::exception_error;
+#endif
     ::testing::InitGoogleTest(&argc, argv);
     return RUN_ALL_TESTS();
 }

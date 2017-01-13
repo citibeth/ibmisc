@@ -141,9 +141,9 @@ class Tuple {
     ValT _value;
 public:
     IndexT &index(int i)
-        { return i; }
+        { return _index[i]; }
     IndexT const &index(int i) const
-        { return i; }
+        { return _index[i]; }
 
     std::array<IndexT, RANK> &index()
         { return _index; }
@@ -200,7 +200,7 @@ public:
     typedef ValT val_type;
 
     
-    std::array<long, rank> shape;
+    std::array<long, rank> _shape;
 
 public:
     struct iterator : public super::iterator {
@@ -232,18 +232,20 @@ public:
 
     TupleList() {}
 
-    TupleList(std::array<long,RANK> _shape)
-        { set_shape(_shape); }
+    TupleList(std::array<long,RANK> shape) : _shape(shape) {}
 
     // So this can serve as a Spsparse Accumulator
-    void set_shape(std::array<long, rank> _shape)
-        { shape = _shape; }
+    void set_shape(std::array<long, rank> shape)
+        { _shape = shape; }
+
+    std::array<long,rank> const &shape() const
+        { return _shape; }
 
     void add(std::array<index_type,rank> const &index, ValT const &value)
     {
         // Check bounds
         for (int i=0; i<RANK; ++i) {
-            if (index[i] < 0 || index[i] >= shape[i]) {
+            if (index[i] < 0 || index[i] >= _shape[i]) {
                 std::ostringstream buf;
                 buf << "Sparse index out of bounds: index=(";
                 for (int j=0; j<RANK; ++j) {
@@ -252,7 +254,7 @@ public:
                 }
                 buf << ") vs. shape=(";
                 for (int j=0; j<RANK; ++j) {
-                    buf << shape[j];
+                    buf << _shape[j];
                     buf << " ";
                 }
                 buf << ")";
@@ -266,7 +268,7 @@ public:
     // see: http://eigen.tuxfamily.org/bz/show_bug.cgi?id=1370
     Eigen::SparseMatrix<ValT,0,IndexT> to_eigen()
     {
-        Eigen::SparseMatrix<ValT,0,IndexT> M(shape[0], shape[1]);
+        Eigen::SparseMatrix<ValT,0,IndexT> M(_shape[0], _shape[1]);
         M.setFromTriplets(super::begin(), super::end());
         return M;
     }
@@ -282,7 +284,7 @@ extern void spcopy(AccumulatorT &ret, TupleList<IndexT,ValT,RANK> const &A, bool
 template<class AccumulatorT, class IndexT, class ValT, int RANK>
 void spcopy(AccumulatorT &ret, TupleList<IndexT,ValT,RANK> const &A, bool set_shape)
 {
-    if (set_shape) ret.set_shape(A.shape);
+    if (set_shape) ret.set_shape(A.shape());
     std::array<int,AccumulatorT::rank> idx;
     for (auto ii=A.begin(); ii != A.end(); ++ii) {
         ret.add(ii->index(), ii->value());

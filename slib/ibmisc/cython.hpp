@@ -196,22 +196,47 @@ PyObject *copy_blitz_to_np(blitz::Array<T,N> const &array)
 
 
 template<class ArrayT>
-PyObject *spsparse_to_tuple(ArrayT A);
+PyObject *spsparse_to_tuple(ArrayT const &A);
 
 template<class ArrayT>
-PyObject *spsparse_to_tuple(ArrayT A)
+PyObject *spsparse_to_tuple(ArrayT const &A)
 {
+    const int rank = ArrayT::rank;
+    typedef typename ArrayT::index_type index_type;
+    typedef typename ArrayT::val_type val_type;
+
+    // Allocate Python arrays and Blitzify
+    std::array<PyObject *,rank> indices_np;
+    std::array<blitz::Array<index_type,1>, ArrayT::rank> indices_bl;
+    std::array<int,1> dims {(int)A.size()};
+    for (int k=0; k<ArrayT::rank; ++k) {
+        indices_np[k] = PyArray_FromDims(
+            1, &dims[0], np_type_num<index_type>());
+        indices_bl[k].reference(np_to_blitz<index_type,1>(indices_np[k], "index", dims));
+    }
+    PyObject *values_np = PyArray_FromDims(
+        1, &dims[0], np_type_num<typename ArrayT::val_type>());
+    auto values_bl(np_to_blitz<val_type,1>(values_np, "values", dims));
+
+    // Copy into the (Numpy) arrays we just allocated
+    int i=0;
+    for (auto ii=A.begin(); ii != A.end(); ++ii,++i) {
+        for (int k=0; k<ArrayT::rank; ++k)
+            indices_bl[k](i) = ii->index(k);
+        values_bl(i) = ii->value();
+    }
+
+    // Bind it up in a tuple
     PyObject *indices_t = PyTuple_New(ArrayT::rank);
     PyObject *shape_t = PyTuple_New(ArrayT::rank);
     for (int k=0; k<ArrayT::rank; ++k) {
         // blitz::Array<typename ArrayT::val_type, ArrayT::rank> idx(indices(k));
-        PyTuple_SetItem(indices_t, k, copy_blitz_to_np<typename ArrayT::index_type,1>(A.indices(k)));
-        PyTuple_SetItem(shape_t, k, Py_BuildValue("i", A.shape[k]));
+        PyTuple_SetItem(indices_t, k, indices_np[k]);
+        PyTuple_SetItem(shape_t, k, Py_BuildValue("i", A.shape()[k]));
     }
 
-    PyObject *data_t = Py_BuildValue("OO",
-        copy_blitz_to_np<typename ArrayT::val_type, 1>(A.vals()),
-        indices_t);
+
+    PyObject *data_t = Py_BuildValue("OO", values_np, indices_t);
 
     // For scipy.sparse.coo_matrix((data1, (rows1, cols1)), shape=(nrow1, ncol1))
     PyObject *ret = Py_BuildValue("OO", data_t, shape_t);

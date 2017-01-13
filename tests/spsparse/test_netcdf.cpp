@@ -94,7 +94,7 @@ TEST_F(SpSparseTest, NetCDF) {
     }
 
     // Read without alloc
-    TupleList<int, double, 2> arr3(arr1.shape);
+    TupleList<int, double, 2> arr3(arr1.shape());
     {
         ibmisc::NcIO ncio(fname, NcFile::read);
         ncio_spsparse(ncio, arr3, false, "arr1");
