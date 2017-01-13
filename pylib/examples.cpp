@@ -17,7 +17,7 @@
  */
 
 #include <ibmisc/cython.hpp>
-#include <spsparse/VectorCooArray.hpp>
+#include <spsparse/eigen.hpp>
 
 #include "examples.hpp"
 
@@ -40,7 +40,7 @@ void cyexample_double_blitz(PyObject *a)
 
 PyObject *cyexample_sparse_matrix()
 {
-    spsparse::VectorCooArray<long, double, 2> M({4,6});
+    spsparse::TupleVector<long, double, 2> M({4,6});
     M.add({2,3}, 2.2);
     M.add({0,5}, 1.1);
     PyObject *tuple = spsparse_to_tuple(M);

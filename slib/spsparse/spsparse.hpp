@@ -109,10 +109,10 @@ template<class IterT>
 class DimIndexIter : public ibmisc::forward_iterator<typename IterT::index_type, DimIndexIter<IterT>>
 {
 public:
+    // Type traits for spsparse iterators
     static int const rank = IterT::rank;
     typedef typename IterT::index_type index_type;
     typedef typename IterT::val_type val_type;
-
 private:
     IterT sub;
     const int dim;
@@ -131,8 +131,9 @@ public:
 
 template<class IterT>
 DimIndexIter<IterT> dim_index_iter(IterT &&sub, int dim)
-    { return DimIndexIter<IterT>(dim, std::move(sub)); }
+    { return DimIndexIter<IterT>(std::move(sub), dim); }
 // ------------------------------------------------------------------------
+
 
 
 

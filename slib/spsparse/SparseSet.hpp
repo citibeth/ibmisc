@@ -91,7 +91,7 @@ public:
         add(sorted.begin(), sorted.end());
     }
 
-    DenseT add_dense(SparseT const &sval) const
+    DenseT add_dense(SparseT const &sval)
     {
         auto ii(_s2d.find(sval));
         if (ii == _s2d.end()) {
@@ -100,7 +100,7 @@ public:
             _d2s.push_back(sval);
             return densei;
         } else {
-            return *ii;
+            return ii->second;
         }
     }
 
@@ -129,7 +129,7 @@ template<class AccumulatorT,class SparseSetT>
 class SparseTransformAccum
 {
     struct Data {
-        SparseSetT const * const sparse_set;
+        SparseSetT * const sparse_set;
         SparseTransform transform;
 
         Data(SparseSetT *_sparse_set, SparseTransform _transform) :

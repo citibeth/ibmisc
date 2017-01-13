@@ -142,10 +142,17 @@ class Tuple {
 public:
     IndexT &index(int i)
         { return i; }
+    IndexT const &index(int i) const
+        { return i; }
+
     std::array<IndexT, RANK> &index()
+        { return _index; }
+    std::array<IndexT, RANK> const &index() const
         { return _index; }
 
     ValT &value()
+        { return _value; }
+    ValT const &value() const
         { return _value; }
 
     Tuple(std::array<IndexT, RANK> const &index,
@@ -159,6 +166,28 @@ public:
         { return index(1); }
 };
 
+#if 0
+template<class IndexT, class ValT, int RANK>
+class TupleIterator : public forward_iterator<
+    Tuple<IndexT,ValT,RANK>,
+    TupleIterator<IndexT,ValT,RANK>>
+{
+public:
+    static const int rank = RANK;
+    typedef IndexT index_type;
+    typedef ValT val_type;
+private:
+    VectorIterT sub;
+    TupleIterator(VectorIterT &&ii) : sub(ii) {}
+public:
+    value_type &operator*()
+        { return *sub; }
+    TupleIterator &operator++()
+        { ++sub; return *this; }
+    bool operator==(const TupleIterator &other) const
+        { return sub == other.sub; }
+}
+#endif
 
 /** Serves as accumulator and iterable storage */
 template<class IndexT, class ValT, int RANK>
@@ -174,6 +203,33 @@ public:
     std::array<long, rank> shape;
 
 public:
+    struct iterator : public super::iterator {
+        static const int rank = RANK;
+        typedef IndexT index_type;
+        typedef ValT val_type;
+
+        iterator(typename super::iterator &&ii) : super::iterator(std::move(ii)) {}
+    };
+    iterator begin()
+        { return iterator(super::begin()); }
+    iterator end()
+        { return iterator(super::end()); }
+    // -------------------------------------------------
+    struct const_iterator : public super::const_iterator {
+        static const int rank = RANK;
+        typedef IndexT index_type;
+        typedef ValT val_type;
+
+        const_iterator(typename super::const_iterator &&ii) : super::const_iterator(std::move(ii)) {}
+    };
+    const_iterator begin() const
+        { return const_iterator(super::begin()); }
+    const_iterator end() const
+        { return const_iterator(super::end()); }
+
+    // -------------------------------------------------
+
+
     TupleVector() {}
 
     TupleVector(std::array<long,RANK> _shape)
@@ -218,6 +274,20 @@ public:
 
 template<class IndexT, class ValT>
 using TripletVector = TupleVector<IndexT,ValT,2>;
+
+
+template<class AccumulatorT, class IndexT, class ValT, int RANK>
+extern void spcopy(AccumulatorT &ret, TupleVector<IndexT,ValT,RANK> const &A, bool set_shape = true);
+
+template<class AccumulatorT, class IndexT, class ValT, int RANK>
+void spcopy(AccumulatorT &ret, TupleVector<IndexT,ValT,RANK> const &A, bool set_shape)
+{
+    if (set_shape) ret.set_shape(A.shape);
+    std::array<int,AccumulatorT::rank> idx;
+    for (auto ii=A.begin(); ii != A.end(); ++ii) {
+        ret.add(ii->index(), ii->value());
+    }
+}
 
 // ---------------------------------------------
 
@@ -267,11 +337,11 @@ public:
     // ---------- What you get once you dereference
 
     _Scalar const &value()
-        { return ii.value(); }
+        { return ii->value(); }
     _StorageIndex const &row()
-        { return ii.row(); }
+        { return ii->row(); }
     _StorageIndex const &col()
-        { return ii.col(); }
+        { return ii->col(); }
     _StorageIndex const &index(int ix)
         { return ix == 0 ? row() : col(); }
     std::array<_StorageIndex,2> index()

@@ -176,17 +176,17 @@ TEST_F(SpSparseTest, sparse_set)
 
     {
     auto ii(arr2d.begin());
-    EXPECT_EQ(2, ii.index(0));
-    EXPECT_EQ(4, ii.index(1));
+    EXPECT_EQ(2, ii->index(0));
+    EXPECT_EQ(4, ii->index(1));
     ++ii;
-    EXPECT_EQ(0, ii.index(0));
-    EXPECT_EQ(0, ii.index(1));
+    EXPECT_EQ(0, ii->index(0));
+    EXPECT_EQ(0, ii->index(1));
     ++ii;
-    EXPECT_EQ(1, ii.index(0));
-    EXPECT_EQ(4, ii.index(1));
+    EXPECT_EQ(1, ii->index(0));
+    EXPECT_EQ(4, ii->index(1));
     ++ii;
-    EXPECT_EQ(0, ii.index(0));
-    EXPECT_EQ(3, ii.index(1));
+    EXPECT_EQ(0, ii->index(0));
+    EXPECT_EQ(3, ii->index(1));
     ++ii;
     EXPECT_EQ(ii, arr2d.end());
     }
@@ -200,17 +200,17 @@ TEST_F(SpSparseTest, sparse_set)
     spcopy(acc3, arr2d);
 
     auto ii(arr3.begin());
-    EXPECT_EQ(6, ii.index(0));
-    EXPECT_EQ(4, ii.index(1));
+    EXPECT_EQ(6, ii->index(0));
+    EXPECT_EQ(4, ii->index(1));
     ++ii;
-    EXPECT_EQ(1, ii.index(0));
-    EXPECT_EQ(0, ii.index(1));
+    EXPECT_EQ(1, ii->index(0));
+    EXPECT_EQ(0, ii->index(1));
     ++ii;
-    EXPECT_EQ(2, ii.index(0));
-    EXPECT_EQ(4, ii.index(1));
+    EXPECT_EQ(2, ii->index(0));
+    EXPECT_EQ(4, ii->index(1));
     ++ii;
-    EXPECT_EQ(1, ii.index(0));
-    EXPECT_EQ(3, ii.index(1));
+    EXPECT_EQ(1, ii->index(0));
+    EXPECT_EQ(3, ii->index(1));
     ++ii;
     EXPECT_EQ(ii, arr3.end());
     }
