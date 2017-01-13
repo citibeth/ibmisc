@@ -7,8 +7,7 @@ set(IBMISC_SOURCE
     ibmisc/VarTransformer.cpp
     ibmisc/ConstantSet.cpp
     ibmisc/ncfile.cpp
-    ibmisc/indexing.cpp
-    spsparse/spsparse.cpp)
+    ibmisc/indexing.cpp)
 
 
 if (USE_PROJ4)

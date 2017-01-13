@@ -20,7 +20,6 @@
 
 #include <unordered_map>
 #include <algorithm>
-#include <spsparse/spsparse.hpp>
 #include <ibmisc/array.hpp>
 #include <spsparse/blitz.hpp>
 
@@ -65,6 +64,7 @@ public:
     DenseT dense_extent() const
         { return _d2s.size(); }
 
+private:
     void add(SparseT sparse_index)
     {
         if (_s2d.find(sparse_index) == _s2d.end()) {
@@ -79,6 +79,7 @@ public:
         for (; sparsei != sparse_end; ++sparsei) add(*sparsei);
     }
 
+public:
 
     template<class IterT>
     void add_sorted(IterT sparsei, IterT const &sparse_end)
@@ -88,6 +89,19 @@ public:
         std::sort(sorted.begin(), sorted.end());
 
         add(sorted.begin(), sorted.end());
+    }
+
+    DenseT add_dense(SparseT const &sval) const
+    {
+        auto ii(_s2d.find(sval));
+        if (ii == _s2d.end()) {
+            auto densei(dense_extent());
+            _s2d.insert(std::pair<SparseT,DenseT>(sval, densei));
+            _d2s.push_back(sval);
+            return densei;
+        } else {
+            return *ii;
+        }
     }
 
     DenseT to_dense(SparseT const &sval) const
@@ -104,7 +118,12 @@ public:
 };
 
 // -----------------------------------------------------------
-enum class SparseTransform {ID, TO_DENSE, TO_SPARSE};
+enum class SparseTransform {
+    ID,           // No transformation
+    TO_DENSE,     // Convert sparse to dense indices
+    TO_SPARSE,    // Convert dense to sparse indices
+    ADD_DENSE     // Convert sparse to dense, adding to the SparseSet if it's not already there.
+};
 
 template<class AccumulatorT,class SparseSetT>
 class SparseTransformAccum
@@ -144,6 +163,10 @@ public:
             if (!data[i].sparse_set) continue;
 
             switch(data[i].transform) {
+                case SparseTransform::ADD_DENSE:
+                    // set_shape() is not very useful with ADD_DENSE;
+                    // you will have to call it again after all
+                    // items have been added.
                 case SparseTransform::TO_DENSE:
                     shape[i] = data[i].sparse_set->dense_extent();
                     break;
@@ -155,13 +178,16 @@ public:
         sub->set_shape(shape);
     }
 
-    void add(std::array<index_type,rank> index, val_type const &val)
+    void add(std::array<index_type,rank> index, value_type const &val)
     {
         for (int i=0; i<rank; ++i) {
             // Use the index we were given, if no transform for this dimension
             if (!data[i].sparse_set) continue;
 
             switch(data[i].transform) {
+                case SparseTransform::ADD_DENSE:
+                    index[i] = data[i].sparse_set->add_dense(index[i]);
+                    break;
                 case SparseTransform::TO_DENSE:
                     index[i] = data[i].sparse_set->to_dense(index[i]);
                     break;
@@ -174,6 +200,7 @@ public:
     }
 };
 
+// ----------------------------------------------------------------
 template<class AccumulatorT,class SparseSetT>
 SparseTransformAccum<AccumulatorT,SparseSetT>::SparseTransformAccum(
     AccumulatorT *_sub,
@@ -197,9 +224,7 @@ inline SparseTransformAccumT sparse_transform_accum(
     return SparseTransformAccumT(sub, transform, sparse_sets);
 }
 #undef SparseTransformAccumT
-
-
-
+// ----------------------------------------------------------------
 template<class AccumulatorT, class SrcT, class SparseT, class DenseT>
 void sparse_copy(AccumulatorT &ret, SrcT const &src,
     SparseTransform direction,
@@ -215,68 +240,6 @@ void sparse_copy(AccumulatorT &ret, SrcT const &src,
     auto accum(sparse_transform_accum(&ret, direction, dims));
     spcopy(accum, src, set_shape);
 }
-
-
-
-
-template<class AccumulatorT, class SrcT, class SparseT, class DenseT>
-void sparse_copy(AccumulatorT &ret, SrcT const &src,
-    SparseTransform direction,
-    std::array<spsparse::SparseSet<SparseT, DenseT> const *, AccumulatorT::rank> dims,
-    bool set_shape=true);
-
-template<class AccumulatorT, class SrcT, class SparseT, class DenseT>
-void sparse_copy(AccumulatorT &ret, SrcT const &src,
-    SparseTransform direction,
-    std::array<spsparse::SparseSet<SparseT, DenseT> const *, AccumulatorT::rank> dims,
-    bool set_shape)
-{
-    auto accum(sparse_transform_accum(&ret, direction, dims));
-    spcopy(accum, src, set_shape);
-}
-
-
-// -------------------------------------------------------
-/** A data sructure that acts like a normal SpSparse Accumulator.  BUT:
-  1) When stuff is added to it, it also updates corresponding dimension maps (SparseSet).
-  2) An Eigen::SparseMatrix may be extracted from it when construction is complete. */
-template <class AccumulatorT, class DenseIndexT>
-class MappedArray
-{
-public:
-    typedef typename AccumulatorT::index_type SparseIndexT;
-    typedef typename AccumulatorT::val_type ValT;
-    typedef SparseSet<SparseIndexT, DenseIndexT> SparseSetT;
-    static const int rank = AccumulatorT::rank;
-
-    /** The underlying constructed matrix.  Access directly if needed. */
-    AccumulatorT M;
-    std::array<SparseSetT *, rank> const dims;
-
-    /** @param dims Dimension maps for each dimension.  If one is
-    preparing to multiply matrices, then each dimension map will be
-    shared by at least two MappedArray object. */
-    MappedArray(std::array<SparseSetT *, rank> const &_dims) : dims(_dims) {}
-
-    /** Sets the shape of the underlying matrix (and dimension maps) */
-    void set_shape(std::array<long, rank> const &shape)
-    {
-        M.set_shape(shape);
-        for (int k=0; k<rank; ++k) dims[k]->set_sparse_extent(shape[k]);
-    }
-
-    /** Adds an item. */
-    void add(std::array<SparseIndexT, rank> const &index, ValT const val)
-    {
-        M.add(index, val);
-        for (int k=0; k<rank; ++k) dims[k]->add(index[k]);
-    }
-
-};
-
-// -----------------------------------------------------------
-
-
 
 
 }   // Namespace

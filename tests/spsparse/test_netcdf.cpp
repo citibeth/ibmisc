@@ -19,7 +19,7 @@
 // https://github.com/google/googletest/blob/master/googletest/docs/Primer.md
 
 #include <gtest/gtest.h>
-#include <spsparse/VectorCooArray.hpp>
+#include <spsparse/eigen.hpp>
 #include <iostream>
 #ifdef USE_EVERYTRACE
 #include <everytrace.h>
@@ -65,8 +65,8 @@ protected:
 
 
 TEST_F(SpSparseTest, NetCDF) {
-    // Make a simple VectorCooArray
-    VectorCooArray<int, double, 2> arr1({5,6});
+    // Make a simple TupleVector
+    TupleVector<int, double, 2> arr1({5,6});
     arr1.add({1,2}, 2.);
     arr1.add({3,3}, 6.);
     arr1.add({4,5}, 1.);
@@ -86,7 +86,7 @@ TEST_F(SpSparseTest, NetCDF) {
     }
 
     // Read with alloc
-    VectorCooArray<int, double, 2> arr2;
+    TupleVector<int, double, 2> arr2;
     {
         ibmisc::NcIO ncio(fname, NcFile::read);
         ncio_spsparse(ncio, arr2, true, "arr1");
@@ -94,7 +94,7 @@ TEST_F(SpSparseTest, NetCDF) {
     }
 
     // Read without alloc
-    VectorCooArray<int, double, 2> arr3(arr1.shape);
+    TupleVector<int, double, 2> arr3(arr1.shape);
     {
         ibmisc::NcIO ncio(fname, NcFile::read);
         ncio_spsparse(ncio, arr3, false, "arr1");
@@ -106,11 +106,11 @@ TEST_F(SpSparseTest, NetCDF) {
     EXPECT_EQ(arr1.size(), arr2.size());
     EXPECT_EQ(arr1.size(), arr3.size());
     for (auto ii1(arr1.begin()), ii2(arr2.begin()), ii3(arr3.begin()); ii1 != arr1.end(); ++ii1, ++ii2, ++ii3) {
-        EXPECT_EQ(ii1.index(), ii2.index());
-        EXPECT_EQ(ii1.val(), ii2.val());
+        EXPECT_EQ(ii1->index(), ii2->index());
+        EXPECT_EQ(ii1->value(), ii2->value());
 
-        EXPECT_EQ(ii1.index(), ii3.index());
-        EXPECT_EQ(ii1.val(), ii3.val());
+        EXPECT_EQ(ii1->index(), ii3->index());
+        EXPECT_EQ(ii1->value(), ii3->value());
     }
 
 }

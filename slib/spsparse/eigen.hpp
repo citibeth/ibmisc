@@ -18,8 +18,7 @@
 
 #pragma once
 
-#include <spsparse/SparseSet.hpp>
-#include <spsparse/VectorCooArray.hpp>
+#include <ibmisc/iter.hpp>
 #include <spsparse/accum.hpp>
 #include <spsparse/blitz.hpp>
 #include <Eigen/SparseCore>
@@ -28,8 +27,7 @@ namespace spsparse {
 
 /** @defgroup eigen eigen.hpp
 
-@brief Linkages between the SpSparse and Eigen libraries: basically,
-converting stuff to/from Eigen::SparseMatrix with dense index space.
+@brief Linkages between the SpSparse and Eigen libraries
 
 @{
 */
@@ -93,94 +91,6 @@ inline blitz::Array<ValueT,1> sum(
     return ret;
 }
 // --------------------------------------------------------------
-template<class SparseMatrixT>
-struct _ES {
-    typedef typename SparseMatrixT::index_type SparseIndexT;
-    typedef typename SparseMatrixT::val_type ValT;
-    typedef Eigen::SparseMatrix<ValT> EigenSparseMatrixT;
-    typedef typename EigenSparseMatrixT::Index DenseIndexT;
-    typedef SparseSet<SparseIndexT, DenseIndexT> SparseSetT;
-    static const int rank = SparseMatrixT::rank;
-
-    typedef spsparse::VectorCooArray<SparseIndexT, ValT, 1> SparseVectorT;
-    typedef Eigen::Triplet<ValT> EigenTripletT;
-};
-
-
-
-/** A data sructure that acts like a normal SpSparse Accumulator.  BUT:
-  1) When stuff is added to it, it also updates corresponding dimension maps (SparseSet).
-  2) An Eigen::SparseMatrix may be extracted from it when construction is complete. */
-template <class SparseMatrixT>
-class SparseTriplets : public
-    spsparse::MappedArray<SparseMatrixT, typename Eigen::SparseMatrix<typename SparseMatrixT::val_type>::Index>
-{
-public:
-    typedef spsparse::MappedArray<SparseMatrixT, typename Eigen::SparseMatrix<typename SparseMatrixT::val_type>::Index> super;
-    typedef typename super::SparseIndexT SparseIndexT;
-    typedef typename super::ValT ValT;
-    typedef typename super::SparseSetT SparseSetT;
-
-    typedef spsparse::VectorCooArray<SparseIndexT, ValT, 1> SparseVectorT;
-    typedef Eigen::SparseMatrix<ValT> EigenSparseMatrixT;
-    typedef typename EigenSparseMatrixT::Index DenseIndexT;
-    typedef Eigen::Triplet<ValT> EigenTripletT;
-
-    /** @param dims Dimension maps for each dimension.  If one is
-    preparing to multiply matrices, then each dimension map will be
-    shared by at least two SparseTriplets object. */
-    SparseTriplets(std::array<SparseSetT *,2> const &_dims) : super(_dims) {}
-
-    /** Produces an Eigen::SparseMatrix from our internal SparseMatrixT.
-
-    @param transpose Set to 'T' to make the result be a transpose of
-        our internal M.  Use '.' for no transpose.
-    @param invert Set to true to make the result be an element-wise
-        multiplicative inverse of M. */
-    typename _ES<SparseMatrixT>::EigenSparseMatrixT to_eigen(char transpose='.', bool invert=false) const;
-
-
-    /** Produces a diagonal Eigen::SparseMatrix S where S[i,i] is the sum of internal M over dimension 1-i.
-    @param dimi Index of the dimension that should REMAIN in the scale matrix.
-    @return Eigen::SparseMatrix of shape [len(dimi), len(dimi)] */
-    typename _ES<SparseMatrixT>::EigenSparseMatrixT eigen_scale_matrix(int dimi) const;
-
-};
-// --------------------------------------------------------
-template <class SparseMatrixT>
-typename _ES<SparseMatrixT>::EigenSparseMatrixT SparseTriplets<SparseMatrixT>::to_eigen(char transpose, bool invert) const
-{
-    std::vector<EigenTripletT> triplets;
-
-    for (auto ii=super::M.begin(); ii != super::M.end(); ++ii) {
-        int ix0 = (transpose == 'T' ? 1 : 0);
-        int ix1 = (transpose == 'T' ? 0 : 1);
-        auto dense0 = super::dims[ix0]->to_dense(ii.index(ix0));
-        auto dense1 = super::dims[ix1]->to_dense(ii.index(ix1));
-        triplets.push_back(EigenTripletT(dense0, dense1, invert ? 1./ii.val() : ii.val()));
-    }
-    EigenSparseMatrixT ret(
-        super::dims[transpose == 'T' ? 1 : 0]->dense_extent(),
-        super::dims[transpose == 'T' ? 0 : 1]->dense_extent());
-    ret.setFromTriplets(triplets.begin(), triplets.end());
-    return ret;
-}
-// --------------------------------------------------------
-template <class SparseMatrixT>
-typename _ES<SparseMatrixT>::EigenSparseMatrixT SparseTriplets<SparseMatrixT>::eigen_scale_matrix(int dimi) const
-{
-    std::vector<EigenTripletT> triplets;
-
-    for (auto ii=super::M.begin(); ii != super::M.end(); ++ii) {
-        auto densei = super::dims[dimi]->to_dense(ii.index(dimi));
-        triplets.push_back(EigenTripletT(densei, densei, ii.val()));
-    }
-    auto extent = super::dims[dimi]->dense_extent();
-    EigenSparseMatrixT ret(extent, extent);
-    ret.setFromTriplets(triplets.begin(), triplets.end());
-    return ret;
-}
-// --------------------------------------------------------
 template<class ValueT>
 Eigen::SparseMatrix<ValueT> diag_matrix(
     blitz::Array<ValueT,1> const &diag, bool invert);
@@ -224,9 +134,162 @@ inline Eigen::SparseMatrix<ValueT> scale_matrix(Eigen::SparseMatrix<ValueT> cons
     { return diag_matrix(sum(M, dimi), true); }
 
 // --------------------------------------------------------------
+/** An N-dimensional generalization of Eigen::Triplet */
+template<class IndexT, class ValueT, int RANK>
+class Tuple {
+    std::array<IndexT, RANK> _index;
+    ValueT _value;
+public:
+    IndexT &index(int i)
+        { return i; }
+    std::array<IndexT, RANK> &index()
+        { return _index; }
 
-// --------------------------------------------------------------
+    ValueT &value()
+        { return _value; }
 
+    Tuple(std::array<IndexT, RANK> const &index,
+        ValueT const &value)
+        : _index(index), _value(value) {}
+
+    // ----- For Eigen::SparseMatrix::setFromTriplets()
+    ValueT row() const
+        { return index(0); }
+    ValueT col() const
+        { return index(1); }
+};
+
+
+/** Serves as accumulator and iterable storage */
+template<class IndexT, class ValueT, int RANK>
+class TupleVector : public std::vector<Tuple<IndexT,ValueT,RANK>>
+{
+public:
+    typedef std::vector<Tuple<IndexT,ValueT,RANK>> super;
+    static const int rank = RANK;
+    typedef IndexT index_type;
+    typedef ValueT value_type;
+
+    
+    std::array<long, rank> shape;
+
+public:
+    TupleVector() {}
+
+    TupleVector(std::array<long,RANK> _shape)
+        { set_shape(_shape); }
+
+    // So this can serve as a Spsparse Accumulator
+    void set_shape(std::array<long, rank> _shape)
+        { shape = _shape; }
+
+    void add(std::array<index_type,rank> const &index, ValueT const &value)
+    {
+        // Check bounds
+        for (int i=0; i<RANK; ++i) {
+            if (index[i] < 0 || index[i] >= shape[i]) {
+                std::ostringstream buf;
+                buf << "Sparse index out of bounds: index=(";
+                for (int j=0; j<RANK; ++j) {
+                    buf << index[j];
+                    buf << " ";
+                }
+                buf << ") vs. shape=(";
+                for (int j=0; j<RANK; ++j) {
+                    buf << shape[j];
+                    buf << " ";
+                }
+                buf << ")";
+                (*ibmisc::ibmisc_error)(-1, buf.str().c_str());
+            }
+        }
+
+        super::push_back(Tuple<IndexT,ValueT,RANK>(index, value));
+    }
+
+    // see: http://eigen.tuxfamily.org/bz/show_bug.cgi?id=1370
+    Eigen::SparseMatrix<ValueT,0,IndexT> to_eigen()
+    {
+        Eigen::SparseMatrix<ValueT,0,IndexT> M(shape[0], shape[1]);
+        M.setFromTriplets(super::begin(), super::end());
+        return M;
+    }
+};
+
+template<class IndexT, class ValueT>
+using TripletVector = TupleVector<IndexT,ValueT,2>;
+
+// ---------------------------------------------
+
+#define ARGS _Scalar,_Options,_StorageIndex
+template<class _Scalar, int _Options, class _StorageIndex>
+class EigenSparseMatrixIterator :
+    public ibmisc::forward_iterator<
+        EigenSparseMatrixIterator<ARGS>,
+        EigenSparseMatrixIterator<ARGS>>
+{
+    typedef EigenSparseMatrixIterator<ARGS> IteratorT;
+public:
+    typedef _StorageIndex index_type;
+    typedef _Scalar value_type;
+    static const int RANK = 2;
+
+    Eigen::SparseMatrix<ARGS> const &M;
+    int k;
+    typename Eigen::SparseMatrix<ARGS>::InnerIterator ii;
+    
+    EigenSparseMatrixIterator(Eigen::SparseMatrix<ARGS> const &_M, int _k)
+        : M(_M), k(_k),
+        ii(typename Eigen::SparseMatrix<ARGS>::InnerIterator(M,k)) {}
+
+    // ---------------------------------------------------------
+    // http://www.cplusplus.com/reference/iterator/
+
+    IteratorT &operator++() {    // Prefix ++
+        ++ii;
+        if (!ii) {
+            ++k;
+            ii = typename Eigen::SparseMatrix<ARGS>::InnerIterator(M,k);
+        }
+        return *this;
+    }
+
+    bool operator==(IteratorT &other)
+        { return (k == other->k) && (ii == other->ii); }
+//    bool operator!=(IteratorT &other)
+//        { return !(this == other); }
+
+    IteratorT &operator*()
+        { return *this; }
+//    IteratorT *operator->()
+//        { return this; }
+
+    // ---------- What you get once you dereference
+
+    _Scalar const &value()
+        { return ii.value(); }
+    _StorageIndex const &row()
+        { return ii.row(); }
+    _StorageIndex const &col()
+        { return ii.col(); }
+    _StorageIndex const &index(int ix)
+        { return ix == 0 ? row() : col(); }
+    std::array<_StorageIndex,2> index()
+        { return {row(), col()}; }
+};
+
+// -----------------------------------
+
+template<class _Scalar, int _Options, class _StorageIndex>
+EigenSparseMatrixIterator<ARGS> begin(Eigen::SparseMatrix<ARGS> const &M)
+    { return EigenSparseMatrixIterator<ARGS>(M,0); }
+
+template<class _Scalar, int _Options, class _StorageIndex>
+EigenSparseMatrixIterator<ARGS> end(Eigen::SparseMatrix<ARGS> const &M)
+    { return EigenSparseMatrixIterator<ARGS>(M,M.outerSize()); }
+
+#undef ARGS
+// -----------------------------------
 
 /** @} */
 

@@ -121,6 +121,8 @@ Example:
     auto Val(np_to_blitz<double,3>(Val_py, "Val", {3, -1, 4}));
 
 @param type_num Must match T
+@param dims Dimensions are checked to be this size.  Use -1 to accept whatever
+            dimension the Numpy array comes with.
 */
 template<class T, int N>
 blitz::Array<T,N> np_to_blitz(
@@ -155,8 +157,12 @@ std::array<int,N> dims)
 }
 
 
-
-
+/** Allocates a Numpy array of a given type and size */
+template<class T, int N>
+PyObject *new_pyarray(std::array<int,N> dims)
+{
+    return PyArray_FromDims(N, &dims[0], np_type_num<T>());
+}
 
 #if 0
 template<class T, int N>
@@ -173,7 +179,7 @@ http://docs.scipy.org/doc/numpy-1.10.0/reference/c-api.array.html
 #endif
 
 template<class T, int N>
-PyObject *blitz_to_np(blitz::Array<T,N> const &array)
+PyObject *copy_blitz_to_np(blitz::Array<T,N> const &array)
 {
     std::array<int,N> dims;
     for (int i=0; i<N; ++i) dims[i] = array.extent(i);
@@ -182,7 +188,7 @@ PyObject *blitz_to_np(blitz::Array<T,N> const &array)
     // Wrap as blitz for convenience
     auto array_bl(np_to_blitz<T,N>(array_py, "array_py", dims));
 
-    // Copy from the arraytor to the Blitz array
+    // Copy from the original Blitz array to the Blitzified Numpy array
     array_bl = array;
     return array_py;
 }
@@ -199,12 +205,12 @@ PyObject *spsparse_to_tuple(ArrayT A)
     PyObject *shape_t = PyTuple_New(ArrayT::rank);
     for (int k=0; k<ArrayT::rank; ++k) {
         // blitz::Array<typename ArrayT::val_type, ArrayT::rank> idx(indices(k));
-        PyTuple_SetItem(indices_t, k, blitz_to_np<typename ArrayT::index_type,1>(A.indices(k)));
+        PyTuple_SetItem(indices_t, k, copy_blitz_to_np<typename ArrayT::index_type,1>(A.indices(k)));
         PyTuple_SetItem(shape_t, k, Py_BuildValue("i", A.shape[k]));
     }
 
     PyObject *data_t = Py_BuildValue("OO",
-        blitz_to_np<typename ArrayT::val_type, 1>(A.vals()),
+        copy_blitz_to_np<typename ArrayT::val_type, 1>(A.vals()),
         indices_t);
 
     // For scipy.sparse.coo_matrix((data1, (rows1, cols1)), shape=(nrow1, ncol1))

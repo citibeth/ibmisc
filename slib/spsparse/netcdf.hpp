@@ -22,7 +22,6 @@
 #include <functional>
 #include <ibmisc/ibmisc.hpp>
 #include <ibmisc/netcdf.hpp>
-#include <spsparse/array.hpp>
 
 namespace spsparse {
 
@@ -55,8 +54,8 @@ void nc_write_spsparse(
     std::vector<size_t> startp = {0, 0};        // SIZE, RANK
     std::vector<size_t> countp = {1, A->rank};  // Write RANK elements at a time
     for (auto ii = A->begin(); ii != A->end(); ++ii, ++startp[0]) {
-        auto index(ii.index());
-        auto val(ii.val());
+        auto index(ii->index());
+        auto val(ii->value());
 
         indices_v.putVar(startp, countp, &index[0]);
         vals_v.putVar(startp, countp, &val);
@@ -86,7 +85,7 @@ void nc_read_spsparse(
     std::vector<size_t> startp = {0, 0};        // SIZE, RANK
     std::vector<size_t> countp = {1, AccumulatorT::rank};   // Write RANK elements at a time
     std::array<typename AccumulatorT::index_type, AccumulatorT::rank> index;
-    typename AccumulatorT::val_type val;
+    typename AccumulatorT::value_type val;
 
     for (; startp[0]<size; ++startp[0]) {
         indices_v.getVar(startp, countp, &index[0]);

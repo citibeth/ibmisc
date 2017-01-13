@@ -16,7 +16,7 @@ foreach(TEST netcdf iter blitz indexing memory var_transformer constant_set date
     add_test(AllTests ibmisc_${TEST})
 endforeach()
 
-foreach(TEST xiter array netcdf multiply_sparse)
+foreach(TEST array netcdf)
     add_executable(spsparse_${TEST} spsparse/test_${TEST}.cpp)
     target_link_libraries(spsparse_${TEST} ${ALL_LIBS})
     add_test(AllTests spsparse_${TEST})

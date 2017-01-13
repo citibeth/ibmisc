@@ -21,7 +21,7 @@
 #include <cstddef>
 #include <gtest/gtest.h>
 #include <ibmisc/array.hpp>
-#include <spsparse/VectorCooArray.hpp>
+#include <spsparse/eigen.hpp>
 #include <spsparse/SparseSet.hpp>
 #include <iostream>
 #ifdef USE_EVERYTRACE
@@ -57,15 +57,19 @@ protected:
 };
 
 
-TEST_F(SpSparseTest, VectorCooArray) {
-    // Make a simple VectorCooArray
-    VectorCooArray<int, double, 1> arr1({4});
+TEST_F(SpSparseTest, TupleVector) {
+    // Make a simple TupleVector
+    TupleVector<int, double, 1> arr1({4});
     arr1.add({1}, 2.);
     arr1.add({3}, 6.);
     EXPECT_EQ(2, arr1.size());
-    EXPECT_EQ(1, arr1.index(0, 0));
-    EXPECT_EQ(3, arr1.index(0,1));
-    EXPECT_EQ(2., arr1.val(0));
+    {
+        auto ii(arr1.begin());
+        EXPECT_EQ(1, ii->index(0));
+        EXPECT_EQ(2., ii->value());
+        ++ii;
+        EXPECT_EQ(3, ii->index(1));
+    }
 
     // Test bounds checking
     try {
@@ -77,172 +81,21 @@ TEST_F(SpSparseTest, VectorCooArray) {
     }
 
     // Test Move Constructor
-    VectorCooArray<int, double, 1> arr2(std::move(arr1));
-    EXPECT_EQ(2, arr2.size());
-    EXPECT_EQ(1, arr2.index(0, 0));
-    EXPECT_EQ(3, arr2.index(0,1));
-    EXPECT_EQ(2., arr2.val(0));
+    TupleVector<int, double, 1> arr2(std::move(arr1));
+    EXPECT_EQ(2, arr1.size());
+    {
+        auto ii(arr1.begin());
+        EXPECT_EQ(1, ii->index(0));
+        EXPECT_EQ(2., ii->value());
+        ++ii;
+        EXPECT_EQ(3, ii->index(1));
+    }
 }
-
-/** Check that we can get sorted permutations properly. */
-TEST_F(SpSparseTest, permutation) {
-    VectorCooArray<int, double, 2> arr2({2,4});
-    arr2.add({1,3}, 5.);
-    arr2.add({1,2}, 3.);
-    arr2.add({0,3}, 17.);
-
-    std::vector<size_t> perm0(sorted_permutation(arr2, {0,1}));
-    EXPECT_EQ(perm0, std::vector<size_t>({2,1,0}));
-
-    std::vector<size_t> perm1(sorted_permutation(arr2, {1,0}));
-    EXPECT_EQ(perm1, std::vector<size_t>({1,2,0}));
-
-}
-
-
-TEST_F(SpSparseTest, iterators) {
-    VectorCooArray<int, double, 2> arr2({2,4});
-    arr2.add({1,3}, 5.);
-    arr2.add({1,2}, 3.);
-    arr2.add({0,3}, 17.);
-    arr2.add({1,2}, 15.);
-
-    // Try out iterators a bit
-    auto ii(arr2.begin());
-    EXPECT_NE(ii, arr2.end());
-    EXPECT_EQ(1, ii.index(0));
-    EXPECT_EQ(3, ii.index(1));
-    EXPECT_EQ(5., ii.val());
-    ii.val() = 17.;
-    EXPECT_EQ(17., ii.val());
-
-    std::array<int,2> arr({1,3});
-    EXPECT_EQ(arr, *ii);
-    ++ii;
-    EXPECT_NE(ii, arr2.end());
-    EXPECT_EQ(1, ii.index(0));
-    EXPECT_EQ(2, ii.index(1));
-    EXPECT_EQ(3., ii.val());
-
-}
-
-TEST_F(SpSparseTest, transpose) {
-    // 2-D VectorCooArray; test consolidate
-    VectorCooArray<int, double, 2> arr2({2,4});
-    arr2.add({1,3}, 5.);
-    arr2.add({1,2}, 3.);
-    arr2.add({0,3}, 17.);
-    arr2.add({0,1}, 14.);
-    arr2.add({1,2}, 15.);
-
-    arr2.transpose({0,1});
-    EXPECT_EQ(std::vector<int>({1,1,0,0,1}), to_vector(arr2.indices(0)));
-    EXPECT_EQ(std::vector<int>({3,2,3,1,2}), to_vector(arr2.indices(1)));   // j
-    EXPECT_EQ(std::vector<double>({5., 3., 17., 14., 15.}), to_vector(arr2.vals()));
-
-    arr2.transpose({1,0});
-    EXPECT_EQ(std::vector<int>({3,2,3,1,2}), to_vector(arr2.indices(0)));   // j
-    EXPECT_EQ(std::vector<int>({1,1,0,0,1}), to_vector(arr2.indices(1)));
-    EXPECT_EQ(std::vector<double>({5., 3., 17., 14., 15.}), to_vector(arr2.vals()));
-
-    arr2.transpose({1,0});
-    EXPECT_EQ(std::vector<int>({1,1,0,0,1}), to_vector(arr2.indices(0)));
-    EXPECT_EQ(std::vector<int>({3,2,3,1,2}), to_vector(arr2.indices(1)));   // j
-    EXPECT_EQ(std::vector<double>({5., 3., 17., 14., 15.}), to_vector(arr2.vals()));
-
-}
-
-
-TEST_F(SpSparseTest, consolidate) {
-    // 2-D VectorCooArray; test consolidate
-    VectorCooArray<int, double, 2> arr2({2,4});
-    arr2.add({1,3}, 5.);
-    arr2.add({1,2}, 3.);
-    arr2.add({0,3}, 17.);
-    arr2.add({0,1}, 14.);
-    arr2.add({1,2}, 15.);
-
-    // Consolidate row major
-    VectorCooArray<int, double, 2> arr3(arr2.shape);
-    consolidate(arr3, arr2, {0,1});
-    EXPECT_EQ(4, arr3.size());
-
-
-    EXPECT_EQ(std::vector<int>({0,0,1,1}), to_vector(arr3.indices(0)));
-    EXPECT_EQ(std::vector<int>({1,3,2,3}), to_vector(arr3.indices(1))); // j
-    EXPECT_EQ(std::vector<double>({14., 17., 18., 5.}), to_vector(arr3.vals()));
-
-    EXPECT_EQ(std::vector<size_t>({0,2,4}), dim_beginnings(arr3));
-
-
-    // Clear it out
-    arr3.clear();
-    EXPECT_EQ(0, arr3.size());
-
-    // Consolidate column-major
-    consolidate(arr3, arr2, {1,0});
-    EXPECT_EQ(std::vector<int>({0,1,0,1}), to_vector(arr3.indices(0)));
-    EXPECT_EQ(std::vector<int>({1,2,3,3}), to_vector(arr3.indices(1))); // j
-    EXPECT_EQ(std::vector<double>({14., 18., 17., 5.}), to_vector(arr3.vals()));
-    EXPECT_EQ(std::vector<size_t>({0,1,2,4}), dim_beginnings(arr3));
-
-}
-
-TEST_F(SpSparseTest, dim_beginnings_iterators)
-{
-    typedef VectorCooArray<int, double, 2> VectorCooArrayT;
-    VectorCooArrayT arr2({20,10});
-
-
-    arr2.add({1,0}, 15.);
-    arr2.add({1,3}, 17.);
-    arr2.add({2,4}, 17.);
-    arr2.add({6,4}, 10.);
-
-    VectorCooArrayT arr3(arr2.shape);
-    consolidate(arr3, arr2, {0,1});
-
-    auto abegin(dim_beginnings(arr3));
-    auto dbi(DimBeginningsXiter<VectorCooArrayT>(&arr3, 0, 1, abegin.begin(), abegin.end()));
-
-    // First row
-    EXPECT_EQ(1, *dbi);
-    auto ii1(dbi.sub_xiter());
-    EXPECT_EQ(0, *ii1);
-    EXPECT_EQ(15., ii1.val());
-    EXPECT_EQ(false, ii1.eof());
-    ++ii1;
-    EXPECT_EQ(3, *ii1);
-    EXPECT_EQ(17., ii1.val());
-    EXPECT_EQ(false, ii1.eof());
-    ++ii1;
-    EXPECT_EQ(true, ii1.eof());
-
-    // Next row
-    ++dbi;
-    EXPECT_EQ(2, *dbi);
-    auto ii2(dbi.sub_xiter());
-    EXPECT_EQ(4, *ii2);
-    EXPECT_EQ(false, ii2.eof());
-    ++ii2;
-    EXPECT_EQ(true, ii2.eof());
-
-    // Next row
-    ++dbi;
-    EXPECT_EQ(6, *dbi);
-    auto ii6(dbi.sub_xiter());
-    EXPECT_EQ(4, *ii6);
-    EXPECT_EQ(false, ii6.eof());
-    ++ii6;
-    EXPECT_EQ(true, ii6.eof());
-
-}
-
 
 TEST_F(SpSparseTest, dense)
 {
-    typedef VectorCooArray<int, double, 2> VectorCooArrayT;
-    VectorCooArrayT arr2({20,10});
+    typedef TupleVector<int, double, 2> TupleVectorT;
+    TupleVectorT arr2({20,10});
 
     arr2.add({1,0}, 15.);
     arr2.add({1,3}, 17.);
@@ -259,14 +112,14 @@ TEST_F(SpSparseTest, dense)
     EXPECT_EQ(sum, 59.);
 
     for (auto ii(arr2.begin()); ii != arr2.end(); ++ii)
-        EXPECT_EQ(dense(ii.index(0), ii.index(1)), ii.val());
+        EXPECT_EQ(dense(ii->index(0), ii->index(1)), ii->value());
 
 }
 
 
 TEST_F(SpSparseTest, dense_to_blitz)
 {
-    typedef VectorCooArray<int, double, 2> VectorCooArrayT;
+    typedef TupleVector<int, double, 2> TupleVectorT;
 
     blitz::Array<double,2> dense1(4,5);
     dense1 = 0;
@@ -274,7 +127,7 @@ TEST_F(SpSparseTest, dense_to_blitz)
     dense1(2,4) = 6.0;
     dense1(0,1) = 7.0;
 
-    VectorCooArrayT sparse1({4,5});
+    TupleVectorT sparse1({4,5});
     spcopy(sparse1, dense1);
     auto dense2(spsparse::to_blitz(sparse1));
 
@@ -291,8 +144,8 @@ TEST_F(SpSparseTest, dense_to_blitz)
 TEST_F(SpSparseTest, sparse_set)
 {
     // Construct a SparseMatrix
-    typedef VectorCooArray<int, double, 2> VectorCooArrayT;
-    VectorCooArrayT arr2({20,10});
+    typedef TupleVector<int, double, 2> TupleVectorT;
+    TupleVectorT arr2({20,10});
 
     arr2.add({6,4}, 10.);
     arr2.add({1,0}, 15.);
@@ -302,7 +155,9 @@ TEST_F(SpSparseTest, sparse_set)
     // Make a SparseSet for each of its dimensions
     SparseSet<int,int> dim0;
     dim0.set_sparse_extent(arr2.shape[0]);
-    dim0.add_sorted(arr2.dim_begin(0), arr2.dim_end(0));
+    dim0.add_sorted(
+        dim_index_iter(arr2.begin(), 0),
+        dim_index_iter(arr2.end(), 0));
 
     EXPECT_EQ(3, dim0.dense_extent());
     EXPECT_EQ(1, dim0.to_sparse(0));
@@ -313,7 +168,7 @@ TEST_F(SpSparseTest, sparse_set)
     EXPECT_EQ(2, dim0.to_dense(6));
 
     // Test to_dense
-    VectorCooArrayT arr2d;
+    TupleVectorT arr2d;
     auto acc1(sparse_transform_accum(
             &arr2d, SparseTransform::TO_DENSE,
             ibmisc::make_array(&dim0, nullptr)));
@@ -338,7 +193,7 @@ TEST_F(SpSparseTest, sparse_set)
 
     // Test to_sparse
     {
-    VectorCooArrayT arr3;
+    TupleVectorT arr3;
     auto acc3(sparse_transform_accum(
             &arr3, SparseTransform::TO_SPARSE,
             ibmisc::make_array(&dim0, nullptr)));

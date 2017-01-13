@@ -20,7 +20,6 @@
 #define SPSPARSE_SPSPARSE_H
 
 #include <exception>
-#include <iostream>
 #include <cmath>
 
 namespace spsparse {
@@ -44,23 +43,12 @@ enum class DuplicatePolicy {
     LEAVE_ALONE, ADD, REPLACE, REPLACE_THEN_ADD};
 
 
-/** @brief Excpetion thrown by the default SpSparse error handler. */
-class Exception : public std::exception
-{
-public:
-    virtual ~Exception()
-        {}
-
-    virtual const char* what() const noexcept
-        { return "spsparse::Exception()"; }
-};
-
 /** @brief Promote relevant template parameters.
 
 Used to propagate relevant template parameters throughout the
-different classes that need them.  Provides: rank, index_type, val_type.
+different classes that need them.  Provides: rank, index_type, value_type.
 
-@note val_type is DIFFERENT from the standard STL value_type.  Standard STL value_type is the same as our index_type.
+@note value_type is DIFFERENT from the standard STL value_type.  Standard STL value_type is the same as our index_type.
 
 Code Example
 @code
@@ -75,12 +63,9 @@ public:
 #define SPSPARSE_LOCAL_TYPES(ArrayOrIterT) \
     static const int rank = ArrayOrIterT::rank; \
     typedef typename ArrayOrIterT::index_type index_type; \
-    typedef typename ArrayOrIterT::val_type val_type;
+    typedef typename ArrayOrIterT::value_type value_type;
 
 // -------------------------------------------------------------
-// Values for sort_order formal parameter below
-extern const std::array<int,2> ROW_MAJOR;
-extern const std::array<int,2> COL_MAJOR;
 
 // The expression "std::isnan(n) || (n == 0)" for different data types.
 // Use template specilization here...
@@ -102,31 +87,56 @@ inline bool isnone(NumT const n, bool const zero_nan=false)
     }
 }
 
-// ----------------------------------------------------------
-} // Namespace spsparse
 
-// -------------------------------------------------------------
-/** Hack to write std::array to ostream. */
-template<class T>
-std::ostream &stream(std::ostream &os, T const * const a, int RANK);
 
-template<class T>
-std::ostream &stream(std::ostream &os, T const * const a, int RANK)
+// -----------------------------------------------------
+/** @brief Select out just one dimension of the index on iteration.
+
+Wraps EigenSparseMatrixIterator or TupleList::iterator, producing a
+single dimension's index with operator*()
+
+Code Example
+@code
+VectorCooMatrix<int, double> const A;
+typedef DimIndexIter<decltype(A)::const_iterator> DIType;
+for (DIType ii(1, A.begin()); ii != DIType(1, A.end()); ++ii)
+    printf("Element with column %d and value %d\n", *ii, ii.val());
+@endcode
+
+@see spsparse::VectorCooMatrix::dim_iter(), spsparse::VectorCooMatrix::dim_begin(), spsparse::VectorCooMatrix::dim_end()
+*/
+template<class IterT>
+class DimIndexIter : public ibmisc::forward_iterator<typename IterT::index_type, DimIndexIter<IterT>>
 {
-    if (RANK == 0) {
-        os << "{}";
-    } else {
-        os << "{";
-        for (int k=0; ; ) {
-            os << a[k];
-            ++k;
-            if (k == RANK) break;
-            os << ", ";
-        }
-        os << "}";
-    }
-    return os;
-}
+public:
+    static int const rank = IterT::rank;
+    typedef typename IterT::index_type index_type;
+    typedef typename IterT::value_type value_type;
+
+private:
+    IterT sub;
+    const int dim;
+
+public:
+    DimIndexIter(IterT &&ii, int _dim) : sub(std::move(ii)), dim(_dim) {}
+
+    value_type operator*()
+        { return sub->index(dim); }
+
+    DimIndexIter &operator++()
+        { ++sub; return *this; }
+    bool operator==(const DimIndexIter& rhs) const
+        {return sub == rhs.sub;}
+};
+
+template<class IterT>
+DimIndexIter<IterT> dim_index_iter(IterT &&sub, int dim)
+    { return DimIndexIter<IterT>(dim, std::move(sub)); }
+// ------------------------------------------------------------------------
+
+
+
+} // Namespace spsparse
 
 /** @} */
 
