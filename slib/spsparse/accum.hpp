@@ -26,6 +26,7 @@
 #include <spsparse/spsparse.hpp>
 
 namespace spsparse {
+namespace accum {
 
 /** @defgroup accum accum.hpp
 @brief Accumulators to use with algorithms.
@@ -42,37 +43,53 @@ it called / not called?
 */
 
 // -----------------------------------------------------------
-/** @brief For in-place operations.
-
-Overwrites a VectorCooArray::iterator.  Good for
-in-place operations that we KNOW won't change the size of the
-VectorCooArray (eg: use with spsparse::transpose()).
-
-@warning Does not bounds-check for the END of the iterator.
-
-Usage Example:
-@code
-VectorCooArray<int,double,2> A;
-OverWriteAccum<decltype(A)::iterator> overwrite(A.begin());
-transpose(overwrite, A, {1,0});
-@endcode
-
-*/
-template<class IterT>
-class OverwriteAccum
+template<class AccumT>
+class Filter : public AccumTraits<AccumT>
 {
-    SPSPARSE_LOCAL_TYPES(IterT);
-
-    IterT ii;
+    typedef AccumTraits<AccumT> super;
 public:
-    OverwriteAccum(IterT &&_ii) : ii(std::move(_ii)) {}
+    AccumT sub;
 
-    void add(std::array<index_type,rank> const &index, typename IterT::val_type const &val) {
-        ii.set_index(index);
-        ii.val() = val;
-        ++ii;
-    }
+    Filter(AccumT &&_sub)
+        : sub(std::move(_sub)) {}
+
+    typename super::base_array_type &base()
+        { return sub.base(); }
+
+    void set_shape(std::array<long, super::rank> const &_shape)
+        { sub.set_shape(_shape); }
+
+    void add(
+        std::array<typename super::index_type, super::rank> const &index,
+        typename super::val_type const &val)
+        { sub.add(index, val); }
 };
+// -----------------------------------------------------------
+template<class AccumT>
+class Ref : public AccumTraits<AccumT>
+{
+    typedef AccumTraits<AccumT> super;
+public:
+    AccumT &sub;
+
+    Ref(AccumT &_sub)
+        : sub(_sub) {}
+
+    typename super::base_array_type &base()
+        { return sub.base(); }
+
+    void set_shape(std::array<long, super::rank> const &_shape)
+        { sub.set_shape(_shape); }
+
+    void add(
+        std::array<typename super::index_type, super::rank> const &index,
+        typename super::val_type const &val)
+        { sub.add(index, val); }
+};
+
+template<class AccumT>
+Ref<AccumT> ref(AccumT &sub)
+    { return Ref<AccumT>(sub); }
 // -----------------------------------------------------------
 /** @brief For transpose or project.
 
@@ -88,80 +105,97 @@ spcopy(p, A);
 @endcode
 
 */
-template<class AccumulatorT,size_t IN_RANK>
-class PermuteAccum
+template<class AccumT,size_t IN_RANK>
+class Permute : public Filter<AccumT>
 {
+    typedef Filter<AccumT> super;
 public:
+    // Override rank stuff from FilterAccum
     static const size_t rank = IN_RANK;
-    static const size_t out_rank = AccumulatorT::rank;
-
-    typedef typename AccumulatorT::index_type index_type;
-    typedef typename AccumulatorT::val_type val_type;
+    static const size_t out_rank = AccumT::rank;
 
 private:
-    AccumulatorT * const sub;
     std::array<int,out_rank> perm;
     std::array<int, out_rank> out_idx;
 
 public:
-    PermuteAccum(AccumulatorT *_sub, std::array<int,out_rank> const &_perm)
-        : sub(_sub), perm(_perm) {}
+    Permute(std::array<int,out_rank> const _perm, AccumT &&_sub)
+        : super(std::move(_sub)), perm(_perm) {}
 
     void set_shape(std::array<long, rank> const &_shape)
     {
         std::array<long, out_rank> oshape;
         for (int i=0; i<out_rank; ++i) oshape[i] = _shape[perm[i]];
-        sub->set_shape(oshape);
+        super::sub.set_shape(oshape);
     }
 
-    void add(std::array<index_type,rank> const &index, val_type const &val) {
+    void add(
+        std::array<typename super::index_type,rank> const &index,
+        typename super::val_type const &val)
+    {
         for (int i=0; i<out_rank; ++i) out_idx[i] = index[perm[i]];
-        sub->add(out_idx, val);
+        super::sub.add(out_idx, val);
     }
 };
-// -----------------------------------------------------------
+
+// Helper used to specify template arguments
 template<size_t X>
 struct in_rank {
     static const size_t x=X;
 };
 
-template<class AccumulatorT,size_t IN_RANK>
-inline PermuteAccum<AccumulatorT,IN_RANK>
-permute_accum(
-    AccumulatorT *_sub,
+template<class AccumT,size_t IN_RANK>
+inline Permute<AccumT,IN_RANK>
+permute(
     in_rank<IN_RANK> const in_rank_dummy,
-    std::array<int, AccumulatorT::rank> const &_perm)
-    { return PermuteAccum<AccumulatorT,IN_RANK>(_sub, _perm); }
+    std::array<int, AccumT::rank> const &_perm,
+    AccumT &&_sub)
+    { return Permute<AccumT,IN_RANK>(_perm, _sub); }
+
 
 // -----------------------------------------------------------
-
-// -----------------------------------------------------------
-
-
-// -------------------------------------------------------
-/** @brief For inner product.
-
-Accumulates into a single scalar, ignoring index information.  Used to
-implement inner products, or just sum over an array.
-
-Usage Example:
-@code
-VectorCooArray<int,double,2> A;
-ScalarAccumulator<decltype(A)> s;
-spcopy(s, A);
-printf("Sum = %g\n", s.val);
-@endcode
-*/
-template<class VectorCooArrayT>
-struct ScalarAccumulator {
-    SPSPARSE_LOCAL_TYPES(VectorCooArrayT);
-
-    val_type val;
-    ScalarAccumulator() : val(0) {}
-
-    void add(const std::array<index_type, rank> &index, val_type const &_val)
-        { this->val += _val; }
+template<class AccumT>
+class Transpose : public Permute<AccumT,2>
+{
+public:
+    Transpose(AccumT &&_sub) :
+        Permute<AccumT,2>({1,0}, std::move(_sub)) {}
 };
+
+
+template<class AccumT>
+Transpose<AccumT>
+transpose(AccumT &&_sub)
+    { return Transpose<AccumT>(std::move(_sub)); }
+
+// -----------------------------------------------------------
+template<class AccumT, class TransformFn>
+class TransformAccum : public Filter<AccumT>
+{
+    typedef Filter<AccumT> super;
+    TransformFn transform_fn;
+public:
+
+    TransformAccum(TransformFn &&_transform_fn, AccumT &&_sub)
+        : super(std::move(_sub)), transform_fn(std::move(_transform_fn)) {}
+    void add(
+        std::array<typename super::index_type,super::rank> const &index,
+        typename super::val_type const &val)
+    {
+        super::sub.add(index, transform_fn(val));
+    }
+
+};
+
+// -----------------------------------------------------------
+struct InvertFn{
+double operator()(double x)
+    { return 1./x; }
+};
+template<class AccumT>
+TransformAccum<AccumT,InvertFn> invert(AccumT &&sub)
+    { return TransformAccum<AccumT,InvertFn>(InvertFn(), std::move(sub)); }
+// -------------------------------------------------------
 
 
 
@@ -169,6 +203,6 @@ struct ScalarAccumulator {
 /** @} */
 
 
-}   // Namespace
+}}   // Namespace
 
 #endif // Guard

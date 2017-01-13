@@ -22,6 +22,7 @@
 #include <spsparse/accum.hpp>
 #include <spsparse/blitz.hpp>
 #include <Eigen/SparseCore>
+#include <spsparse/SparseSet.hpp>
 
 namespace spsparse {
 
@@ -34,15 +35,15 @@ namespace spsparse {
 
 // --------------------------------------------------------------
 /** Copies an Eigen SparseMatrix into a rank-2 Spsparse accumulator. */
-template<class AccumulatorT, class ValT>
+template<class AccumT, class ValT>
 extern void spcopy(
-    AccumulatorT &ret,
+    AccumT &&ret,
     Eigen::SparseMatrix<ValT> const &M,
     bool set_shape=true);
 
-template<class AccumulatorT, class ValT>
+template<class AccumT, class ValT>
 void spcopy(
-    AccumulatorT &ret,
+    AccumT &&ret,
     Eigen::SparseMatrix<ValT> const &M,
     bool set_shape=true)
 {
@@ -56,22 +57,22 @@ void spcopy(
     }}
 }
 // --------------------------------------------------------------
-template<class AccumulatorT, int _Rows>
+template<class AccumT, int _Rows>
 inline void spcopy(
-    AccumulatorT &ret,
-    Eigen::Matrix<typename AccumulatorT::val_type, _Rows, 1> const &M,    // eg. Eigen::VectorXd
+    AccumT &&ret,
+    Eigen::Matrix<typename AccumT::val_type, _Rows, 1> const &M,    // eg. Eigen::VectorXd
     bool set_shape=true);
 
 
 /** Copy from dense Eigen column vectors */
-template<class AccumulatorT, int _Rows>
+template<class AccumT, int _Rows>
 inline void spcopy(
-    AccumulatorT &ret,
-    Eigen::Matrix<typename AccumulatorT::val_type, _Rows, 1> const &M,    // eg. Eigen::VectorXd
+    AccumT &&ret,
+    Eigen::Matrix<typename AccumT::val_type, _Rows, 1> const &M,    // eg. Eigen::VectorXd
     bool set_shape)
 {
     for (size_t i=0; i<M.rows(); ++i) {
-        ret.add({(typename AccumulatorT::index_type)i}, M(i,0));
+        ret.add({(typename AccumT::index_type)i}, M(i,0));
     }
 }
 
@@ -84,9 +85,10 @@ inline blitz::Array<ValT,1> sum(
 {
     // Get our weight vector (in dense coordinate space)
     blitz::Array<double,1> ret;
-    auto accum1(spsparse::blitz_accum_new(&ret));
-    auto accum2(permute_accum(&accum1, in_rank<2>(), {dimi}));
-    spcopy(accum2, M, true);
+    spcopy(
+        accum::permute(accum::in_rank<2>(), {dimi},
+        accum::blitz_new(ret)),
+        M);
 
     return ret;
 }
@@ -198,11 +200,15 @@ public:
     static const int rank = RANK;
     typedef IndexT index_type;
     typedef ValT val_type;
+    typedef TupleList base_array_type;
 
     
     std::array<long, rank> _shape;
 
 public:
+    base_array_type &base()
+        { return *this; }
+
     struct iterator : public super::iterator {
         static const int rank = RANK;
         typedef IndexT index_type;
@@ -274,18 +280,14 @@ public:
     }
 };
 
-template<class IndexT, class ValT>
-using TripletVector = TupleList<IndexT,ValT,2>;
+template<class AccumT, class IndexT, class ValT, int RANK>
+extern void spcopy(AccumT &&ret, TupleList<IndexT,ValT,RANK> const &A, bool set_shape = true);
 
-
-template<class AccumulatorT, class IndexT, class ValT, int RANK>
-extern void spcopy(AccumulatorT &ret, TupleList<IndexT,ValT,RANK> const &A, bool set_shape = true);
-
-template<class AccumulatorT, class IndexT, class ValT, int RANK>
-void spcopy(AccumulatorT &ret, TupleList<IndexT,ValT,RANK> const &A, bool set_shape)
+template<class AccumT, class IndexT, class ValT, int RANK>
+void spcopy(AccumT &&ret, TupleList<IndexT,ValT,RANK> const &A, bool set_shape)
 {
     if (set_shape) ret.set_shape(A.shape());
-    std::array<int,AccumulatorT::rank> idx;
+    std::array<int,AccumT::rank> idx;
     for (auto ii=A.begin(); ii != A.end(); ++ii) {
         ret.add(ii->index(), ii->value());
     }

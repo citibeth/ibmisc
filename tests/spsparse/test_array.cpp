@@ -22,6 +22,7 @@
 #include <gtest/gtest.h>
 #include <ibmisc/array.hpp>
 #include <spsparse/eigen.hpp>
+#include <spsparse/accum.hpp>
 #include <spsparse/SparseSet.hpp>
 #include <iostream>
 #ifdef USE_EVERYTRACE
@@ -170,10 +171,12 @@ TEST_F(SpSparseTest, sparse_set)
 
     // Test to_dense
     TupleListT arr2d;
-    auto acc1(sparse_transform_accum(
-            &arr2d, SparseTransform::TO_DENSE,
-            ibmisc::make_array(&dim0, nullptr)));
-    spcopy(acc1, arr2);
+    spcopy(
+        accum::sparse_transform(
+            SparseTransform::TO_DENSE,
+            ibmisc::make_array(&dim0, nullptr),
+        accum::ref(arr2d)),
+        arr2);
 
     {
     auto ii(arr2d.begin());
@@ -195,10 +198,12 @@ TEST_F(SpSparseTest, sparse_set)
     // Test to_sparse
     {
     TupleListT arr3;
-    auto acc3(sparse_transform_accum(
-            &arr3, SparseTransform::TO_SPARSE,
-            ibmisc::make_array(&dim0, nullptr)));
-    spcopy(acc3, arr2d);
+    spcopy(
+        accum::sparse_transform(
+            SparseTransform::TO_SPARSE,
+            ibmisc::make_array(&dim0, nullptr),
+        accum::ref(arr3)),
+        arr2d);
 
     auto ii(arr3.begin());
     EXPECT_EQ(6, ii->index(0));
@@ -215,6 +220,55 @@ TEST_F(SpSparseTest, sparse_set)
     ++ii;
     EXPECT_EQ(ii, arr3.end());
     }
+
+}
+
+TEST_F(SpSparseTest, invert_accum)
+{
+    // Construct a SparseMatrix
+    typedef TupleList<int, double, 2> TupleListT;
+    TupleListT arr({20,10});
+
+    arr.add({6,4}, 8.);    // Inverses of powers of 2 will be exact FP arithmetic
+    arr.add({1,0}, 16.);
+
+    TupleListT arr2;
+    spcopy(accum::invert(accum::ref(arr2)), arr);
+
+    auto ii(arr2.begin());
+    EXPECT_EQ(6, ii->index(0));
+    EXPECT_EQ(4, ii->index(1));
+    EXPECT_EQ(1./8., ii->value());
+    ++ii;
+    EXPECT_EQ(1, ii->index(0));
+    EXPECT_EQ(0, ii->index(1));
+    EXPECT_EQ(1./16., ii->value());
+}
+
+
+TEST_F(SpSparseTest, transpose_accum)
+{
+    // Construct a SparseMatrix
+    typedef TupleList<int, double, 2> TupleListT;
+    TupleListT arr({20,10});
+
+    arr.add({6,4}, 8.);    // Inverses of powers of 2 will be exact FP arithmetic
+    arr.add({1,0}, 16.);
+
+    TupleListT arr2;
+    spcopy(accum::transpose(accum::ref(arr2)), arr);
+
+    EXPECT_EQ(arr2.shape()[0], 10);
+    EXPECT_EQ(arr2.shape()[1], 20);
+    auto ii(arr2.begin());
+
+    EXPECT_EQ(4, ii->index(0));
+    EXPECT_EQ(6, ii->index(1));
+    EXPECT_EQ(8., ii->value());
+    ++ii;
+    EXPECT_EQ(0, ii->index(0));
+    EXPECT_EQ(1, ii->index(1));
+    EXPECT_EQ(16., ii->value());
 
 }
 

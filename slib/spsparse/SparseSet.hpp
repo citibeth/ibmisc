@@ -125,9 +125,13 @@ enum class SparseTransform {
     ADD_DENSE     // Convert sparse to dense, adding to the SparseSet if it's not already there.
 };
 
-template<class AccumulatorT,class SparseSetT>
-class SparseTransformAccum
+// =======================================================
+
+template<class AccumT,class SparseSetT>
+class SparseTransformAccum : public accum::Filter<AccumT>
 {
+    typedef accum::Filter<AccumT> super;
+public:
     struct Data {
         SparseSetT * const sparse_set;
         SparseTransform transform;
@@ -136,11 +140,7 @@ class SparseTransformAccum
             sparse_set(_sparse_set), transform(_transform) {}
     };
 
-public:
-    SPSPARSE_LOCAL_TYPES(AccumulatorT);
-
 private:
-    AccumulatorT * const sub;
     std::vector<Data> data;
 
 public:
@@ -151,14 +151,14 @@ public:
         0 if that dimension is not to be transformed
     */
     SparseTransformAccum(
-        AccumulatorT *_sub,
         SparseTransform _transform,
-        std::array<SparseSetT *, (size_t)rank> const sparse_sets);
+        std::array<SparseSetT *, (size_t)super::rank> const sparse_sets,
+        AccumT &&_sub);
 
     /** Merge shape we're given with shape from transforms. */
-    void set_shape(std::array<long, rank> shape)
+    void set_shape(std::array<long, super::rank> shape)
     {
-        for (int i=0; i<rank; ++i) {
+        for (int i=0; i<super::rank; ++i) {
             // Use the shape we were given, if no transform for this dimension
             if (!data[i].sparse_set) continue;
 
@@ -167,6 +167,7 @@ public:
                     // set_shape() is not very useful with ADD_DENSE;
                     // you will have to call it again after all
                     // items have been added.
+                    // (fall through)
                 case SparseTransform::TO_DENSE:
                     shape[i] = data[i].sparse_set->dense_extent();
                     break;
@@ -175,12 +176,12 @@ public:
                     break;
             }
         }
-        sub->set_shape(shape);
+        super::sub.set_shape(shape);
     }
 
-    void add(std::array<index_type,rank> index, val_type const &val)
+    void add(std::array<typename super::index_type,super::rank> index, typename super::val_type const &val)
     {
-        for (int i=0; i<rank; ++i) {
+        for (int i=0; i<super::rank; ++i) {
             // Use the index we were given, if no transform for this dimension
             if (!data[i].sparse_set) continue;
 
@@ -196,45 +197,49 @@ public:
                     break;
             }
         }
-        sub->add(index, val);
+        super::sub.add(index, val);
     }
 };
 
 // ----------------------------------------------------------------
-template<class AccumulatorT,class SparseSetT>
-SparseTransformAccum<AccumulatorT,SparseSetT>::SparseTransformAccum(
-    AccumulatorT *_sub,
+template<class AccumT,class SparseSetT>
+SparseTransformAccum<AccumT,SparseSetT>::SparseTransformAccum(
     SparseTransform transform,
-    std::array<SparseSetT *, (size_t)rank> const sparse_sets)    // 0 if we don't want to densify/sparsify that dimension
-    : sub(_sub)
+    std::array<SparseSetT *, (size_t)super::rank> const sparse_sets,    // 0 if we don't want to densify/sparsify that dimension
+    AccumT &&_sub)
+    : super(std::move(_sub))
 {
-    for (int i=0; i<rank; ++i) {
+    for (int i=0; i<super::rank; ++i) {
         data.push_back(Data(sparse_sets[i],
             sparse_sets[i] ? transform : SparseTransform::ID));
     }
 }
 
-#define SparseTransformAccumT SparseTransformAccum<AccumulatorT,SparseSetT>
-template<class AccumulatorT,class SparseSetT>
-inline SparseTransformAccumT sparse_transform_accum(
-        AccumulatorT *sub,
+namespace accum {
+
+#define SparseTransformAccumT SparseTransformAccum<AccumT,SparseSetT>
+template<class AccumT,class SparseSetT>
+inline SparseTransformAccumT sparse_transform(
         SparseTransform transform,
-        std::array<SparseSetT *, AccumulatorT::rank> const &sparse_sets)
+        std::array<SparseSetT *, AccumT::rank> const &sparse_sets,
+        AccumT &&sub)
 {
-    return SparseTransformAccumT(sub, transform, sparse_sets);
+    return SparseTransformAccumT(transform, sparse_sets, std::move(sub));
 }
 #undef SparseTransformAccumT
+
+}    // namespace accum
 // ----------------------------------------------------------------
-template<class AccumulatorT, class SrcT, class SparseT, class DenseT>
-void sparse_copy(AccumulatorT &ret, SrcT const &src,
+template<class AccumT, class SrcT, class SparseT, class DenseT>
+void sparse_copy(AccumT &ret, SrcT const &src,
     SparseTransform direction,
-    std::array<spsparse::SparseSet<SparseT, DenseT> *, AccumulatorT::rank> dims,
+    std::array<spsparse::SparseSet<SparseT, DenseT> *, AccumT::rank> dims,
     bool set_shape=true);
 
-template<class AccumulatorT, class SrcT, class SparseT, class DenseT>
-void sparse_copy(AccumulatorT &ret, SrcT const &src,
+template<class AccumT, class SrcT, class SparseT, class DenseT>
+void sparse_copy(AccumT &ret, SrcT const &src,
     SparseTransform direction,
-    std::array<spsparse::SparseSet<SparseT, DenseT> *, AccumulatorT::rank> dims,
+    std::array<spsparse::SparseSet<SparseT, DenseT> *, AccumT::rank> dims,
     bool set_shape)
 {
     auto accum(sparse_transform_accum(&ret, direction, dims));
