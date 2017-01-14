@@ -29,11 +29,15 @@ namespace spsparse {
 SparseVector) and a dense set numbered [0...n) */
 template<class SparseT, class DenseT>
 class SparseSet {
+public:
     SparseT _sparse_extent;
     std::unordered_map<SparseT, DenseT> _s2d;
     std::vector<SparseT> _d2s;
 
 public:
+    typedef SparseT sparse_type;
+    typedef DenseT dense_type;
+
     SparseSet() : _sparse_extent(-1) {}
 
     void clear() {
@@ -118,40 +122,60 @@ public:
 };
 
 // -----------------------------------------------------------
-enum class SparseTransform {
+enum class SparsifyTransform {
     ID,           // No transformation
     TO_DENSE,     // Convert sparse to dense indices
+    TO_DENSE_IGNORE_MISSING,
     TO_SPARSE,    // Convert dense to sparse indices
-    ADD_DENSE     // Convert sparse to dense, adding to the SparseSet if it's not already there.
+    ADD_DENSE    // Convert sparse to dense, adding to the SparseSet if it's not already there.
 };
+
 
 // =======================================================
 
+namespace accum {
+
 template<class AccumT,class SparseSetT>
-class SparseTransformAccum : public accum::Filter<AccumT>
+class Sparsify : public Filter<AccumT>
 {
-    typedef accum::Filter<AccumT> super;
+    typedef Filter<AccumT> super;
 public:
     struct Data {
         SparseSetT * const sparse_set;
-        SparseTransform transform;
+        SparsifyTransform transform;
 
-        Data(SparseSetT *_sparse_set, SparseTransform _transform) :
+        Data(SparseSetT *_sparse_set, SparsifyTransform _transform) :
             sparse_set(_sparse_set), transform(_transform) {}
-    };
 
+        long extent() const {
+            switch(transform) {
+                case SparsifyTransform::ID :
+                    return -1;
+                case SparsifyTransform::ADD_DENSE :
+                case SparsifyTransform::TO_DENSE_IGNORE_MISSING :
+                case SparsifyTransform::TO_DENSE :
+                    return sparse_set->dense_extent();
+                case SparsifyTransform::TO_SPARSE :
+                    return sparse_set->sparse_extent();
+            }
+        }
+    };
 private:
+
     std::vector<Data> data;
 
 public:
+    Data const &dim(int ix)
+        { return data[ix]; }
+
     /** @param _transform
-        SparseTransform::TO_DENSE
-        SparseTransform::TO_SPARSE
+        SparsifyTransform::TO_DENSE
+        SparsifyTransform::TO_SPARSE
     @param sparse_sets
         0 if that dimension is not to be transformed
     */
-    SparseTransformAccum(
-        SparseTransform _transform,
+    Sparsify(
+        SparsifyTransform _transform,
         std::array<SparseSetT *, (size_t)super::rank> const sparse_sets,
         AccumT &&_sub);
 
@@ -163,15 +187,16 @@ public:
             if (!data[i].sparse_set) continue;
 
             switch(data[i].transform) {
-                case SparseTransform::ADD_DENSE:
+                case SparsifyTransform::ADD_DENSE:
                     // set_shape() is not very useful with ADD_DENSE;
                     // you will have to call it again after all
                     // items have been added.
                     // (fall through)
-                case SparseTransform::TO_DENSE:
+                case SparsifyTransform::TO_DENSE_IGNORE_MISSING:
+                case SparsifyTransform::TO_DENSE:
                     shape[i] = data[i].sparse_set->dense_extent();
                     break;
-                case SparseTransform::TO_SPARSE:
+                case SparsifyTransform::TO_SPARSE:
                     shape[i] = data[i].sparse_set->sparse_extent();
                     break;
             }
@@ -186,13 +211,19 @@ public:
             if (!data[i].sparse_set) continue;
 
             switch(data[i].transform) {
-                case SparseTransform::ADD_DENSE:
+                case SparsifyTransform::ADD_DENSE:
                     index[i] = data[i].sparse_set->add_dense(index[i]);
                     break;
-                case SparseTransform::TO_DENSE:
+                case SparsifyTransform::TO_DENSE_IGNORE_MISSING: {
+                    auto &sset(*data[i].sparse_set);
+                    auto ii(sset._s2d.find(index[i]));
+                    if (ii == sset._s2d.end()) continue;
+                    index[i] = ii->second;
+                } break;
+                case SparsifyTransform::TO_DENSE:
                     index[i] = data[i].sparse_set->to_dense(index[i]);
                     break;
-                case SparseTransform::TO_SPARSE:
+                case SparsifyTransform::TO_SPARSE:
                     index[i] = data[i].sparse_set->to_sparse(index[i]);
                     break;
             }
@@ -203,46 +234,45 @@ public:
 
 // ----------------------------------------------------------------
 template<class AccumT,class SparseSetT>
-SparseTransformAccum<AccumT,SparseSetT>::SparseTransformAccum(
-    SparseTransform transform,
+Sparsify<AccumT,SparseSetT>::Sparsify(
+    SparsifyTransform transform,
     std::array<SparseSetT *, (size_t)super::rank> const sparse_sets,    // 0 if we don't want to densify/sparsify that dimension
     AccumT &&_sub)
     : super(std::move(_sub))
 {
     for (int i=0; i<super::rank; ++i) {
         data.push_back(Data(sparse_sets[i],
-            sparse_sets[i] ? transform : SparseTransform::ID));
+            sparse_sets[i] ? transform : SparsifyTransform::ID));
     }
 }
 
-namespace accum {
 
-#define SparseTransformAccumT SparseTransformAccum<AccumT,SparseSetT>
+#define SparsifyT Sparsify<AccumT,SparseSetT>
 template<class AccumT,class SparseSetT>
-inline SparseTransformAccumT sparse_transform(
-        SparseTransform transform,
+inline SparsifyT sparsify(
+        SparsifyTransform transform,
         std::array<SparseSetT *, AccumT::rank> const &sparse_sets,
         AccumT &&sub)
 {
-    return SparseTransformAccumT(transform, sparse_sets, std::move(sub));
+    return SparsifyT(transform, sparse_sets, std::move(sub));
 }
-#undef SparseTransformAccumT
+#undef SparsifyT
 
 }    // namespace accum
 // ----------------------------------------------------------------
 template<class AccumT, class SrcT, class SparseT, class DenseT>
 void sparse_copy(AccumT &ret, SrcT const &src,
-    SparseTransform direction,
+    SparsifyTransform direction,
     std::array<spsparse::SparseSet<SparseT, DenseT> *, AccumT::rank> dims,
     bool set_shape=true);
 
 template<class AccumT, class SrcT, class SparseT, class DenseT>
 void sparse_copy(AccumT &ret, SrcT const &src,
-    SparseTransform direction,
+    SparsifyTransform direction,
     std::array<spsparse::SparseSet<SparseT, DenseT> *, AccumT::rank> dims,
     bool set_shape)
 {
-    auto accum(sparse_transform_accum(&ret, direction, dims));
+    auto accum(accum::sparsify(&ret, direction, dims));
     spcopy(accum, src, set_shape);
 }
 

@@ -34,17 +34,18 @@ namespace spsparse {
 */
 
 // --------------------------------------------------------------
+#define ARGS _Scalar,_Options,_StorageIndex
 /** Copies an Eigen SparseMatrix into a rank-2 Spsparse accumulator. */
-template<class AccumT, class ValT>
+template<class AccumT, class _Scalar, int _Options, class _StorageIndex>
 extern void spcopy(
     AccumT &&ret,
-    Eigen::SparseMatrix<ValT> const &M,
+    Eigen::SparseMatrix<ARGS> const &M,
     bool set_shape=true);
 
-template<class AccumT, class ValT>
+template<class AccumT, class _Scalar, int _Options, class _StorageIndex>
 void spcopy(
     AccumT &&ret,
-    Eigen::SparseMatrix<ValT> const &M,
+    Eigen::SparseMatrix<ARGS> const &M,
     bool set_shape=true)
 {
     if (set_shape) ret.set_shape({M.rows(), M.cols()});
@@ -52,10 +53,11 @@ void spcopy(
     // See here for note on iterating through Eigen::SparseMatrix
     // http://eigen.tuxfamily.org/bz/show_bug.cgi?id=1104
     for (int k=0; k<M.outerSize(); ++k) {
-    for (typename Eigen::SparseMatrix<ValT>::InnerIterator ii(M,k); ii; ++ii) {
+    for (typename Eigen::SparseMatrix<ARGS>::InnerIterator ii(M,k); ii; ++ii) {
         ret.add({ii.row(), ii.col()}, ii.value());
     }}
 }
+#undef ARGS
 // --------------------------------------------------------------
 template<class AccumT, int _Rows>
 inline void spcopy(
@@ -77,22 +79,7 @@ inline void spcopy(
 }
 
 // --------------------------------------------------------------
-/** Sum the rows or columns of an Eigen SparseMatrix.
-@param dimi 0: sum rows, 1: sum columns */
-template<class ValT>
-inline blitz::Array<ValT,1> sum(
-    Eigen::SparseMatrix<ValT> const &M, int dimi)
-{
-    // Get our weight vector (in dense coordinate space)
-    blitz::Array<double,1> ret;
-    spcopy(
-        accum::permute(accum::in_rank<2>(), {dimi},
-        accum::blitz_new(ret)),
-        M);
 
-    return ret;
-}
-// --------------------------------------------------------------
 template<class ValT>
 Eigen::SparseMatrix<ValT> diag_matrix(
     blitz::Array<ValT,1> const &diag, bool invert);
@@ -106,6 +93,7 @@ Eigen::SparseMatrix<ValT> diag_matrix(
     // Invert weight vector into Eigen-format scale matrix
     std::vector<Eigen::Triplet<ValT>> triplets;
     for (int i=0; i < diag.extent(0); ++i) {
+        if (diag(i) == 0) continue;
         triplets.push_back(Eigen::Triplet<ValT>(
             i, i, invert ? 1./diag(i) : diag(i)));
     }
@@ -182,7 +170,7 @@ private:
     VectorIterT sub;
     TupleIterator(VectorIterT &&ii) : sub(ii) {}
 public:
-    value_type &operator*()
+    val_type &operator*()
         { return *sub; }
     TupleIterator &operator++()
         { ++sub; return *this; }
@@ -236,7 +224,8 @@ public:
     // -------------------------------------------------
 
 
-    TupleList() {}
+    TupleList()
+        { _shape.fill(-1); }    // -1 means unlimited dimension
 
     TupleList(std::array<long,RANK> shape) : _shape(shape) {}
 
@@ -246,12 +235,14 @@ public:
 
     std::array<long,rank> const &shape() const
         { return _shape; }
+    long shape(int i) const
+        { return _shape[i]; }
 
     void add(std::array<index_type,rank> const &index, ValT const &value)
     {
         // Check bounds
         for (int i=0; i<RANK; ++i) {
-            if (index[i] < 0 || index[i] >= _shape[i]) {
+            if (_shape[i] >= 0 && (index[i] < 0 || index[i] >= _shape[i])) {
                 std::ostringstream buf;
                 buf << "Sparse index out of bounds: index=(";
                 for (int j=0; j<RANK; ++j) {
@@ -270,15 +261,22 @@ public:
 
         super::push_back(Tuple<IndexT,ValT,RANK>(index, value));
     }
-
-    // see: http://eigen.tuxfamily.org/bz/show_bug.cgi?id=1370
-    Eigen::SparseMatrix<ValT,0,IndexT> to_eigen()
-    {
-        Eigen::SparseMatrix<ValT,0,IndexT> M(_shape[0], _shape[1]);
-        M.setFromTriplets(super::begin(), super::end());
-        return M;
-    }
 };
+
+
+template<class ArrayT>
+extern Eigen::SparseMatrix<typename ArrayT::val_type,0,typename ArrayT::index_type>
+    to_eigen(ArrayT const &tuples);
+
+template<class ArrayT>
+Eigen::SparseMatrix<typename ArrayT::val_type,0,typename ArrayT::index_type>
+    to_eigen(ArrayT const &tuples)
+{
+    Eigen::SparseMatrix<typename ArrayT::val_type,0,typename ArrayT::index_type> M(tuples.base().shape(0), tuples.base().shape(1));
+    M.setFromTriplets(tuples.base().begin(), tuples.base().end());
+    return M;
+}
+
 
 template<class AccumT, class IndexT, class ValT, int RANK>
 extern void spcopy(AccumT &&ret, TupleList<IndexT,ValT,RANK> const &A, bool set_shape = true);
@@ -292,8 +290,29 @@ void spcopy(AccumT &&ret, TupleList<IndexT,ValT,RANK> const &A, bool set_shape)
         ret.add(ii->index(), ii->value());
     }
 }
-
 // ---------------------------------------------
+/** Produces an Eigen matrix from a set of tuples, applying a densification
+translation along the way. */
+template<class AccumT,class SparseSetT>
+Eigen::SparseMatrix<
+    typename AccumT::val_type, 0,
+    typename SparseSetT::dense_type>
+extern sparsify_to_eigen(accum::Sparsify<AccumT, SparseSetT> &accum);
+
+template<class AccumT,class SparseSetT>
+Eigen::SparseMatrix<
+    typename AccumT::val_type, 0,
+    typename SparseSetT::dense_type>
+sparsify_to_eigen(accum::Sparsify<AccumT, SparseSetT> &accum)
+{
+    Eigen::SparseMatrix<typename AccumT::val_type,0,typename AccumT::index_type> M(
+        accum.dim(0).extent(),
+        accum.dim(1).extent());
+    M.setFromTriplets(accum.base().begin(), accum.base().end());
+    return M;
+}
+
+// =========================================================
 
 #define ARGS _Scalar,_Options,_StorageIndex
 template<class _Scalar, int _Options, class _StorageIndex>
@@ -364,6 +383,93 @@ EigenSparseMatrixIterator<ARGS> end(Eigen::SparseMatrix<ARGS> const &M)
 
 #undef ARGS
 // -----------------------------------
+/** Sum the rows or columns of an Eigen SparseMatrix.
+@param dimi 0: sum rows, 1: sum columns */
+#define ARGS _Scalar,_Options,_StorageIndex
+template<class _Scalar, int _Options, class _StorageIndex>
+inline blitz::Array<_Scalar,1> sum(
+    Eigen::SparseMatrix<ARGS> const &M, int dimi, char invert='+')
+{
+    // Get our weight vector (in dense coordinate space)
+    blitz::Array<_Scalar,1> ret;
+    spcopy(
+        accum::permute(accum::in_rank<2>(), {dimi},
+        accum::invert(invert,
+        accum::blitz_new(ret))),
+        M);
+
+    return ret;
+}
+
+
+template<class _Scalar, int _Options, class _StorageIndex>
+Eigen::SparseMatrix<ARGS> sum_to_diagonal(
+    Eigen::SparseMatrix<ARGS> const &M, int dimi, char invert='+')
+{
+    // Get our weight vector (in dense coordinate space)
+    TupleList<_StorageIndex, _Scalar, 2> ret;
+    spcopy(
+        accum::permute(accum::in_rank<2>(), {dimi},
+        accum::permute(accum::in_rank<1>(), {0,0},    // Form diag matrix
+        accum::invert(invert,
+        accum::ref(ret)))),
+        M);
+
+    return to_eigen_densify(ret);
+}
+#undef ARGS
+// --------------------------------------------------------------
+
+template<class SparseIndexT, class _Scalar, int _Options, class _StorageIndex>
+/** Create Eigen matrices with dense index space; while still
+    assembling the dense index space.  Delay final creation of the
+    matrix until all other matrices on the same index space are
+    complete. */
+class MakeDenseEigen {
+public:
+    typedef SparseSet<SparseIndexT, _StorageIndex> SparseSetT;
+    typedef TupleList<_StorageIndex,_Scalar,2> TupleListT;
+    typedef accum::Sparsify<
+        accum::Permute<
+            accum::Ref<
+                TupleListT>,
+            2>,
+        SparseSetT> AccumT;
+    typedef Eigen::SparseMatrix<_Scalar,_Options,_StorageIndex> EigenMatrixT;
+
+    TupleListT M;
+    std::array<SparseSetT *,2> const dims;
+    AccumT accum;
+
+    /** @param transpose Use '.' for regular, 'T' for transpose.  If transposing
+        in the final TupleList output, the SparseSets to which indices
+        are added are NOT transposed.
+    */
+    MakeDenseEigen(
+        std::function<void (AccumT &)> const &fn,
+        SparsifyTransform sparsify_transform,
+        std::array<SparseSetT *,2> const &_dims,
+        char transpose = '.')    // '.' or 'T
+    : dims(_dims), accum(
+        accum::sparsify(sparsify_transform, dims,
+        accum::permute(accum::in_rank<2>(),
+            (transpose == 'T') ? ibmisc::make_array(1,0) : ibmisc::make_array(0,1),
+        accum::ref(M))))
+    {
+        fn(accum);
+    }
+
+    EigenMatrixT to_eigen()
+        { return sparsify_to_eigen(accum); }
+};
+
+// ------------------------------------------
+
+
+
+
+
+
 
 /** @} */
 

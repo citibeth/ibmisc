@@ -150,8 +150,7 @@ permute(
     in_rank<IN_RANK> const in_rank_dummy,
     std::array<int, AccumT::rank> const &_perm,
     AccumT &&_sub)
-    { return Permute<AccumT,IN_RANK>(_perm, _sub); }
-
+    { return Permute<AccumT,IN_RANK>(_perm, std::move(_sub)); }
 
 // -----------------------------------------------------------
 template<class AccumT>
@@ -189,12 +188,14 @@ public:
 
 // -----------------------------------------------------------
 struct InvertFn{
-double operator()(double x)
-    { return 1./x; }
+    char invert;
+    InvertFn(char _invert) : invert(_invert) {}
+    double operator()(double x)
+        { return invert=='-' ? 1./x : x; }
 };
 template<class AccumT>
-TransformAccum<AccumT,InvertFn> invert(AccumT &&sub)
-    { return TransformAccum<AccumT,InvertFn>(InvertFn(), std::move(sub)); }
+TransformAccum<AccumT,InvertFn> invert(char invert, AccumT &&sub)
+    { return TransformAccum<AccumT,InvertFn>(InvertFn(invert), std::move(sub)); }
 // -------------------------------------------------------
 
 

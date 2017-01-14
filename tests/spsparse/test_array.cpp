@@ -19,6 +19,7 @@
 // https://github.com/google/googletest/blob/master/googletest/docs/Primer.md
 
 #include <cstddef>
+#include <functional>
 #include <gtest/gtest.h>
 #include <ibmisc/array.hpp>
 #include <spsparse/eigen.hpp>
@@ -31,6 +32,7 @@
 
 using namespace spsparse;
 using namespace ibmisc;
+using namespace std::placeholders;
 
 // The fixture for testing class Foo.
 class SpSparseTest : public ::testing::Test {
@@ -172,8 +174,8 @@ TEST_F(SpSparseTest, sparse_set)
     // Test to_dense
     TupleListT arr2d;
     spcopy(
-        accum::sparse_transform(
-            SparseTransform::TO_DENSE,
+        accum::sparsify(
+            SparsifyTransform::TO_DENSE,
             ibmisc::make_array(&dim0, nullptr),
         accum::ref(arr2d)),
         arr2);
@@ -199,8 +201,8 @@ TEST_F(SpSparseTest, sparse_set)
     {
     TupleListT arr3;
     spcopy(
-        accum::sparse_transform(
-            SparseTransform::TO_SPARSE,
+        accum::sparsify(
+            SparsifyTransform::TO_SPARSE,
             ibmisc::make_array(&dim0, nullptr),
         accum::ref(arr3)),
         arr2d);
@@ -233,7 +235,10 @@ TEST_F(SpSparseTest, invert_accum)
     arr.add({1,0}, 16.);
 
     TupleListT arr2;
-    spcopy(accum::invert(accum::ref(arr2)), arr);
+    spcopy(
+        accum::invert('-',
+        accum::ref(arr2)),
+        arr);
 
     auto ii(arr2.begin());
     EXPECT_EQ(6, ii->index(0));
@@ -271,6 +276,59 @@ TEST_F(SpSparseTest, transpose_accum)
     EXPECT_EQ(16., ii->value());
 
 }
+// -----------------------------------------------
+typedef MakeDenseEigen<long,double,0,int> MakeDenseEigenT;
+
+void sample_makedense(MakeDenseEigenT::AccumT &accum)
+{
+    accum.add({6,4}, 8.);
+    accum.add({1,0}, 16.);
+    accum.add({6,0}, 16.);
+}
+TEST_F(SpSparseTest, make_dense_eigen)
+{
+    std::array<MakeDenseEigenT::SparseSetT, 2> dims;
+    MakeDenseEigenT M_m(
+        std::bind(&sample_makedense, _1),
+        SparsifyTransform::ADD_DENSE,
+        {&dims[0], &dims[1]}, '.');
+
+    auto ii(M_m.accum.base().begin());
+    EXPECT_EQ(0, ii->index(0));
+    EXPECT_EQ(0, ii->index(1));
+    EXPECT_EQ(8., ii->value());
+    ++ii;
+    EXPECT_EQ(1, ii->index(0));
+    EXPECT_EQ(1, ii->index(1));
+    EXPECT_EQ(16., ii->value());
+    ++ii;
+    EXPECT_EQ(0, ii->index(0));
+    EXPECT_EQ(1, ii->index(1));
+    EXPECT_EQ(16., ii->value());
+
+    EXPECT_EQ(-1, M_m.accum.base().shape(0));
+    EXPECT_EQ(-1, M_m.accum.base().shape(1));
+
+    auto M(M_m.to_eigen());
+
+    EXPECT_EQ(2, M.rows());
+    EXPECT_EQ(2, M.cols());
+#if 0
+
+    auto ii(begin(M));
+    EXPECT_EQ(4, ii->index(0));
+    EXPECT_EQ(6, ii->index(1));
+    EXPECT_EQ(8., ii->value());
+    ++ii;
+    EXPECT_EQ(0, ii->index(0));
+    EXPECT_EQ(1, ii->index(1));
+    EXPECT_EQ(16., ii->value());
+#endif  
+}
+
+//TODO test:
+//1. MakeDenseEigen
+//2. EigenSparseMatrixIterator
 
 
 int main(int argc, char **argv) {
