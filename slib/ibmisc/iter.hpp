@@ -118,7 +118,9 @@ class forward_iterator : public std::iterator<std::forward_iterator_tag, ValueT>
     DerivedT const *derived() const
         { return static_cast<DerivedT const *>(this); }
 public:
-    ValueT *operator->() const
+    ValueT *operator->()
+        { return &derived()->operator*(); }
+    ValueT const *operator->() const
         { return &derived()->operator*(); }
 
     DerivedT operator++(int)

@@ -283,7 +283,7 @@ void sample_makedense(MakeDenseEigenT::AccumT &accum)
 {
     accum.add({6,4}, 8.);
     accum.add({1,0}, 16.);
-    accum.add({6,0}, 16.);
+    accum.add({6,0}, 17.);
 }
 TEST_F(SpSparseTest, make_dense_eigen)
 {
@@ -304,7 +304,7 @@ TEST_F(SpSparseTest, make_dense_eigen)
     ++ii;
     EXPECT_EQ(0, ii->index(0));
     EXPECT_EQ(1, ii->index(1));
-    EXPECT_EQ(16., ii->value());
+    EXPECT_EQ(17., ii->value());
 
     EXPECT_EQ(-1, M_m.accum.base().shape(0));
     EXPECT_EQ(-1, M_m.accum.base().shape(1));
@@ -313,17 +313,24 @@ TEST_F(SpSparseTest, make_dense_eigen)
 
     EXPECT_EQ(2, M.rows());
     EXPECT_EQ(2, M.cols());
-#if 0
 
+    // Test simple iterator for Eigen::SparseMatrix
+    {
     auto ii(begin(M));
-    EXPECT_EQ(4, ii->index(0));
-    EXPECT_EQ(6, ii->index(1));
+    EXPECT_EQ(0, ii->index(0));
+    EXPECT_EQ(0, ii->index(1));
     EXPECT_EQ(8., ii->value());
     ++ii;
     EXPECT_EQ(0, ii->index(0));
     EXPECT_EQ(1, ii->index(1));
+    EXPECT_EQ(17., ii->value());
+    ++ii;
+    EXPECT_EQ(1, ii->index(0));
+    EXPECT_EQ(1, ii->index(1));
     EXPECT_EQ(16., ii->value());
-#endif  
+    ++ii;
+    EXPECT_TRUE(ii == end(M));
+    }
 }
 
 //TODO test:

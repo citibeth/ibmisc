@@ -342,17 +342,20 @@ public:
         ++ii;
         if (!ii) {
             ++k;
-            ii = typename Eigen::SparseMatrix<ARGS>::InnerIterator(M,k);
+            ii.~InnerIterator();
+            new (&ii) typename Eigen::SparseMatrix<ARGS>::InnerIterator(M,k);
         }
         return *this;
     }
 
-    bool operator==(IteratorT &other)
+    bool operator==(IteratorT const &other) const
         { return (k == other->k) && (ii == other->ii); }
-//    bool operator!=(IteratorT &other)
-//        { return !(this == other); }
+//    bool operator==(IteratorT const other) const
+//        { return (k == other->k) && (ii == other->ii); }
 
     IteratorT &operator*()
+        { return *this; }
+    IteratorT const &operator*() const
         { return *this; }
 //    IteratorT *operator->()
 //        { return this; }
@@ -360,12 +363,12 @@ public:
     // ---------- What you get once you dereference
 
     _Scalar const &value()
-        { return ii->value(); }
-    _StorageIndex const &row()
-        { return ii->row(); }
-    _StorageIndex const &col()
-        { return ii->col(); }
-    _StorageIndex const &index(int ix)
+        { return ii.value(); }
+    _StorageIndex row()
+        { return ii.row(); }
+    _StorageIndex col()
+        { return ii.col(); }
+    _StorageIndex index(int ix)
         { return ix == 0 ? row() : col(); }
     std::array<_StorageIndex,2> index()
         { return {row(), col()}; }
