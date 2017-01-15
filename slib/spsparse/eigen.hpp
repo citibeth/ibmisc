@@ -82,11 +82,11 @@ inline void spcopy(
 
 template<class ValT>
 Eigen::SparseMatrix<ValT> diag_matrix(
-    blitz::Array<ValT,1> const &diag, bool invert);
+    blitz::Array<ValT,1> const &diag, char invert='+');
 
 template<class ValT>
 Eigen::SparseMatrix<ValT> diag_matrix(
-    blitz::Array<ValT,1> const &diag, bool invert)
+    blitz::Array<ValT,1> const &diag, char invert='+')
 {
     int n = diag.extent(0);
 
@@ -95,33 +95,14 @@ Eigen::SparseMatrix<ValT> diag_matrix(
     for (int i=0; i < diag.extent(0); ++i) {
         if (diag(i) == 0) continue;
         triplets.push_back(Eigen::Triplet<ValT>(
-            i, i, invert ? 1./diag(i) : diag(i)));
+            i, i, invert == '-' ? 1./diag(i) : diag(i)));
     }
 
     Eigen::SparseMatrix<ValT> M(diag.extent(0), diag.extent(0));
     M.setFromTriplets(triplets.begin(), triplets.end());
+
     return M;
 }
-
-// --------------------------------------------------------------
-
-
-template<class ValT>
-inline Eigen::SparseMatrix<ValT> weight_matrix(blitz::Array<ValT,1> weights)
-    { return diag_matrix(weights, false); }
-
-
-template<class ValT>
-inline Eigen::SparseMatrix<ValT> scale_matrix(blitz::Array<ValT,1> weights)
-    { return diag_matrix(weights, true); }
-// --------------------------------------------------------------
-template<class ValT>
-inline Eigen::SparseMatrix<ValT> weight_matrix(Eigen::SparseMatrix<ValT> const &M, int dimi)
-    { return diag_matrix(sum(M, dimi), false); }
-
-template<class ValT>
-inline Eigen::SparseMatrix<ValT> scale_matrix(Eigen::SparseMatrix<ValT> const &M, int dimi)
-    { return diag_matrix(sum(M, dimi), true); }
 
 // --------------------------------------------------------------
 /** An N-dimensional generalization of Eigen::Triplet */
@@ -195,6 +176,8 @@ public:
 
 public:
     base_array_type &base()
+        { return *this; }
+    base_array_type const &base() const
         { return *this; }
 
     struct iterator : public super::iterator {
@@ -340,8 +323,9 @@ public:
 
     IteratorT &operator++() {    // Prefix ++
         ++ii;
-        if (!ii) {
+        while (!ii) {
             ++k;
+            if (k == M.outerSize()) break;    // Iteration is over
             ii.~InnerIterator();
             new (&ii) typename Eigen::SparseMatrix<ARGS>::InnerIterator(M,k);
         }
@@ -349,7 +333,10 @@ public:
     }
 
     bool operator==(IteratorT const &other) const
-        { return (k == other->k) && (ii == other->ii); }
+    {
+        if (k != other->k) return false;
+        return (k == M.outerSize()) || (ii == other->ii);
+    }
 //    bool operator==(IteratorT const other) const
 //        { return (k == other->k) && (ii == other->ii); }
 
@@ -397,9 +384,11 @@ inline blitz::Array<_Scalar,1> sum(
     blitz::Array<_Scalar,1> ret;
     spcopy(
         accum::permute(accum::in_rank<2>(), {dimi},
-        accum::invert(invert,
-        accum::blitz_new(ret))),
+        accum::blitz_new(ret)),
         M);
+
+    if (invert == '-')
+        for (int i=0; i<ret.extent(0); ++i) ret(i) = 1./ret(i);
 
     return ret;
 }
@@ -409,16 +398,24 @@ template<class _Scalar, int _Options, class _StorageIndex>
 Eigen::SparseMatrix<ARGS> sum_to_diagonal(
     Eigen::SparseMatrix<ARGS> const &M, int dimi, char invert='+')
 {
-    // Get our weight vector (in dense coordinate space)
-    TupleList<_StorageIndex, _Scalar, 2> ret;
-    spcopy(
-        accum::permute(accum::in_rank<2>(), {dimi},
-        accum::permute(accum::in_rank<1>(), {0,0},    // Form diag matrix
-        accum::invert(invert,
-        accum::ref(ret)))),
-        M);
+    // Set up diagonal matrix w/ predictable indices in a TupleList
+    _StorageIndex n = (dimi == 0 ? M.rows() : M.cols());
+    TupleList<_StorageIndex, _Scalar, 2> tuples;
+    tuples.set_shape({n,n});
+    tuples.reserve(n);
+    for (int i=0; i<n; ++i) tuples.add({i,i},0);
 
-    return to_eigen_densify(ret);
+    for (auto ii(begin(M)); ii != end(M); ++ii) {
+        auto ix(dimi == 0 ? ii->row() : ii->col());
+        tuples[ix].value() += ii->value();
+    }
+
+    if (invert == '-') {
+        for (size_t i=0; i<tuples.size(); ++i)
+            tuples[i].value() = 1. / tuples[i].value();
+    }
+
+    return to_eigen(tuples);
 }
 #undef ARGS
 // --------------------------------------------------------------

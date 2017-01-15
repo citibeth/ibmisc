@@ -333,9 +333,168 @@ TEST_F(SpSparseTest, make_dense_eigen)
     }
 }
 
-//TODO test:
-//1. MakeDenseEigen
-//2. EigenSparseMatrixIterator
+TEST_F(SpSparseTest, diag_matrix)
+{
+    blitz::Array<double,1> diag(5);
+    diag(0) = 4.;
+    diag(1) = 8.;
+    diag(2) = 0.;
+    diag(3) = 16.;
+    diag(4) = 0.;
+    auto M(diag_matrix(diag, '+'));
+
+    EXPECT_EQ(5, M.rows());
+    EXPECT_EQ(5, M.cols());
+
+
+    auto ii(begin(M));
+    EXPECT_EQ(0, ii->index(0));
+    EXPECT_EQ(0, ii->index(1));
+    EXPECT_EQ(4., ii->value());
+    ++ii;
+    EXPECT_EQ(1, ii->index(0));
+    EXPECT_EQ(1, ii->index(1));
+    EXPECT_EQ(8., ii->value());
+    ++ii;
+    EXPECT_EQ(3, ii->index(0));
+    EXPECT_EQ(3, ii->index(1));
+    EXPECT_EQ(16., ii->value());
+    ++ii;
+    EXPECT_TRUE(ii == end(M));
+}
+
+TEST_F(SpSparseTest, diag_matrix_inv)
+{
+    blitz::Array<double,1> diag(4);
+    diag(0) = 4.;
+    diag(1) = 8.;
+    diag(2) = 0.;
+    diag(3) = 16.;
+    auto M(diag_matrix(diag, '-'));
+
+    EXPECT_EQ(4, M.rows());
+    EXPECT_EQ(4, M.cols());
+
+    auto ii(begin(M));
+    EXPECT_EQ(0, ii->index(0));
+    EXPECT_EQ(0, ii->index(1));
+    EXPECT_EQ(1./4., ii->value());
+    ++ii;
+    EXPECT_EQ(1, ii->index(0));
+    EXPECT_EQ(1, ii->index(1));
+    EXPECT_EQ(1./8., ii->value());
+    ++ii;
+    EXPECT_EQ(3, ii->index(0));
+    EXPECT_EQ(3, ii->index(1));
+    EXPECT_EQ(1./16., ii->value());
+    ++ii;
+    EXPECT_TRUE(ii == end(M));
+}
+
+
+TEST_F(SpSparseTest, sum)
+{
+    typedef TupleList<int, double, 2> TupleListT;
+    TupleListT arr({3,4});
+
+    arr.add({0,0}, 1.);
+    arr.add({0,1}, 2.);
+    arr.add({0,3}, 4.);
+
+    arr.add({2,3}, 8.);
+    arr.add({2,1}, 16.);
+
+    auto M(to_eigen(arr));
+
+    {auto arrb(sum(M,0,'+'));
+        EXPECT_EQ(3, arrb.extent(0));
+        EXPECT_EQ(7., arrb(0));
+        EXPECT_EQ(0., arrb(1));
+        EXPECT_EQ(24., arrb(2));
+    }
+
+    {auto arrb(sum(M,0,'-'));
+        EXPECT_EQ(3, arrb.extent(0));
+        EXPECT_DOUBLE_EQ(1./7., arrb(0));
+//        EXPECT_EQ(0., arrb(1));
+        EXPECT_DOUBLE_EQ(1./24., arrb(2));
+    }
+
+    {auto arrb(sum(M,1,'+'));
+        EXPECT_EQ(4, arrb.extent(0));
+        EXPECT_EQ(1., arrb(0));
+        EXPECT_EQ(18., arrb(1));
+        EXPECT_EQ(0., arrb(2));
+        EXPECT_EQ(12., arrb(3));
+    }
+}
+
+TEST_F(SpSparseTest, sum_to_diagonal)
+{
+    typedef TupleList<int, double, 2> TupleListT;
+    TupleListT arr({3,4});
+
+    arr.add({0,0}, 1.);
+    arr.add({0,1}, 2.);
+    arr.add({0,3}, 4.);
+
+    arr.add({2,3}, 8.);
+    arr.add({2,1}, 16.);
+
+    auto M(to_eigen(arr));
+
+    {auto M2(sum_to_diagonal(M,0,'+'));
+        EXPECT_EQ(3, M2.rows());
+
+        auto ii(begin(M2));
+        EXPECT_EQ(0, ii->index(0));
+        EXPECT_EQ(0, ii->index(1));
+        EXPECT_EQ(7., ii->value());
+        ++ii;    // zeros not skipped
+        ++ii;
+        EXPECT_EQ(2, ii->index(0));
+        EXPECT_EQ(2, ii->index(1));
+        EXPECT_EQ(24., ii->value());
+        ++ii;
+        EXPECT_TRUE(ii == end(M2));
+    }
+
+    {auto M2(sum_to_diagonal(M,0,'-'));
+        EXPECT_EQ(3, M2.rows());
+
+        auto ii(begin(M2));
+        EXPECT_EQ(0, ii->index(0));
+        EXPECT_EQ(0, ii->index(1));
+        EXPECT_DOUBLE_EQ(1./7., ii->value());
+        ++ii;    // zeros not skipped
+        ++ii;
+        EXPECT_EQ(2, ii->index(0));
+        EXPECT_EQ(2, ii->index(1));
+        EXPECT_DOUBLE_EQ(1./24., ii->value());
+        ++ii;
+        EXPECT_TRUE(ii == end(M2));
+    }
+
+    {auto M2(sum_to_diagonal(M,1,'+'));
+        EXPECT_EQ(4, M2.cols());
+
+        auto ii(begin(M2));
+        EXPECT_EQ(0, ii->index(0));
+        EXPECT_EQ(0, ii->index(1));
+        EXPECT_EQ(1., ii->value());
+        ++ii;
+        EXPECT_EQ(1, ii->index(0));
+        EXPECT_EQ(1, ii->index(1));
+        EXPECT_DOUBLE_EQ(18., ii->value());
+        ++ii;    // zeros not skipped
+        ++ii;
+        EXPECT_EQ(3, ii->index(0));
+        EXPECT_EQ(3, ii->index(1));
+        EXPECT_DOUBLE_EQ(12., ii->value());
+        ++ii;
+        EXPECT_TRUE(ii == end(M2));
+    }
+}
 
 
 int main(int argc, char **argv) {
