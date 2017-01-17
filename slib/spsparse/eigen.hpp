@@ -60,7 +60,7 @@ void spcopy(
 #undef ARGS
 // --------------------------------------------------------------
 template<class AccumT, int _Rows>
-inline void spcopy(
+extern void spcopy(
     AccumT &&ret,
     Eigen::Matrix<typename AccumT::val_type, _Rows, 1> const &M,    // eg. Eigen::VectorXd
     bool set_shape=true);
@@ -68,7 +68,7 @@ inline void spcopy(
 
 /** Copy from dense Eigen column vectors */
 template<class AccumT, int _Rows>
-inline void spcopy(
+void spcopy(
     AccumT &&ret,
     Eigen::Matrix<typename AccumT::val_type, _Rows, 1> const &M,    // eg. Eigen::VectorXd
     bool set_shape)
@@ -137,29 +137,6 @@ public:
         { return index(1); }
 };
 
-#if 0
-template<class IndexT, class ValT, int RANK>
-class TupleIterator : public forward_iterator<
-    Tuple<IndexT,ValT,RANK>,
-    TupleIterator<IndexT,ValT,RANK>>
-{
-public:
-    static const int rank = RANK;
-    typedef IndexT index_type;
-    typedef ValT val_type;
-private:
-    VectorIterT sub;
-    TupleIterator(VectorIterT &&ii) : sub(ii) {}
-public:
-    val_type &operator*()
-        { return *sub; }
-    TupleIterator &operator++()
-        { ++sub; return *this; }
-    bool operator==(const TupleIterator &other) const
-        { return sub == other.sub; }
-}
-#endif
-
 /** Serves as accumulator and iterable storage */
 template<class IndexT, class ValT, int RANK>
 class TupleList : public std::vector<Tuple<IndexT,ValT,RANK>>
@@ -221,31 +198,35 @@ public:
     long shape(int i) const
         { return _shape[i]; }
 
-    void add(std::array<index_type,rank> const &index, ValT const &value)
-    {
-        // Check bounds
-        for (int i=0; i<RANK; ++i) {
-            if (_shape[i] >= 0 && (index[i] < 0 || index[i] >= _shape[i])) {
-                std::ostringstream buf;
-                buf << "Sparse index out of bounds: index=(";
-                for (int j=0; j<RANK; ++j) {
-                    buf << index[j];
-                    buf << " ";
-                }
-                buf << ") vs. shape=(";
-                for (int j=0; j<RANK; ++j) {
-                    buf << _shape[j];
-                    buf << " ";
-                }
-                buf << ")";
-                (*ibmisc::ibmisc_error)(-1, buf.str().c_str());
-            }
-        }
-
-        super::push_back(Tuple<IndexT,ValT,RANK>(index, value));
-    }
+    void add(std::array<index_type,rank> const &index, ValT const &value);
 };
 
+template<class IndexT, class ValT, int RANK>
+void TupleList<IndexT,ValT,RANK>::add(std::array<index_type,rank> const &index, ValT const &value)
+{
+    // Check bounds
+    for (int i=0; i<RANK; ++i) {
+        if (_shape[i] >= 0 && (index[i] < 0 || index[i] >= _shape[i])) {
+            std::ostringstream buf;
+            buf << "Sparse index out of bounds: index=(";
+            for (int j=0; j<RANK; ++j) {
+                buf << index[j];
+                buf << " ";
+            }
+            buf << ") vs. shape=(";
+            for (int j=0; j<RANK; ++j) {
+                buf << _shape[j];
+                buf << " ";
+            }
+            buf << ")";
+            (*ibmisc::ibmisc_error)(-1, buf.str().c_str());
+        }
+    }
+
+    super::push_back(Tuple<IndexT,ValT,RANK>(index, value));
+}
+
+// --------------------------------------------------------
 
 template<class ArrayT>
 extern Eigen::SparseMatrix<typename ArrayT::val_type,0,typename ArrayT::index_type>
@@ -321,16 +302,7 @@ public:
     // ---------------------------------------------------------
     // http://www.cplusplus.com/reference/iterator/
 
-    IteratorT &operator++() {    // Prefix ++
-        ++ii;
-        while (!ii) {
-            ++k;
-            if (k == M.outerSize()) break;    // Iteration is over
-            ii.~InnerIterator();
-            new (&ii) typename Eigen::SparseMatrix<ARGS>::InnerIterator(M,k);
-        }
-        return *this;
-    }
+    IteratorT &operator++();
 
     bool operator==(IteratorT const &other) const
     {
@@ -361,6 +333,20 @@ public:
         { return {row(), col()}; }
 };
 
+template<class _Scalar, int _Options, class _StorageIndex>
+EigenSparseMatrixIterator<ARGS> &EigenSparseMatrixIterator<ARGS>::operator++() 
+{    // Prefix ++
+    ++ii;
+    while (!ii) {
+        ++k;
+        if (k == M.outerSize()) break;    // Iteration is over
+        ii.~InnerIterator();
+        new (&ii) typename Eigen::SparseMatrix<ARGS>::InnerIterator(M,k);
+    }
+    return *this;
+}
+
+
 // -----------------------------------
 
 template<class _Scalar, int _Options, class _StorageIndex>
@@ -373,11 +359,16 @@ EigenSparseMatrixIterator<ARGS> end(Eigen::SparseMatrix<ARGS> const &M)
 
 #undef ARGS
 // -----------------------------------
+template<class _Scalar, int _Options, class _StorageIndex>
+#define ARGS _Scalar,_Options,_StorageIndex
+
+blitz::Array<_Scalar,1> sum(
+    Eigen::SparseMatrix<ARGS> const &M, int dimi, char invert='+');
+
 /** Sum the rows or columns of an Eigen SparseMatrix.
 @param dimi 0: sum rows, 1: sum columns */
-#define ARGS _Scalar,_Options,_StorageIndex
 template<class _Scalar, int _Options, class _StorageIndex>
-inline blitz::Array<_Scalar,1> sum(
+blitz::Array<_Scalar,1> sum(
     Eigen::SparseMatrix<ARGS> const &M, int dimi, char invert='+')
 {
     // Get our weight vector (in dense coordinate space)
@@ -393,6 +384,10 @@ inline blitz::Array<_Scalar,1> sum(
     return ret;
 }
 
+
+template<class _Scalar, int _Options, class _StorageIndex>
+Eigen::SparseMatrix<ARGS> sum_to_diagonal(
+    Eigen::SparseMatrix<ARGS> const &M, int dimi, char invert='+');
 
 template<class _Scalar, int _Options, class _StorageIndex>
 Eigen::SparseMatrix<ARGS> sum_to_diagonal(
@@ -428,16 +423,19 @@ template<class SparseIndexT, class _Scalar, int _Options, class _StorageIndex>
 class MakeDenseEigen {
 public:
     typedef SparseSet<SparseIndexT, _StorageIndex> SparseSetT;
-    typedef TupleList<_StorageIndex,_Scalar,2> TupleListT;
+
+    template<int RANK>
+        using TupleListT = TupleList<_StorageIndex,_Scalar,RANK>;
+
     typedef accum::Sparsify<
         accum::Permute<
             accum::Ref<
-                TupleListT>,
+                TupleListT<2>>,
             2>,
         SparseSetT> AccumT;
-    typedef Eigen::SparseMatrix<_Scalar,_Options,_StorageIndex> EigenMatrixT;
+    typedef Eigen::SparseMatrix<_Scalar,_Options,_StorageIndex> EigenSparseMatrixT;
 
-    TupleListT M;
+    TupleListT<2> M;
     std::array<SparseSetT *,2> const dims;
     AccumT accum;
 
@@ -459,7 +457,7 @@ public:
         fn(accum);
     }
 
-    EigenMatrixT to_eigen()
+    EigenSparseMatrixT to_eigen()
         { return sparsify_to_eigen(accum); }
 };
 

@@ -21,6 +21,7 @@
 
 #include <exception>
 #include <cmath>
+#include <ibmisc/iter.hpp>
 
 namespace spsparse {
 

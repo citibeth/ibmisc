@@ -225,6 +225,48 @@ TEST_F(SpSparseTest, sparse_set)
 
 }
 
+TEST_F(SpSparseTest, partial_sparsify)
+{
+    // Construct a SparseMatrix
+    typedef TupleList<int, double, 2> TupleListT;
+    TupleListT arr({30,10});
+
+    arr.add({6,4}, 10.);
+    arr.add({17,0}, 15.);
+    arr.add({22,4}, 17.);
+    arr.add({17,3}, 17.);
+
+    SparseSet<int,int> dim0;
+    SparseSet<int,int> dim1;
+    TupleListT arr2;
+    spcopy(
+        accum::sparsify(
+            SparsifyTransform::ADD_DENSE,
+            ibmisc::make_array(&dim0, nullptr),
+        accum::ref(arr2)),
+        arr, false);
+
+    auto ii(arr2.begin());
+    EXPECT_EQ(0, ii->index(0));
+    EXPECT_EQ(4, ii->index(1));
+    EXPECT_EQ(10., ii->value());
+    ++ii;
+    EXPECT_EQ(1, ii->index(0));
+    EXPECT_EQ(0, ii->index(1));
+    EXPECT_EQ(15., ii->value());
+    ++ii;
+    EXPECT_EQ(2, ii->index(0));
+    EXPECT_EQ(4, ii->index(1));
+    EXPECT_EQ(17., ii->value());
+    ++ii;
+    EXPECT_EQ(1, ii->index(0));
+    EXPECT_EQ(3, ii->index(1));
+    EXPECT_EQ(17., ii->value());
+    ++ii;
+
+    EXPECT_TRUE(ii == arr2.end());
+}
+
 TEST_F(SpSparseTest, invert_accum)
 {
     // Construct a SparseMatrix

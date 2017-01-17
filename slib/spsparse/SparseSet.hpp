@@ -150,7 +150,7 @@ public:
         long extent() const {
             switch(transform) {
                 case SparsifyTransform::ID :
-                    return -1;
+                    return -1;    // sparse_set == NULL
                 case SparsifyTransform::ADD_DENSE :
                 case SparsifyTransform::TO_DENSE_IGNORE_MISSING :
                 case SparsifyTransform::TO_DENSE :
@@ -207,10 +207,10 @@ public:
     void add(std::array<typename super::index_type,super::rank> index, typename super::val_type const &val)
     {
         for (int i=0; i<super::rank; ++i) {
-            // Use the index we were given, if no transform for this dimension
-            if (!data[i].sparse_set) continue;
-
             switch(data[i].transform) {
+                case SparsifyTransform::ID:
+                    // Use the index given, no transform
+                    break;
                 case SparsifyTransform::ADD_DENSE:
                     index[i] = data[i].sparse_set->add_dense(index[i]);
                     break;
@@ -259,22 +259,6 @@ inline SparsifyT sparsify(
 #undef SparsifyT
 
 }    // namespace accum
-// ----------------------------------------------------------------
-template<class AccumT, class SrcT, class SparseT, class DenseT>
-void sparse_copy(AccumT &ret, SrcT const &src,
-    SparsifyTransform direction,
-    std::array<spsparse::SparseSet<SparseT, DenseT> *, AccumT::rank> dims,
-    bool set_shape=true);
-
-template<class AccumT, class SrcT, class SparseT, class DenseT>
-void sparse_copy(AccumT &ret, SrcT const &src,
-    SparsifyTransform direction,
-    std::array<spsparse::SparseSet<SparseT, DenseT> *, AccumT::rank> dims,
-    bool set_shape)
-{
-    auto accum(accum::sparsify(&ret, direction, dims));
-    spcopy(accum, src, set_shape);
-}
 
 
 }   // Namespace
