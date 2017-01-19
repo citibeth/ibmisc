@@ -142,6 +142,9 @@ template<SPARSIFY_TPARAMS>
 class Sparsify : public Filter<AccumT>
 {
     typedef Filter<AccumT> super;
+    typedef typename super::index_type out_index_type;
+public:
+    typedef InIndexT index_type;    // Override super
 public:
     struct Data {
         SparseSetT * const sparse_set;
@@ -207,9 +210,9 @@ public:
         super::sub.set_shape(shape);
     }
 
-    void add(std::array<InIndexT,super::rank> index, typename super::val_type const &val)
+    void add(std::array<index_type,super::rank> index, typename super::val_type const &val)
     {
-        std::array<typename super::index_type, super::rank> index2;
+        std::array<out_index_type, super::rank> index2;
 
         for (int i=0; i<super::rank; ++i) {
             switch(data[i].transform) {
