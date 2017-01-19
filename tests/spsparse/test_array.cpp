@@ -132,7 +132,7 @@ TEST_F(SpSparseTest, dense_to_blitz)
     dense1(0,1) = 7.0;
 
     TupleListT sparse1({4,5});
-    spcopy(sparse1, dense1);
+    spcopy(accum::ref(sparse1), dense1);
     auto dense2(spsparse::to_blitz(sparse1));
 
     for (int i=0; i<dense1.extent(0); ++i) {
@@ -176,6 +176,7 @@ TEST_F(SpSparseTest, sparse_set)
     spcopy(
         accum::sparsify(
             SparsifyTransform::TO_DENSE,
+            accum::in_index_type<int>(),
             ibmisc::make_array(&dim0, nullptr),
         accum::ref(arr2d)),
         arr2);
@@ -201,9 +202,8 @@ TEST_F(SpSparseTest, sparse_set)
     {
     TupleListT arr3;
     spcopy(
-        accum::sparsify(
-            SparsifyTransform::TO_SPARSE,
-            ibmisc::make_array(&dim0, nullptr),
+        accum::to_sparse(
+            make_array(&dim0, nullptr),
         accum::ref(arr3)),
         arr2d);
 
@@ -228,21 +228,18 @@ TEST_F(SpSparseTest, sparse_set)
 TEST_F(SpSparseTest, partial_sparsify)
 {
     // Construct a SparseMatrix
-    typedef TupleList<int, double, 2> TupleListT;
-    TupleListT arr({30,10});
+    TupleList<long, double, 2> arr({30,10});
 
     arr.add({6,4}, 10.);
     arr.add({17,0}, 15.);
     arr.add({22,4}, 17.);
     arr.add({17,3}, 17.);
 
-    SparseSet<int,int> dim0;
-    SparseSet<int,int> dim1;
-    TupleListT arr2;
+    SparseSet<long,int> dim0;
+    SparseSet<long,int> dim1;
+    TupleList<int, double, 2> arr2;
     spcopy(
-        accum::sparsify(
-            SparsifyTransform::ADD_DENSE,
-            ibmisc::make_array(&dim0, nullptr),
+        accum::add_dense(ibmisc::make_array(&dim0, nullptr),
         accum::ref(arr2)),
         arr, false);
 
@@ -323,9 +320,9 @@ typedef MakeDenseEigen<long,double,0,int> MakeDenseEigenT;
 
 void sample_makedense(MakeDenseEigenT::AccumT &accum)
 {
-    accum.add({6,4}, 8.);
-    accum.add({1,0}, 16.);
-    accum.add({6,0}, 17.);
+    accum.add({6L,2L}, 8.);
+    accum.add({1L,0L}, 16.);
+    accum.add({6L,0L}, 17.);
 }
 TEST_F(SpSparseTest, make_dense_eigen)
 {

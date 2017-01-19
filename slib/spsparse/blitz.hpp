@@ -120,11 +120,11 @@ inline Blitz<ValT, RANK> blitz_existing(
 // ----------------------------------------------------------
 
 template<class AccumT, class TypeT, int RANK>
-extern void spcopy(AccumT &ret,
+extern void spcopy(AccumT &&ret,
     blitz::Array<TypeT, RANK> const &arr, bool set_shape=true);
 
 template<class AccumT, class TypeT, int RANK>
-void spcopy(AccumT &ret,
+void spcopy(AccumT &&ret,
     blitz::Array<TypeT, RANK> const &arr, bool set_shape)
 {
     if (set_shape) {

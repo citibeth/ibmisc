@@ -126,8 +126,8 @@ enum class SparsifyTransform {
     ID,           // No transformation
     TO_DENSE,     // Convert sparse to dense indices
     TO_DENSE_IGNORE_MISSING,
-    TO_SPARSE,    // Convert dense to sparse indices
-    ADD_DENSE    // Convert sparse to dense, adding to the SparseSet if it's not already there.
+    ADD_DENSE,    // Convert sparse to dense, adding to the SparseSet if it's not already there.
+    TO_SPARSE    // Convert dense to sparse indices
 };
 
 
@@ -135,7 +135,10 @@ enum class SparsifyTransform {
 
 namespace accum {
 
-template<class AccumT,class SparseSetT>
+#define SPARSIFY_TPARAMS class AccumT, class SparseSetT, class InIndexT
+#define SparsifyT Sparsify<AccumT,SparseSetT,InIndexT>
+
+template<SPARSIFY_TPARAMS>
 class Sparsify : public Filter<AccumT>
 {
     typedef Filter<AccumT> super;
@@ -204,37 +207,40 @@ public:
         super::sub.set_shape(shape);
     }
 
-    void add(std::array<typename super::index_type,super::rank> index, typename super::val_type const &val)
+    void add(std::array<InIndexT,super::rank> index, typename super::val_type const &val)
     {
+        std::array<typename super::index_type, super::rank> index2;
+
         for (int i=0; i<super::rank; ++i) {
             switch(data[i].transform) {
                 case SparsifyTransform::ID:
                     // Use the index given, no transform
+                    index2[i] = index[i];
                     break;
                 case SparsifyTransform::ADD_DENSE:
-                    index[i] = data[i].sparse_set->add_dense(index[i]);
+                    index2[i] = data[i].sparse_set->add_dense(index[i]);
                     break;
                 case SparsifyTransform::TO_DENSE_IGNORE_MISSING: {
                     auto &sset(*data[i].sparse_set);
                     auto ii(sset._s2d.find(index[i]));
                     if (ii == sset._s2d.end()) continue;
-                    index[i] = ii->second;
+                    index2[i] = ii->second;
                 } break;
                 case SparsifyTransform::TO_DENSE:
-                    index[i] = data[i].sparse_set->to_dense(index[i]);
+                    index2[i] = data[i].sparse_set->to_dense(index[i]);
                     break;
                 case SparsifyTransform::TO_SPARSE:
-                    index[i] = data[i].sparse_set->to_sparse(index[i]);
+                    index2[i] = data[i].sparse_set->to_sparse(index[i]);
                     break;
             }
         }
-        super::sub.add(index, val);
+        super::sub.add(index2, val);
     }
 };
 
 // ----------------------------------------------------------------
-template<class AccumT,class SparseSetT>
-Sparsify<AccumT,SparseSetT>::Sparsify(
+template<SPARSIFY_TPARAMS>
+SparsifyT::Sparsify(
     SparsifyTransform transform,
     std::array<SparseSetT *, (size_t)super::rank> const sparse_sets,    // 0 if we don't want to densify/sparsify that dimension
     AccumT &&_sub)
@@ -246,17 +252,59 @@ Sparsify<AccumT,SparseSetT>::Sparsify(
     }
 }
 
+template<class X>
+struct in_index_type {
+    typedef X x;
+};
 
-#define SparsifyT Sparsify<AccumT,SparseSetT>
-template<class AccumT,class SparseSetT>
+template<SPARSIFY_TPARAMS>
 inline SparsifyT sparsify(
         SparsifyTransform transform,
+        in_index_type<InIndexT> const dummy,
         std::array<SparseSetT *, AccumT::rank> const &sparse_sets,
         AccumT &&sub)
 {
     return SparsifyT(transform, sparse_sets, std::move(sub));
 }
 #undef SparsifyT
+#undef SPARSIFY_TPARAMS
+
+// -------------------------------------------------------------
+#define SPARSIFY_TPARAMS class AccumT, class SparseSetT
+#define ToDenseT Sparsify<AccumT,SparseSetT,typename SparseSetT::sparse_type>
+#define ToSparseT Sparsify<AccumT,SparseSetT,typename SparseSetT::dense_type>
+
+template<SPARSIFY_TPARAMS>
+inline ToDenseT to_dense(
+        std::array<SparseSetT *, AccumT::rank> const &dims,
+        AccumT &&sub)
+{ return ToDenseT(SparsifyTransform::TO_DENSE, dims, std::move(sub)); }
+
+template<SPARSIFY_TPARAMS>
+inline ToDenseT to_dense_ignore_missing(
+        std::array<SparseSetT *, AccumT::rank> const &dims,
+        AccumT &&sub)
+{ return ToDenseT(SparsifyTransform::TO_DENSE_IGNORE_MISSING, dims, std::move(sub)); }
+
+template<SPARSIFY_TPARAMS>
+inline ToDenseT add_dense(
+        std::array<SparseSetT *, AccumT::rank> const &dims,
+        AccumT &&sub)
+{ return ToDenseT(SparsifyTransform::ADD_DENSE, dims, std::move(sub)); }
+
+template<SPARSIFY_TPARAMS>
+inline ToSparseT to_sparse(
+        std::array<SparseSetT *, AccumT::rank> const &dims,
+        AccumT &&sub)
+{ return ToSparseT(SparsifyTransform::TO_SPARSE, dims, std::move(sub)); }
+
+#undef ToSparseT
+#undef ToDenseT
+#undef SPARSIFY_TPARAMS
+
+
+
+// ----------------------------------------------------------------
 
 }    // namespace accum
 
