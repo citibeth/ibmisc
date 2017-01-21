@@ -111,6 +111,14 @@ class Tuple {
     std::array<IndexT, RANK> _index;
     ValT _value;
 public:
+    template<class ArchiveT>
+    void serialize(ArchiveT &ar, const unsigned int file_version)
+    {
+        ar & _index;
+        ar & _value;
+    }
+
+
     IndexT &index(int i)
         { return _index[i]; }
     IndexT const &index(int i) const
@@ -125,6 +133,8 @@ public:
         { return _value; }
     ValT const &value() const
         { return _value; }
+
+    Tuple() {}    // WARNING: Uninitialized.  It's here for boost serialization
 
     Tuple(std::array<IndexT, RANK> const &index,
         ValT const &value)
@@ -152,6 +162,13 @@ public:
     std::array<long, rank> _shape;
 
 public:
+    template<class ArchiveT>
+    void serialize(ArchiveT &ar, const unsigned int file_version)
+    {
+        ar & *static_cast<super *>(this);
+        ar & _shape;
+    }
+
     base_array_type &base()
         { return *this; }
     base_array_type const &base() const

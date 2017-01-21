@@ -21,6 +21,7 @@
 #include <unordered_map>
 #include <algorithm>
 #include <ibmisc/array.hpp>
+#include <spsparse/accum.hpp>
 #include <spsparse/blitz.hpp>
 
 namespace spsparse {
