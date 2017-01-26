@@ -432,6 +432,7 @@ public:
 
     TupleListT<2> M;
     std::array<SparseSetT *,2> const dims;
+    std::array<int,2> const permute;    // {1,0} for transpse=='T'
     AccumT accum;
 
     /** @param transpose Use '.' for regular, 'T' for transpose.  If transposing
@@ -443,12 +444,13 @@ public:
         SparsifyTransform sparsify_transform,
         std::array<SparseSetT *,2> const &_dims,
         char transpose = '.')    // '.' or 'T
-    : dims(_dims), accum(
+    : dims(_dims),
+        permute((transpose == 'T') ? ibmisc::make_array(1,0) : ibmisc::make_array(0,1)),
+        accum(
         accum::sparsify(sparsify_transform,
             accum::in_index_type<typename SparseSetT::sparse_type>(),
             dims,
-        accum::permute(accum::in_rank<2>(),
-            (transpose == 'T') ? ibmisc::make_array(1,0) : ibmisc::make_array(0,1),
+        accum::permute(accum::in_rank<2>(), permute,
         accum::ref(M))))
     {
         fn(accum);
@@ -457,17 +459,16 @@ public:
     EigenSparseMatrixT to_eigen()
     {
         Eigen::SparseMatrix<typename AccumT::val_type,0,typename AccumT::index_type> M(
-            accum.dim(0).extent(),
-            accum.dim(1).extent());
+            accum.dim(permute[0]).extent(),
+            accum.dim(permute[1]).extent());
+
+        // This segfaults if indices are out of bounds
         M.setFromTriplets(accum.base().begin(), accum.base().end());
         return M;
     }
 };
 
 // ------------------------------------------
-
-
-
 
 
 

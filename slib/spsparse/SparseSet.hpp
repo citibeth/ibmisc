@@ -227,7 +227,7 @@ public:
                 case SparsifyTransform::TO_DENSE_IGNORE_MISSING: {
                     auto &sset(*data[i].sparse_set);
                     auto ii(sset._s2d.find(index[i]));
-                    if (ii == sset._s2d.end()) continue;
+                    if (ii == sset._s2d.end()) return;    // An index was missing; ignore this element in the sparse matrix
                     index2[i] = ii->second;
                 } break;
                 case SparsifyTransform::TO_DENSE:
