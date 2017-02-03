@@ -503,7 +503,8 @@ void nc_rw_blitz(
             size_t size = dim.getSize();
             shape[k] = size;
         }
-        val->resize(shape);
+        // val->resize(shape);   // Is this buggy?
+        val->reference(blitz::Array<TypeT,RANK>(shape));
     }
 
     _check_blitz_strides(*val);
