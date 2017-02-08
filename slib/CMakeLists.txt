@@ -1,6 +1,7 @@
 # ----------- ibmisc_c
 set(IBMISC_SOURCE
     ibmisc/string.cpp
+    ibmisc/filesystem.cpp
     ibmisc/datetime.cpp
     ibmisc/ibmisc.cpp
     ibmisc/geodesy.cpp

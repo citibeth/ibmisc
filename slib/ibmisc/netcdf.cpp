@@ -232,6 +232,7 @@ netCDF::NcVar get_or_add_var(
             }
         }
     } else {
+printf("get_or_add_var(%s)\n",vname.c_str());
         ncvar = ncio.nc->getVar(vname);
         if (ncvar.isNull()) {
             (*ibmisc_error)(-1,

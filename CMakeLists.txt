@@ -63,11 +63,11 @@ endif()
 if (USE_BOOST)
     # We USE these parts of Boost... but they aren't components in the CMake
     # sense because they are header-only:
-    # find_package(Boost COMPONENTS operators optional iterator preprocessor)
-    find_package(Boost)
+    # find_package(Boost COMPONENTS operators optional iterator preprocessor filesystem)
+    find_package(Boost COMPONENTS filesystem)
     add_definitions(-DUSE_BOOST)
-    include_directories(${BOOST_INCLUDE_DIR})
-    list(APPEND EXTERNAL_LIBS ${BOOST_LIBRARIES})
+    include_directories(${Boost_INCLUDE_DIRS})
+    list(APPEND EXTERNAL_LIBS ${Boost_LIBRARIES})
 endif()
 # -----------------------------------------------------
 if (NOT DEFINED USE_UDUNITS2)
