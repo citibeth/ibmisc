@@ -67,7 +67,10 @@ double ConstantSet::get_as(std::string const &name,
     try {
         CVConverter cv(usrc, units);
         double ret = cv.convert(data[src_ix].val);
-//printf("ConstantSet: Converting %s: %f %s --> %f %s\n", name.c_str(), (*this)[src_ix], usrc.c_str(), ret, units.c_str());
+        double src_val = (*this)[src_ix].val;
+        if (ret != src_val) {
+            printf("ConstantSet: Converting %s: %g [%s] --> %g [%s]\n", name.c_str(), src_val, usrc.c_str(), ret, units.c_str());
+        }
         return ret;
     } catch(const std::exception &ex) {
         (*ibmisc_error)(-1,
