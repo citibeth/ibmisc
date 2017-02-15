@@ -170,9 +170,20 @@ public:
         return ret;
     }
 
+    /** Allocate and run an arbitrary constructor */
     template<class T, typename... Args>
     T &make(Args... args)
         { return *newptr<T>(args...); }
+
+    /** Allocate from an rvalue reference */
+    template<class T>
+    T &make(T &&val)
+        { return *newptr<T>(std::move(val)); }
+
+    /** Allocate and copy from an existing object */
+    template<class T>
+    T &make(T const &val)
+        { return *newptr<T>(val); }
 
     ~TmpAlloc() { free(); }
     void free() {

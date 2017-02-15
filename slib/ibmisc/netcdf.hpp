@@ -118,6 +118,12 @@ extern std::vector<netCDF::NcDim> get_dims(
 extern std::vector<netCDF::NcDim> get_or_add_dims(
     NcIO &ncio,
     std::vector<std::string> const &dim_names,
+    std::vector<long> const &dim_lens);
+
+/** No unlimited dimensions possible here */
+extern std::vector<netCDF::NcDim> get_or_add_finite_dims(
+    NcIO &ncio,
+    std::vector<std::string> const &dim_names,
     std::vector<size_t> const &dim_lens);
 
 // ---------------------------------------------------------
@@ -133,7 +139,7 @@ std::vector<netCDF::NcDim> get_or_add_dims(
     blitz::Array<TypeT, RANK> &val,
     std::vector<std::string> const &dim_names)
 {
-    std::vector<size_t> dim_sizes(RANK);
+    std::vector<long> dim_sizes(RANK);
     for (int k=0; k<RANK; ++k) dim_sizes[k] = val.extent(k);
     return get_or_add_dims(ncio, dim_names, dim_sizes);
 }
@@ -143,12 +149,12 @@ std::vector<netCDF::NcDim> get_or_add_dims(
 Used to concatenate dimensions from different places. */
 class NcDimSpec {
     std::vector<std::string> names;
-    std::vector<size_t> extents;
+    std::vector<long> extents;
 
 public:
     NcDimSpec() {}
     NcDimSpec(std::vector<std::string> &&_names,
-        std::vector<size_t> &&_extents)
+        std::vector<long> &&_extents)
     : names(_names), extents(_extents) {}
 
 
@@ -408,15 +414,16 @@ void get_or_put_att_enum(
 /** Check that blitz::Array is unit strides, column major.
 For now, that's the only kind of Blitz variable we know how to write. */
 template<class TypeT, int RANK>
-void _check_blitz_strides(blitz::Array<TypeT, RANK> const &val);
+void _check_blitz_strides(blitz::Array<TypeT, RANK> const &val, std::string const &vname);
 
 template<class TypeT, int RANK>
-void _check_blitz_strides(blitz::Array<TypeT, RANK> const &val)
+void _check_blitz_strides(blitz::Array<TypeT, RANK> const &val, std::string const &vname)
 {
     size_t expected_stride = 1;
     for (int k=RANK-1; k >= 0; --k) {
+        size_t actual_stride = val.stride(k);
         if (val.stride(k) != expected_stride)
-            (*ibmisc_error)(-1, "blitz::Array has unexpected stride, cannot read/write with NetCDF (for now).");
+            (*ibmisc_error)(-1, "blitz::Array dimension %s-%d has unexpected stride %ld (vs %ld), cannot read/write with NetCDF (for now).", vname.c_str(), k, actual_stride, expected_stride);
         expected_stride *= val.extent(k);
     }
 }
@@ -507,7 +514,7 @@ void nc_rw_blitz(
         val->reference(blitz::Array<TypeT,RANK>(shape));
     }
 
-    _check_blitz_strides(*val);
+    _check_blitz_strides(*val, vname);
     _check_nc_rank(ncvar, RANK);
     _check_blitz_dims(ncvar, *val, rw);
 

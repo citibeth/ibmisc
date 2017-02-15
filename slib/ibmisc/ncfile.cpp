@@ -43,7 +43,7 @@ static void nc_write_timespan(netCDF::NcGroup *nc, std::array<double,2> const &t
 /** For files with a single timepoint: Defines start and end timepoints. */
 void ncio_timespan(NcIO &ncio, std::array<double,2> &timespan, std::string const &time_units, std::string const &vname_base)
 {
-    auto timespan_b(to_blitz<double,2>(timespan));
+    auto &timespan_b(ncio.tmp.make(to_blitz<double,2>(timespan)));
     std::string vname = vname_base + "timespan";
     ncio_blitz<double,1>(ncio, timespan_b, false, vname, "double",
         get_or_add_dims(ncio, {"two"}, {2}));

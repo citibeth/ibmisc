@@ -92,7 +92,9 @@ void NcIO::operator+=(std::function<void ()> const &fn)
 }
 
 void NcIO::operator()() {
-    for (auto ii=_io.begin(); ii != _io.end(); ++ii) (*ii)();
+    for (auto ii=_io.begin(); ii != _io.end(); ++ii) {
+        (*ii)();
+    }
     _io.clear();
     tmp.free();
 }
@@ -172,10 +174,21 @@ std::vector<netCDF::NcDim> get_dims(
     return ret;
 }
 
-std::vector<netCDF::NcDim> get_or_add_dims(
+std::vector<netCDF::NcDim> get_or_add_finite_dims(
     NcIO &ncio,
     std::vector<std::string> const &dim_names,
     std::vector<size_t> const &dim_sizes)
+{
+    std::vector<long> sizes;
+    sizes.reserve(dim_sizes.size());
+    for (size_t s : dim_sizes) sizes.push_back((long)s);
+    return get_or_add_dims(ncio, dim_names, sizes);
+}
+
+std::vector<netCDF::NcDim> get_or_add_dims(
+    NcIO &ncio,
+    std::vector<std::string> const &dim_names,
+    std::vector<long> const &dim_sizes)
 {
     if (dim_names.size() != dim_sizes.size()) {
         (*ibmisc_error)(-1,
