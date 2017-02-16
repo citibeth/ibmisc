@@ -122,6 +122,18 @@ public:
     }
 };
 
+
+/** Creates a SparseSet instances that is intentionally an
+    identity function. */
+template<class SparseSetT>
+SparseSetT id_sparse_set(typename SparseSetT::dense_type n)
+{
+    SparseSetT sparse_set;
+    for (typename SparseSetT::dense_type i=0; i<n; ++i) sparse_set.add_dense(i);
+    sparse_set.set_sparse_extent(sparse_set.dense_extent());
+    return sparse_set;
+}
+
 // -----------------------------------------------------------
 enum class SparsifyTransform {
     ID,           // No transformation

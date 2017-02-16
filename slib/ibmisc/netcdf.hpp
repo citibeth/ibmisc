@@ -57,9 +57,16 @@ inline netCDF::NcType nc_type(netCDF::NcVar ncvar, std::string sntype)
     { return ncvar.getParentGroup().getType(sntype, netCDF::NcGroup::ParentsAndCurrent); }
 // ---------------------------------------------------
 
+struct TaggedThunk {
+    std::function<void ()> fn;
+    std::string tag;
+    TaggedThunk(std::function<void ()> const &_fn, std::string const &_tag) :
+        fn(_fn), tag(_tag) {}
+};
+
 /** Used to keep track of future writes on NcDefine */
 class NcIO {
-    std::vector<std::function<void ()>> _io;
+    std::vector<TaggedThunk> _io;
 
     netCDF::NcFile _mync;  // NcFile lacks proper move constructor
     bool own_nc;
@@ -83,9 +90,14 @@ public:
         { return nc->getType(sntype, netCDF::NcGroup::ParentsAndCurrent); }
 
 
-    void operator+=(std::function<void ()> const &fn);
+    void add(std::string const &tag, std::function<void ()> const &fn);
 
-    void operator()();
+    void operator+=(std::function<void ()> const &fn)
+        { add("", fn); }
+
+    void flush(bool debug);
+    void operator()()
+        { flush(false); }
 
     void close();
 };

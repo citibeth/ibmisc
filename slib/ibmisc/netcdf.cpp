@@ -85,15 +85,16 @@ NcIO::NcIO(std::string const &filePath, char mode) :
     rw(_filemode_to_rw(mode)),
     define(rw == 'w') {}
 
-void NcIO::operator+=(std::function<void ()> const &fn)
+void NcIO::add(std::string const &tag, std::function<void ()> const &fn)
 {
     if (rw == 'r') fn();
-    else _io.push_back(fn);
+    else _io.push_back(TaggedThunk(fn, ""));
 }
 
-void NcIO::operator()() {
+void NcIO::flush(bool debug) {
     for (auto ii=_io.begin(); ii != _io.end(); ++ii) {
-        (*ii)();
+        if (debug) printf("NcIO::flush(%s)\n", ii->tag.c_str());
+        ii->fn();
     }
     _io.clear();
     tmp.free();
