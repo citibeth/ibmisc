@@ -70,18 +70,28 @@ class NcIO {
 
     netCDF::NcFile _mync;  // NcFile lacks proper move constructor
     bool own_nc;
+
+    static void default_configure_var(netCDF::NcVar ncvar);
+
 public:
     TmpAlloc tmp;    // Data kept around for the write phase
     netCDF::NcGroup * const nc;
+
+    // Extracts of the read/write/define mode
     char const rw;
     const bool define;
+
+    // Used to configure a variable after it's been created
+    std::function<void(netCDF::NcVar)> const configure_var;
 
     // mode can be (see https://docs.python.org/3/library/functions.html#open)
     // 'r' 	open for reading (default)
     // 'w' 	open for writing, truncating the file first
     // 'x' 	open for exclusive creation, failing if the file already exists
     // 'a' 	open for writing, appending to the end of the file if it exists
-    NcIO(std::string const &filePath, char mode);
+    NcIO(std::string const &filePath, char mode,
+        std::function<void(netCDF::NcVar)> const &_configure_var =
+            std::bind(NcIO::default_configure_var, std::placeholders::_1));
 
     ~NcIO() { close(); }
 

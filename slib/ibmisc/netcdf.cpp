@@ -77,13 +77,23 @@ inline char _filemode_to_rw(char mode)
     }
 }
 
-NcIO::NcIO(std::string const &filePath, char mode) :
+void NcIO::default_configure_var(netCDF::NcVar ncvar)
+{
+    ncvar.setCompression(true, true, 4);
+
+    // For some reason, this causes an HDF5 error
+    // ncvar.setChecksum(netCDF::NcVar::nc_FLETCHER32);
+}
+
+NcIO::NcIO(std::string const &filePath, char mode,
+    std::function<void(NcVar)> const &_configure_var) :
     _mync(filePath, _filemode_to_netcdf(mode),
         netCDF::NcFile::FileFormat::nc4),
     own_nc(true),
     nc(&_mync),
     rw(_filemode_to_rw(mode)),
-    define(rw == 'w') {}
+    define(rw == 'w'),
+    configure_var(_configure_var) {}
 
 void NcIO::add(std::string const &tag, std::function<void ()> const &fn)
 {
@@ -225,6 +235,7 @@ netCDF::NcVar get_or_add_var(
 
         if (ncvar.isNull()) {
             ncvar = ncio.nc->addVar(vname, snc_type, sdims);
+            ncio.configure_var(ncvar);
         } else {
             // Check dimensions match
             if (ncvar.getDimCount() != dims.size()) {
@@ -246,7 +257,6 @@ netCDF::NcVar get_or_add_var(
             }
         }
     } else {
-printf("get_or_add_var(%s)\n",vname.c_str());
         ncvar = ncio.nc->getVar(vname);
         if (ncvar.isNull()) {
             (*ibmisc_error)(-1,
