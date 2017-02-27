@@ -19,6 +19,7 @@
 // https://github.com/google/googletest/blob/master/googletest/docs/Primer.md
 
 #include <gtest/gtest.h>
+#include <spsparse/eigen.hpp>
 #include <ibmisc/VarTransformer.hpp>
 #include <iostream>
 #include <cstdio>
@@ -26,6 +27,7 @@
 #include <map>
 
 using namespace ibmisc;
+using namespace spsparse;
 
 // The fixture for testing class Foo.
 class VarTransformerTest : public ::testing::Test {
@@ -80,7 +82,7 @@ TEST_F(VarTransformerTest, segment_vector)
     printf("-------------------\n");
 #endif
 
-    ibmisc::CSRAndUnits trans = vt.apply_scalars({std::make_pair("dt[s]", 17.0)});
+    auto trans(vt.apply_scalars({std::make_pair("dt[s]", 17.0)}));    // Mxb
 
 #if 0
     printf("------------------- trans =\n");
@@ -96,16 +98,12 @@ TEST_F(VarTransformerTest, segment_vector)
     ival(dim_inputs.at("mass_per_timestep[kg s-1]")) = 3.;
 
     // Try it out...
-    for (int xi=0; xi<dim_outputs.size(); ++xi) {
-        double sum = 0;
-        std::vector<std::pair<int, double>> const &row(trans.mat[xi]);
-        for (auto xjj=row.begin(); xjj != row.end(); ++xjj) {
-            int xj = xjj->first;
-            double io_val = xjj->second;
+    oval = 0;
+    for (auto ii(begin(trans.M)); ii != end(trans.M); ++ii)
+        oval(ii->row()) += ii->value() * ival(ii->col());
 
-            sum += io_val * ival(xj);
-        }
-        oval(xi) = sum + trans.units[xi];
+    for (int i=0; i<oval.extent(0); ++i) {
+        oval(i) += trans.b(i);
     }
 
     EXPECT_DOUBLE_EQ(30.48, oval(0));

@@ -22,22 +22,10 @@
 #include <array>
 #include <blitz/array.h>
 #include <ibmisc/IndexSet.hpp>
+#include <Eigen/SparseCore>
+#include <Eigen/Dense>
 
 namespace ibmisc {
-
-/** This is not officially part of the SparseMatrix.hpp framework.
-Keeping it here is much simpler, even if not as general. */
-class CSRMatrix : public std::vector<std::vector<std::pair<int, double>>> {
-    typedef std::vector<std::vector<std::pair<int, double>>> super;
-public:
-
-    CSRMatrix(int nrow) : super(nrow) {}
-
-    void add(int row, int col, double val)
-        { (*this)[row].push_back(std::make_pair(col, val)); }
-
-    friend std::ostream &operator<<(std::ostream &out, CSRMatrix const &mat);
-};
 
 /** A relation such as y = Ax + b can be represented as:
 y = A'x' where x' = [x 1].  HOWEVER... such a representation
@@ -46,14 +34,13 @@ Therefore, it makes sense to decompose it to remove the "unit" element.
 By convention, the unit element is the last one in a dimension.
 
 This class stores the (smaller) vector x, along with the unit vector b. */
-class CSRAndUnits {
-public:
-    CSRMatrix mat;
-    std::vector<double> units;
+template<class _Scalar, int _Options, class _StorageIndex>
+struct Mxb {
+    Eigen::SparseMatrix<_Scalar, _Options, _StorageIndex> M;
+    Eigen::Matrix<_Scalar, Eigen::Dynamic, 1, _Options> b;
 
-    CSRAndUnits(int nrow) : mat(nrow), units(nrow, 0.0) {}
-
-    friend std::ostream &operator<<(std::ostream &out, CSRAndUnits const &matu);
+    Mxb(int nrow, int ncol) : M(nrow, ncol), b(decltype(b)::Zero(nrow))
+        {}
 };
 
 // -------------------------------------------------
@@ -68,8 +55,8 @@ We wish to make transformations such as the following:
    y2 = x2 + 273.15
    y3 = x3 + i4
 
-These transformations can be represented via the matrix:
-   y = M [x 1]
+These transformations can be represented via the matrix equation:
+   y = M . [x 1]
 where M is:
     x1      x2  x3  x4  unit
     -----------------------------
@@ -126,6 +113,7 @@ public:
         { return _dimensions[idim]; }
 
 public:
+    typedef Mxb<double, Eigen::ColMajor, int> MxbT;
 
     /** Set an element of the tensor, using name-based indexing.
     This is equivalent to:
@@ -136,14 +124,12 @@ public:
 
     /** Instantiates the scalars with specific values, and returns a 2nd-order
     matrix derived from the 3d-order tensor, in CSR format. */
-    CSRAndUnits apply_scalars(
-        std::vector<std::pair<std::string, double>> const &nvpairs = {});
+    MxbT apply_scalars(
+        std::vector<std::pair<std::string, double>> const &nvpairs = {},
+        char transpose = '.');
 
     friend std::ostream &operator<<(std::ostream &out, VarTransformer const &vt);
 };
-
-std::ostream &operator<<(std::ostream &out, CSRMatrix const &mat);
-std::ostream &operator<<(std::ostream &out, CSRAndUnits const &matu);
 
 /** Print out the tensor as readable symbolic equations.
 Used to check and debug. */
