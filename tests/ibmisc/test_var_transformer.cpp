@@ -97,7 +97,7 @@ TEST_F(VarTransformerTest, segment_vector)
     ival(dim_inputs.at("T[C]")) = 10.;
     ival(dim_inputs.at("mass_per_timestep[kg s-1]")) = 3.;
 
-    // Try it out...
+    // Try it out: compute oval = M ival + b
     oval = 0;
     for (auto ii(begin(trans.M)); ii != end(trans.M); ++ii)
         oval(ii->row()) += ii->value() * ival(ii->col());
@@ -109,6 +109,29 @@ TEST_F(VarTransformerTest, segment_vector)
     EXPECT_DOUBLE_EQ(30.48, oval(0));
     EXPECT_DOUBLE_EQ(50., oval(1));
     EXPECT_DOUBLE_EQ(51., oval(2));
+
+
+
+    // ------------------- Try again with transpose
+    auto transT(vt.apply_scalars({std::make_pair("dt[s]", 17.0)}, 'T'));    // Mxb
+
+    // Try it out: compute oval = M ival + b
+    oval = 0;
+    for (auto ii(begin(transT.M)); ii != end(transT.M); ++ii)
+        oval(ii->col()) += ii->value() * ival(ii->row());
+
+    for (int i=0; i<oval.extent(0); ++i) {
+        oval(i) += transT.b(i);
+    }
+
+    EXPECT_DOUBLE_EQ(30.48, oval(0));
+    EXPECT_DOUBLE_EQ(50., oval(1));
+    EXPECT_DOUBLE_EQ(51., oval(2));
+
+
+
+
+
 
 #if 0
     for (size_t i=0; i<dim_inputs.size(); ++i) {

@@ -37,9 +37,12 @@ This class stores the (smaller) vector x, along with the unit vector b. */
 template<class _Scalar, int _Options, class _StorageIndex>
 struct Mxb {
     Eigen::SparseMatrix<_Scalar, _Options, _StorageIndex> M;
-    Eigen::Matrix<_Scalar, Eigen::Dynamic, 1, _Options> b;
+    // b is either a row-vector or column-vector
+    Eigen::Matrix<_Scalar, Eigen::Dynamic, Eigen::Dynamic, _Options> b;
 
-    Mxb(int nrow, int ncol) : M(nrow, ncol), b(decltype(b)::Zero(nrow))
+    Mxb(int nrow, int ncol, char transpose) :
+        M(transpose ? ncol : nrow, transpose ? nrow : ncol),
+        b(decltype(b)::Zero(transpose ? 1 : ncol, transpose ? nrow : 1))
         {}
 };
 

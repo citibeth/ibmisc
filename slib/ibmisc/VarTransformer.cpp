@@ -122,7 +122,7 @@ Mxb<double, Eigen::ColMajor, int> VarTransformer::apply_scalars(
 
     // Take inner product of tensor with our scalars.
     std::vector<Eigen::Triplet<double,int>> triplets;
-    MxbT ret(n_outputs_nu, n_inputs_wu);
+    MxbT ret(n_outputs_nu, n_inputs_wu, transpose);
     for (int i=0; i < n_outputs_nu; ++i) {
         for (int j=0; j < n_inputs_wu; ++j) {
             double coeff = 0;
