@@ -33,8 +33,13 @@ void VarTransformer::set_dims(
 
     // Copy the dimension labels, and add a "unit" dimension to the end
     for (int idim=0; idim<RANK; ++idim) {
-        for (auto ii=source_dims[idim]->begin(); ii != source_dims[idim]->end(); ++ii)
+        for (auto ii=source_dims[idim]->begin();
+            ii != source_dims[idim]->end(); ++ii)
+        {
             _dimensions[idim].insert(*ii);
+        }
+
+        // Automatically addd the UNIT scalar to every dimension
         _dimensions[idim].insert(UNIT);
     }
 
@@ -127,7 +132,13 @@ Mxb<double, Eigen::ColMajor, int> VarTransformer::apply_scalars(
         for (int j=0; j < n_inputs_wu; ++j) {
             double coeff = 0;
             for (int k=0; k < n_scalars_wu; ++k) {
-                coeff += _tensor(i,j,k) * scalars(k);
+                // This check is in case scalars(k) is inf or nan.
+                // We are forcing 0*inf=0 and 0*nan=0, which is the right
+                // thing here (since a coeff=0 means that element in the tensor
+                // is not used, so we don't care if the scalar is valid).
+                if (_tensor(i,j,k) != 0) {
+                    coeff += _tensor(i,j,k) * scalars(k);
+                }
             }
 
             // Output format: sparse matrix plus dense unit column
