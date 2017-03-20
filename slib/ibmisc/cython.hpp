@@ -19,6 +19,9 @@
 #pragma once
 
 #include <Python.h>
+// We can't disable deprecated API yet because Cythong generates code that uses it.
+// Disable the deprecated Numpy API
+// #define NPY_NO_DEPRECATED_API NPY_1_7_API_VERSION
 #include <numpy/arrayobject.h>
 #include <ibmisc/netcdf.hpp>
 #include <ibmisc/ibmisc.hpp>
@@ -34,11 +37,11 @@ namespace cython {
 /** Call when initializing the Cython extension. */
 void init();
 
-extern PyArrayObject *check_dimensions(
+extern PyArrayObject *np_check_dimensions(
 PyObject *ovec,
 std::string const &vname,
 int type_num,
-int const *dims,
+npy_intp const *dims,
 int ndim);
 
 // -------------------------------------------------
@@ -128,16 +131,16 @@ template<class T, int N>
 blitz::Array<T,N> np_to_blitz(
 PyObject *ovec,
 std::string const &vname,
-std::array<int,N> dims);
+std::array<npy_intp,N> dims);
 
 template<class T, int N>
 blitz::Array<T,N> np_to_blitz(
 PyObject *ovec,
 std::string const &vname,
-std::array<int,N> dims)
+std::array<npy_intp,N> dims)
 {
     // Check data types and cast
-    PyArrayObject *vec = check_dimensions(ovec, vname, np_type_num<T>(), &dims[0], N);
+    PyArrayObject *vec = np_check_dimensions(ovec, vname, np_type_num<T>(), &dims[0], N);
 
     int const T_size = sizeof(T);
     assert(T_size == PyArray_ITEMSIZE(vec));
@@ -159,9 +162,9 @@ std::array<int,N> dims)
 
 /** Allocates a Numpy array of a given type and size */
 template<class T, int N>
-PyObject *new_pyarray(std::array<int,N> dims)
+PyObject *new_pyarray(std::array<npy_intp,N> dims)
 {
-    return PyArray_FromDims(N, &dims[0], np_type_num<T>());
+    return PyArray_SimpleNew(N, &dims[0], np_type_num<T>());
 }
 
 #if 0
@@ -181,9 +184,9 @@ http://docs.scipy.org/doc/numpy-1.10.0/reference/c-api.array.html
 template<class T, int N>
 PyObject *copy_blitz_to_np(blitz::Array<T,N> const &array)
 {
-    std::array<int,N> dims;
+    std::array<npy_intp,N> dims;
     for (int i=0; i<N; ++i) dims[i] = array.extent(i);
-    PyObject *array_py = PyArray_FromDims(N, &dims[0], np_type_num<T>());
+    PyObject *array_py = PyArray_SimpleNew(N, &dims[0], np_type_num<T>());
 
     // Wrap as blitz for convenience
     auto array_bl(np_to_blitz<T,N>(array_py, "array_py", dims));
@@ -208,13 +211,13 @@ PyObject *spsparse_to_tuple(ArrayT const &A)
     // Allocate Python arrays and Blitzify
     std::array<PyObject *,rank> indices_np;
     std::array<blitz::Array<index_type,1>, ArrayT::rank> indices_bl;
-    std::array<int,1> dims {(int)A.size()};
+    std::array<npy_intp,1> dims {(npy_intp)A.size()};
     for (int k=0; k<ArrayT::rank; ++k) {
-        indices_np[k] = PyArray_FromDims(
+        indices_np[k] = PyArray_SimpleNew(
             1, &dims[0], np_type_num<index_type>());
         indices_bl[k].reference(np_to_blitz<index_type,1>(indices_np[k], "index", dims));
     }
-    PyObject *values_np = PyArray_FromDims(
+    PyObject *values_np = PyArray_SimpleNew(
         1, &dims[0], np_type_num<typename ArrayT::val_type>());
     auto values_bl(np_to_blitz<val_type,1>(values_np, "values", dims));
 

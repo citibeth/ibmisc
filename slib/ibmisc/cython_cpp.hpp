@@ -41,11 +41,11 @@ void init()
 /** Makes sure a Numpy Array has the given type and dimension.  Raises
 a Python exception if it does not.
 @param type_num See http://docs.scipy.org/doc/numpy/reference/c-api.dtype.html eg: NPY_DOUBLE */
-PyArrayObject *check_dimensions(
+PyArrayObject *np_check_dimensions(
 PyObject *ovec,
 std::string const &vname,
 int type_num,
-int const *dims,
+npy_intp const *dims,
 int ndim)
 {
     // Check that it's not null
