@@ -25,6 +25,7 @@
 
 // NOTE These next few lines may be win32 specific, you may need to modify them to compile on other platform
 #include <functional>
+#include <array>
 #include <cstdio>
 #include <cmath>
 #include <cassert>
@@ -109,7 +110,7 @@ public:
   /// \param a_searchResult Search result array.  Caller should set grow size. Function will reset, not append to array.
   /// \param a_resultCallback Callback function to return result.  Callback should return 'true' to continue searching
   /// \return Returns the number of entries found
-  int Search(const ELEMTYPE a_min[NUMDIMS], const ELEMTYPE a_max[NUMDIMS], RTree::Callback const &a_resultCallback);
+  int Search(std::array<ELEMTYPE, NUMDIMS> const &a_min, std::array<ELEMTYPE, NUMDIMS> const &a_max, RTree::Callback const &a_resultCallback);
   
   /// Remove all entries from tree
   void RemoveAll();
@@ -546,7 +547,7 @@ void RTREE_QUAL::Remove(const ELEMTYPE a_min[NUMDIMS], const ELEMTYPE a_max[NUMD
 
 
 RTREE_TEMPLATE
-int RTREE_QUAL::Search(const ELEMTYPE a_min[NUMDIMS], const ELEMTYPE a_max[NUMDIMS], RTree::Callback const &a_resultCallback)
+int RTREE_QUAL::Search(std::array<ELEMTYPE, NUMDIMS> const &a_min, std::array<ELEMTYPE, NUMDIMS> const &a_max, RTree::Callback const &a_resultCallback)
 {
 #ifdef _DEBUG
   for(int index=0; index<NUMDIMS; ++index)
@@ -570,6 +571,8 @@ int RTREE_QUAL::Search(const ELEMTYPE a_min[NUMDIMS], const ELEMTYPE a_max[NUMDI
 
   return foundCount;
 }
+
+
 
 
 RTREE_TEMPLATE
