@@ -433,7 +433,7 @@ void get_or_put_att_enum(
 
 // ====================== Error Checking =============================
 // ---------------------------------------------------
-/** Check that blitz::Array is unit strides, column major.
+/** Check that blitz::Array is unit strides, row major.
 For now, that's the only kind of Blitz variable we know how to write. */
 template<class TypeT, int RANK>
 void _check_blitz_strides(blitz::Array<TypeT, RANK> const &val, std::string const &vname);

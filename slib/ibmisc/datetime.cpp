@@ -6,6 +6,12 @@
 
 namespace ibmisc {
 
+extern const std::string iso8601_format = "%04d-%02d-%02dT%02d:%02d:%02dZ";
+extern const long iso8601_length = 20;
+
+extern std::string to_iso8601(Datetime const &dt)
+    { return (boost::format(ibmisc::iso8601_format) % dt[0] % dt[1] % dt[2] % dt[3] % dt[4] % dt[5]).str(); }
+
 // ===================================================
 // Cal365
 Calendar::~Calendar() {}
@@ -68,7 +74,7 @@ TimeUnit::TimeUnit()
 {}
 
 
-JDatetime TimeUnit::to_jdatetime(double tm)
+JDatetime TimeUnit::to_jdatetime(double tm) const
 {
     switch(uniti) {
     case TimeElement::SECOND : {
@@ -105,7 +111,7 @@ std::string TimeUnit::to_cf() const
 }
 
 
-Datetime TimeUnit::to_datetime(double tm)
+Datetime TimeUnit::to_datetime(double tm) const
 {
     return cal->to_datetime(to_jdatetime(tm));
 }

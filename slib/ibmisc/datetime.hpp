@@ -18,6 +18,7 @@
 
 #pragma once
 
+#include <tuple>
 #include <ibmisc/array.hpp>
 
 namespace ibmisc {
@@ -121,6 +122,10 @@ inline Time::Time(Datetime const &ymdt)
 
 inline Datetime Date::operator+(Time const &tm)
     { return Datetime(*this, tm); }
+
+extern const std::string iso8601_format;
+extern const long iso8601_length;
+extern std::string to_iso8601(Datetime const &dt);
 
 // =============================================================
 // ---------------------------------------------------
@@ -240,9 +245,9 @@ public:
     /** Produces a CF-compliant string describing this unit for time. */
     std::string to_cf() const;
 
-    JDatetime to_jdatetime(double tm);
+    JDatetime to_jdatetime(double tm) const;
 
-    Datetime to_datetime(double tm);
+    Datetime to_datetime(double tm) const;
 
 };
 
