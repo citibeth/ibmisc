@@ -98,7 +98,7 @@ NcIO::NcIO(std::string const &filePath, char mode,
 void NcIO::add(std::string const &tag, std::function<void ()> const &fn)
 {
     if (rw == 'r') fn();
-    else _io.push_back(TaggedThunk(fn, ""));
+    else _io.push_back(TaggedThunk(fn, tag));
 }
 
 void NcIO::flush(bool debug) {
