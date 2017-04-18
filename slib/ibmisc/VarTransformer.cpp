@@ -157,8 +157,8 @@ Mxb<double, Eigen::ColMajor, int> VarTransformer::apply_scalars(
     }
     ret.M.setFromTriplets(triplets.begin(), triplets.end());
 
-//std::cout << "apply_scalars() returning M=" << Mxb.M << std::endl;
-//std::cout << "apply_scalars() returning b=" << Mxb.b << std::endl;
+//std::cout << "apply_scalars() returning M=" << ret.M << std::endl;
+//std::cout << "apply_scalars() returning b=" << ret.b << std::endl;
 
 //  printf("END VarTransformer::apply_scalars()\n");
     return ret;
