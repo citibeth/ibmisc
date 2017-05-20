@@ -44,10 +44,7 @@ void nc_write_spsparse(
     ArrayT *A,
     std::string const &vname)
 {
-    typedef std::array<typename ArrayT::index_type, ArrayT::rank> indices_type;
-
     std::array<size_t, ArrayT::rank> shape;     // Extent of each dimension
-
     netCDF::NcVar indices_v = nc->getVar(vname + ".indices");
     netCDF::NcVar vals_v = nc->getVar(vname + ".vals");
 

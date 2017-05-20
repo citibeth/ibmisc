@@ -18,10 +18,11 @@
 
 #pragma once
 
+#include <Eigen/SparseCore>
 #include <ibmisc/iter.hpp>
+#include <ibmisc/netcdf.hpp>
 #include <spsparse/accum.hpp>
 #include <spsparse/blitz.hpp>
-#include <Eigen/SparseCore>
 #include <spsparse/SparseSet.hpp>
 
 namespace spsparse {
@@ -470,6 +471,72 @@ public:
 
 // ------------------------------------------
 
+
+// ====================================================
+template<class _Scalar, int _Options, class _StorageIndex>
+void nc_write_eigen(
+    netCDF::NcGroup *nc,
+    Eigen::SparseMatrix<_Scalar,_Options,_StorageIndex> *A,
+    std::string const &vname);
+
+template<class _Scalar, int _Options, class _StorageIndex>
+void nc_write_eigen(
+    netCDF::NcGroup *nc,
+    Eigen::SparseMatrix<_Scalar,_Options,_StorageIndex> *A,
+    std::string const &vname)
+{
+    netCDF::NcVar indices_v = nc->getVar(vname + ".indices");
+    netCDF::NcVar vals_v = nc->getVar(vname + ".values");
+
+    std::vector<size_t> startp = {0, 0};        // SIZE, RANK
+    std::vector<size_t> countp = {1, 2};  // Write RANK elements at a time
+    for (auto ii = begin(*A); ii != end(*A); ++ii, ++startp[0]) {
+        auto index(ii->index());
+        auto val(ii->value());
+
+        indices_v.putVar(startp, countp, &index[0]);
+        vals_v.putVar(startp, countp, &val);
+    }
+}
+
+
+
+template<class _Scalar, int _Options, class _StorageIndex>
+void ncio_eigen(
+    ibmisc::NcIO &ncio,
+    Eigen::SparseMatrix<_Scalar,_Options,_StorageIndex> &A,
+    std::string const &vname);
+
+template<class _Scalar, int _Options, class _StorageIndex>
+void ncio_eigen(
+    ibmisc::NcIO &ncio,
+    Eigen::SparseMatrix<_Scalar,_Options,_StorageIndex> &A,
+    std::string const &vname)
+{
+    if (ncio.rw == 'r') (*ibmisc::ibmisc_error)(-1,
+        "ncio_eigen() currently does not support reading.");
+
+    std::vector<std::string> const dim_names({vname + ".size", vname + ".rank"});
+    std::vector<netCDF::NcDim> dims;        // Dimensions in NetCDF
+    std::vector<size_t> dim_sizes;          // Length of our two dimensions.
+
+
+    // Count the number of elements in the sparse matrix.
+    // NOTE: This can/does give a diffrent answer from A.nonZeros().
+    //       But it is what we want for dimensioning netCDF arrays.
+    long count=0;
+    for (auto ii(begin(A)); ii != end(A); ++ii) ++count;
+    dims = ibmisc::get_or_add_dims(ncio, dim_names, {count, 2});
+
+    auto info_v = get_or_add_var(ncio, vname + ".info", "int64", {});
+    std::array<size_t,2> shape { A.rows(), A.cols() };
+    ibmisc::get_or_put_att(info_v, 'w', "shape", "int64", shape);
+
+    get_or_add_var(ncio, vname + ".indices", "int64", dims);
+    get_or_add_var(ncio, vname + ".vals", "double", {dims[0]});
+    ncio += std::bind(&nc_write_eigen<_Scalar, _Options, _StorageIndex>, ncio.nc, &A, vname);
+
+}
 
 
 

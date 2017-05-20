@@ -19,6 +19,7 @@
 #ifndef IBMISC_NETCDF_HPP
 #define IBMISC_NETCDF_HPP
 
+#include <typeinfo>
 #include <netcdf>
 #include <boost/any.hpp>
 #include <functional>
@@ -43,14 +44,44 @@ template<class T>
 inline std::string get_nc_type()
 {
     (*ibmisc_error)(-1,
-        "get_nc_type(): Unknown type");
+        "get_nc_type(): Unknown type: '%s'", typeid(T).name());
 }
+
+template<> inline std::string get_nc_type<bool>()
+    { return "char"; }
+
+template<> inline std::string get_nc_type<int8_t>()
+    { return "byte"; }
+
+template<> inline std::string get_nc_type<char>()
+    { return "char"; }
+
+template<> inline std::string get_nc_type<int16_t>()
+    { return "short"; }
+
+template<> inline std::string get_nc_type<uint16_t>()
+    { return "ushort"; }
+
+template<> inline std::string get_nc_type<int32_t>()
+    { return "int"; }
+
+template<> inline std::string get_nc_type<uint32_t>()
+    { return "uint"; }
+
+template<> inline std::string get_nc_type<int64_t>()
+    { return "int64"; }
+
+template<> inline std::string get_nc_type<uint64_t>()
+    { return "uint64"; }
+
+template<> inline std::string get_nc_type<float>()
+    { return "float"; }
 
 template<> inline std::string get_nc_type<double>()
     { return "double"; }
 
-template<> inline std::string get_nc_type<int>()
-    { return "int"; }
+template<> inline std::string get_nc_type<std::string>()
+    { return "string"; }
 // ---------------------------------------------------
 /** Converts a string to a NetCDF type */
 inline netCDF::NcType nc_type(netCDF::NcVar ncvar, std::string sntype)
@@ -238,10 +269,17 @@ void get_or_put_att(
     AttrT *data, size_t len)
 {
     switch(rw) {
-        case 'w':
-            ncvar.putAtt(name, nc_type(ncvar, stype), len, data);
-        break;
-        case 'r':
+        case 'w': {
+            if (std::is_same<AttrT,bool>::value) {
+                std::string sbool;
+                sbool.reserve(len);
+                for (size_t i=0; i<len; ++i) sbool.push_back(data[i] ? 't' : 'f');
+                ncvar.putAtt(name, sbool);
+            } else {
+                ncvar.putAtt(name, nc_type(ncvar, stype), len, data);
+            }
+        } break;
+        case 'r': {
             auto att(ncvar.getAtt(name));
             if (att.getAttLength() != len) {
                 (*ibmisc_error)(-1,
@@ -249,44 +287,37 @@ void get_or_put_att(
                     "variable of length %ld",
                     name.c_str(), att.getAttLength(), len);
             }
-            att.getValues(data);
-        break;
+
+            if (std::is_same<AttrT,bool>::value) {
+                std::string sbool;
+                att.getValues(sbool);
+                for (size_t i=0; i<len; ++i) {
+                    data[i] = (
+                        (sbool[i] == 't') || (sbool[i] == 'T') || (sbool[i] == '0'));
+                }
+            } else {
+                att.getValues(data);
+            }
+        } break;
     }
 }
 
-// ---------------------------------------
-template<class NcVarT>
-void get_or_put_att(
-    NcVarT &ncvar, char rw,
-    const std::string &name,
-    bool *data, size_t len);
 
-template<class NcVarT>
+
+template<class NcVarT, class AttrT>
 void get_or_put_att(
     NcVarT &ncvar, char rw,
     const std::string &name,
-    bool *data, size_t len)
+    AttrT *data, size_t len);
+
+template<class NcVarT, class AttrT>
+void get_or_put_att(
+    NcVarT &ncvar, char rw,
+    const std::string &name,
+    AttrT *data, size_t len)
 {
-    char cdata[len];
-    switch(rw) {
-        case 'w':
-            for (int i=0; i<len; ++i) cdata[i] = (data[i] ? 't' : 'f');
-            ncvar.putAtt(name, nc_type(ncvar, "char"), len, cdata);
-        break;
-        case 'r':
-            auto att(ncvar.getAtt(name));
-            if (att.getAttLength() != len) {
-                (*ibmisc_error)(-1,
-                    "Trying to read attribute %s of length %ld into C++ "
-                    "variable of length %ld",
-                    name.c_str(), att.getAttLength(), len);
-            }
-            att.getValues(cdata);
-            for (int i=0; i<len; ++i) data[i] = (cdata[i] == 't');
-        break;
-    }
+    get_or_put_att(ncvar, rw, name, get_nc_type<AttrT>(), data, len);
 }
-
 // ---------------------------------------
 template<class NcVarT>
 void get_or_put_att(
@@ -585,6 +616,16 @@ netCDF::NcVar ncio_blitz(
 
     return ncvar;
 }
+
+
+template<class TypeT, int RANK>
+netCDF::NcVar ncio_blitz(
+    NcIO &ncio,
+    blitz::Array<TypeT, RANK> &val,
+    bool alloc,
+    std::string const &vname,
+    std::vector<netCDF::NcDim> const &dims)
+{ return ncio_blitz(ncio, val, alloc, vname, get_nc_type<TypeT>(), dims); }
 
 // ----------------------------------------------------
 // =================================================
