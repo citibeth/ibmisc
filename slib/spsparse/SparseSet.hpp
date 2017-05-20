@@ -21,6 +21,7 @@
 #include <unordered_map>
 #include <algorithm>
 #include <ibmisc/array.hpp>
+#include <ibmisc/netcdf.hpp>
 #include <spsparse/accum.hpp>
 #include <spsparse/blitz.hpp>
 
@@ -39,13 +40,12 @@ public:
     typedef SparseT sparse_type;
     typedef DenseT dense_type;
 
+
+    void ncio(ibmisc::NcIO &ncio, std::string const &vname);
+
     SparseSet() : _sparse_extent(-1) {}
 
-    void clear() {
-        _sparse_extent = -1;
-        _s2d.clear();
-        _d2s.clear();
-    }
+    void clear();
 
     bool in_sparse(SparseT const &sparse_ix) const
         { return _s2d.find(sparse_ix) != _s2d.end(); }
@@ -56,15 +56,7 @@ public:
     SparseT sparse_extent() const
         { return _sparse_extent; }
 
-    void set_sparse_extent(SparseT extent)
-    {
-        std::stringstream buf;
-        if (_sparse_extent != -1 && _sparse_extent != extent) {
-            buf << "Cannot change sparse_extent from " << _sparse_extent << " to " << extent;
-            (*ibmisc::ibmisc_error)(-1, "%s", buf.str().c_str());
-        }
-        _sparse_extent = extent;
-    }
+    void set_sparse_extent(SparseT extent);
 
     DenseT dense_extent() const
         { return _d2s.size(); }
@@ -110,19 +102,62 @@ public:
     }
 
     DenseT to_dense(SparseT const &sval) const
-        { return _s2d.at(sval); }
+    {
+        auto ii(_s2d.find(sval));
+        if (ii == _s2d.end()) {
+            std::stringstream sval_s;
+            sval_s << sval;
+            (*ibmisc::ibmisc_error)(-1,
+                "Sparse value %s not found in SparseSet", sval_s.str().c_str());
+        }
+        return ii->second;
+    }
 
     SparseT to_sparse(DenseT const &dval) const
     {
         if (dval < 0 || dval >= _d2s.size()) {
             (*ibmisc::ibmisc_error)(-1,
-                "Value %ld is out of range (0, %ld)", dval, _d2s.size());
+                "Value %ld is out of range (0, %ld)", (long)dval, _d2s.size());
         }
         return _d2s[dval];
     }
+
+
 };
 
+template<class SparseT, class DenseT>
+void SparseSet<SparseT, DenseT>::ncio(ibmisc::NcIO &ncio, std::string const &vname)
+{
+    if (ncio.rw == 'r') (*ibmisc::ibmisc_error)(-1,
+        "SparseSet::ncio() currently does not support reading.");
 
+    get_or_add_dim(ncio, vname + ".sparse_extent", _sparse_extent);
+    // Set up dimensions
+    auto dims(ibmisc::get_or_add_dims(ncio,
+        {vname + ".dense_extent"},
+        {dense_extent()}));
+
+    ibmisc::ncio_vector(ncio, _d2s, false, vname, ibmisc::get_nc_type<SparseT>(), dims);
+}
+
+template<class SparseT, class DenseT>
+void SparseSet<SparseT, DenseT>::clear() {
+    _sparse_extent = -1;
+    _s2d.clear();
+    _d2s.clear();
+}
+
+template<class SparseT, class DenseT>
+void SparseSet<SparseT, DenseT>::set_sparse_extent(SparseT extent)
+{
+    std::stringstream buf;
+    if (_sparse_extent != -1 && _sparse_extent != extent) {
+        buf << "Cannot change sparse_extent from " << _sparse_extent << " to " << extent;
+        (*ibmisc::ibmisc_error)(-1, "%s", buf.str().c_str());
+    }
+    _sparse_extent = extent;
+}
+// ==================================================================
 /** Creates a SparseSet instances that is intentionally an
     identity function. */
 template<class SparseSetT>
