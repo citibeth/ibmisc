@@ -16,13 +16,13 @@ static void nc_write_timespan(netCDF::NcGroup *nc, std::array<double,2> const &t
 /** For files with a single timepoint: Defines start and end timepoints. */
 void ncio_timespan(NcIO &ncio, std::array<double,2> &timespan, ibmisc::TimeUnit const &time_unit, std::string const &vname)
 {
-    auto &timespan_b(ncio.tmp.make(to_blitz<double,2>(timespan)));    // Copy the input
+    auto &timespan_b(ncio.tmp.move(to_blitz<double,2>(timespan)));    // Copy the input
     ncio_blitz<double,1>(ncio, timespan_b, false, vname, "double",
         get_or_add_dims(ncio, {vname + ".length"}, {timespan.size()}));
 
     if (ncio.rw == 'w') {
         // Write human-readable form of the timestamps
-        auto &timespan_c(ncio.tmp.make(    // Allocate for the NcIO operation
+        auto &timespan_c(ncio.tmp.move(    // Allocate for the NcIO operation
             blitz::Array<char,2>(timespan.size(), iso8601_length)));
 
         for (int i=0; i < timespan.size(); ++i) {

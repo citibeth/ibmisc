@@ -175,14 +175,19 @@ public:
     T &make(Args... args)
         { return *newptr<T>(args...); }
 
-    /** Allocate from an rvalue reference */
+
+    /** Move to allocated location from an rvalue reference */
     template<class T>
-    T &make(T &&val)
-        { return *newptr<T>(std::move(val)); }
+    T &move(T &&val)
+    {
+        T *ptr(new T(std::move(val)));
+        deleters.push_back(std::bind(&TmpAlloc::del<T>, ptr));
+        return *ptr;
+    }
 
     /** Allocate and copy from an existing object */
     template<class T>
-    T &make(T const &val)
+    T &copy(T const &val)
         { return *newptr<T>(val); }
 
     ~TmpAlloc() { free(); }
