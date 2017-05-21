@@ -22,6 +22,7 @@
 #include <functional>
 #include <gtest/gtest.h>
 #include <ibmisc/array.hpp>
+#include <ibmisc/memory.hpp>
 #include <spsparse/eigen.hpp>
 #include <spsparse/accum.hpp>
 #include <spsparse/SparseSet.hpp>
@@ -534,6 +535,76 @@ TEST_F(SpSparseTest, sum_to_diagonal)
         EXPECT_TRUE(ii == end(M2));
     }
 }
+
+// ------------------------------------------------------------------
+void *sample_eigen_data;
+Eigen::Matrix<double,Eigen::Dynamic,Eigen::Dynamic> sample_eigen_to_blitz()
+{
+    Eigen::Matrix<double,Eigen::Dynamic,Eigen::Dynamic> M(2,3);
+    int count=0;
+
+    for (int j=0; j<3; ++j) {
+    for (int i=0; i<2; ++i) {
+        M(i,j) = count++;
+    }}
+
+    sample_eigen_data = M.data();
+    return M;
+}
+
+TEST_F(SpSparseTest, eigen_to_blitz)
+{
+    TmpAlloc tmp;
+    blitz::Array<double,2> M(to_blitz(sample_eigen_to_blitz(), tmp));
+
+    // Test that the object created in sample_eigen_to_blitz()
+    // is moved, not copied, to the TmpAlloc
+    EXPECT_TRUE(sample_eigen_data == M.data());
+    EXPECT_EQ(3, M.extent(0));
+    EXPECT_EQ(2, M.extent(1));
+
+    // Test that it has the value we expect (transposing indices
+    // for Eigen vs. Blitz)
+    int count=0;
+    for (int j=0; j<M.extent(0); ++j) {
+    for (int i=0; i<M.extent(1); ++i) {    // stride=1
+        EXPECT_EQ((double)count, M(j,i));
+        ++count;
+    }}
+}
+// ------------------------------------------------------------------
+Eigen::Matrix<double,Eigen::Dynamic,1> sample_eigen_to_blitz_1d()
+{
+    Eigen::Matrix<double,Eigen::Dynamic,1> M(3);
+    int count=0;
+
+    for (int i=0; i<3; ++i) {
+        M[i] = count++;
+    }
+
+    sample_eigen_data = M.data();
+    return M;
+}
+
+TEST_F(SpSparseTest, eigen_to_blitz_1d)
+{
+    TmpAlloc tmp;
+    blitz::Array<double,1> M(to_blitz(sample_eigen_to_blitz_1d(), tmp));
+
+    // Test that the object created in sample_eigen_to_blitz()
+    // is moved, not copied, to the TmpAlloc
+    EXPECT_TRUE(sample_eigen_data == M.data());
+    EXPECT_EQ(3, M.extent(0));
+
+    // Test that it has the value we expect (transposing indices
+    // for Eigen vs. Blitz)
+    int count=0;
+    for (int i=0; i<M.extent(1); ++i) {
+        EXPECT_EQ((double)count, M(i));
+        ++count;
+    }
+}
+// ------------------------------------------------------------------
 
 
 int main(int argc, char **argv) {

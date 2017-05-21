@@ -21,6 +21,7 @@
 #include <Eigen/SparseCore>
 #include <ibmisc/iter.hpp>
 #include <ibmisc/netcdf.hpp>
+#include <ibmisc/memory.hpp>
 #include <spsparse/accum.hpp>
 #include <spsparse/blitz.hpp>
 #include <spsparse/SparseSet.hpp>
@@ -537,6 +538,55 @@ void ncio_eigen(
     ncio += std::bind(&nc_write_eigen<_Scalar, _Options, _StorageIndex>, ncio.nc, &A, vname);
 
 }
+// ====================================================
+/** Reference Eigen::Matrix to blitz::Array
+The Eigen::Matrix Rvalue-reference is stored in memory allocated by TmpAlloc,
+which must live at least as long as the returned blitz::Array. */
+template<class val_type>
+blitz::Array<val_type,2> to_blitz(
+    Eigen::Matrix<val_type, Eigen::Dynamic, Eigen::Dynamic> &&M,
+    ibmisc::TmpAlloc &tmp)
+{
+   auto &M_tmp(tmp.move<Eigen::Matrix<val_type, Eigen::Dynamic, Eigen::Dynamic>>(std::move(M)));
+
+   return blitz::Array<double,2>(
+       M_tmp.data(),
+       blitz::shape(M_tmp.cols(), M_tmp.rows()),
+       blitz::neverDeleteData);
+}
+
+/** Reference Eigen::Matrix vector to blitz::Array
+The Eigen::Matrix Rvalue-reference is stored in memory allocated by TmpAlloc,
+which must live at least as long as the returned blitz::Array. */
+template<class val_type>
+blitz::Array<val_type,1> to_blitz(
+    Eigen::Matrix<val_type, Eigen::Dynamic, 1> &&M,
+    ibmisc::TmpAlloc &tmp)
+{
+   auto &M_tmp(tmp.move<Eigen::Matrix<val_type, Eigen::Dynamic, 1>>(std::move(M)));
+
+   return blitz::Array<double,1>(
+       M_tmp.data(),
+       blitz::shape(M_tmp.rows()),
+       blitz::neverDeleteData);
+}
+
+/** Reference Eigen::Matrix vector to blitz::Array
+The Eigen::Matrix Rvalue-reference is stored in memory allocated by TmpAlloc,
+which must live at least as long as the returned blitz::Array. */
+template<class val_type>
+blitz::Array<val_type,1> to_blitz(
+    Eigen::Matrix<val_type, 1, Eigen::Dynamic> &&M,
+    ibmisc::TmpAlloc &tmp)
+{
+   auto &M_tmp(tmp.move<Eigen::Matrix<val_type, 1, Eigen::Dynamic>>(std::move(M)));
+
+   return blitz::Array<double,1>(
+       M_tmp.data(),
+       blitz::shape(M_tmp.cols()),
+       blitz::neverDeleteData);
+}
+
 
 
 
