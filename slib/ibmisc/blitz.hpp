@@ -209,49 +209,93 @@ blitz::Array<T, rank> f_to_c(blitz::Array<T, rank> &arr)
     return ret;
 }
 // ---------------------------------------------------------
+/** Allows negative dimensions in dest_shape, as with Python's numpy.reshape().
+See https://docs.scipy.org/doc/numpy-dev/reference/generated/numpy.reshape.html#numpy.reshape */
 
-#define RESHAPE_BODY \
-    /* Check dimensions */ \
-    long src_n = 1; \
-    for (int i=0; i<src_ndim; ++i) src_n *= src.extent(i); \
-    long dest_n = 1; \
-    for (int i=0; i<dest_ndim; ++i) dest_n *= dest_shape[i]; \
-    if (src_n != dest_n) { \
-        (*ibmisc::ibmisc_error)(-1, \
-            "blitz.hpp, ibmisc::reshape(): Total dimension mismatch, src=%ld, dest=%ld\n", src_n, dest_n); \
-    } \
- 
+/** Helper function to determine array shapes for reshape() below. */
+template<int src_ndim, int dest_ndim>
+blitz::TinyVector<int,dest_ndim> reshape_get_dest_shape(
+    blitz::TinyVector<int,src_ndim> const &src_shape,
+    blitz::TinyVector<int,dest_ndim> const &dest_shape);
+
+template<int src_ndim, int dest_ndim>
+blitz::TinyVector<int,dest_ndim> reshape_get_dest_shape(
+    blitz::TinyVector<int,src_ndim> const &src_shape,
+    blitz::TinyVector<int,dest_ndim> const &dest_shape)
+{
+    blitz::TinyVector<int,dest_ndim> ret;
+
+    /* Check dimensions */
+    long src_n = 1;
+    for (int i=0; i<src_ndim; ++i) {
+        src_n *= src_shape[i];
+    }
+
+    int negi = -1;
+    long dest_n = 1;
+    for (int i=0; i<dest_ndim; ++i) {
+        if (dest_shape[i] < 0) {
+            if (negi >= 0) (*ibmisc::ibmisc_error)(-1,
+                "reshape() destination cannot have more than one dimension <0 (but it has at least dimensions #%d and #%d)", negi, i);
+            negi = i;
+        } else {
+            dest_n *= dest_shape[i];
+            ret[i] = dest_shape[i];
+        }
+    }
+
+    // Fill in missing dimension
+    if (negi >= 0) {
+        ret[negi] = src_n / dest_n;    // integer divide
+        if (ret[negi] * dest_n != src_n) (*ibmisc::ibmisc_error)(-1,
+            "Non-integral missing dimension #i: %d / %d", negi, src_n, dest_n);
+    } else if (src_n != dest_n) {
+        (*ibmisc::ibmisc_error)(-1,
+            "blitz.hpp, ibmisc::reshape(): Total dimension mismatch, src=%ld, dest=%ld\n", src_n, dest_n);
+    }
+
+    return ret;
+}
 
 
+/** Reshape an array, to another one with different dimensions but the
+    same number of elements.  Returns an array aliasing the same
+    internal memory.
 
-/** Reshape an array.  As long as src and dest have same total number
-of elements.  Assumes a dense array on both sides. */
+    To reshape `blitz::Array<double,2> A` to rank 1:
+       reshape<double,2,1>(A, {-1});
+
+@param T Array type
+@param src_ndim Rank of the array to be reshaped
+@param dest_ndim Rank of the destination array to return
+@param src The array to be reshaped
+@param dest_shape Shape of the array to return.
+    The total size implied by this shape (all elements multipled
+    together) must equal the size of src.  Up to one dimension may be
+    -1: as with Python's numpy.reshape(), that dimension will be set
+    to "all remaining values."
+@return The reshaped array. */
 template<class T, int src_ndim, int dest_ndim>
 extern blitz::Array<T, dest_ndim> reshape(
     blitz::Array<T, src_ndim> &src,
     blitz::TinyVector<int,dest_ndim> const &dest_shape)
 {
-    RESHAPE_BODY;
-
     /* Do the reshaping */
-    return blitz::Array<T,dest_ndim>(src.data(), dest_shape, blitz::neverDeleteData);
+    return blitz::Array<T,dest_ndim>(src.data(),
+        reshape_get_dest_shape(src.shape(), dest_shape),
+        blitz::neverDeleteData);
 }
 
-/** Reshape an array.  As long as src and dest have same total number
-of elements.  Assumes a dense array on both sides. */
 template<class T, int src_ndim, int dest_ndim>
 extern blitz::Array<T, dest_ndim> const reshape(
     blitz::Array<T, src_ndim> const &src,
     blitz::TinyVector<int,dest_ndim> const &dest_shape)
 {
-    RESHAPE_BODY;
-
     /* Do the reshaping */
-    return (blitz::Array<T,dest_ndim> const)(src.data(), dest_shape, blitz::neverDeleteData);
-
+    return (blitz::Array<T,dest_ndim> const)(src.data(),
+        reshape_get_dest_shape(src.shape(), dest_shape),
+        blitz::neverDeleteData);
 }
-
-#undef RESHAPE_BODY
 
 #if 0
 // These templates SHOULD work.  But they haven't been tested or used,

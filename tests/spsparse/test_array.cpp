@@ -22,6 +22,7 @@
 #include <functional>
 #include <gtest/gtest.h>
 #include <ibmisc/array.hpp>
+#include <ibmisc/blitz.hpp>
 #include <ibmisc/memory.hpp>
 #include <spsparse/eigen.hpp>
 #include <spsparse/accum.hpp>
@@ -603,6 +604,39 @@ TEST_F(SpSparseTest, eigen_to_blitz_1d)
         EXPECT_EQ((double)count, M(i));
         ++count;
     }
+}
+// ------------------------------------------------------------------
+TEST_F(SpSparseTest, reshape)
+{
+    blitz::Array<double,2> a2(2,3);
+
+    auto a3(reshape<double,2,2>(a2, {3,2}));
+    EXPECT_TRUE(a2.data() == a3.data());
+    EXPECT_EQ(2, a3.rank());
+    EXPECT_EQ(3, a3.extent(0));
+    EXPECT_EQ(2, a3.extent(1));
+    EXPECT_EQ(1, a3.stride()[1]);
+    EXPECT_EQ(2, a3.stride()[0]);
+
+    auto a1(reshape<double,2,1>(a2, {-1}));
+    EXPECT_TRUE(a1.data() == a3.data());
+    EXPECT_EQ(1, a1.rank());
+    EXPECT_EQ(6, a1.extent(0));
+    EXPECT_EQ(1, a1.stride()[0]);
+
+    EXPECT_ANY_THROW(({
+        reshape<double,2,2>(a2, {-1,-1});
+    }));
+    EXPECT_ANY_THROW(({
+        reshape<double,2,2>(a2, {5,3});
+    }));
+    EXPECT_ANY_THROW(({
+        reshape<double,2,2>(a2, {5,-1});
+    }));
+    EXPECT_ANY_THROW(({
+        reshape<double,2,2>(a2, {-1,5});
+    }));
+
 }
 // ------------------------------------------------------------------
 
