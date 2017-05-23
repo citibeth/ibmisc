@@ -134,17 +134,20 @@ TEST_F(SpSparseTest, dense_to_blitz)
     dense1(0,1) = 7.0;
 
     TupleListT sparse1({4,5});
-    spcopy(accum::ref(sparse1), dense1);
+    TupleListT sparse2({4,5});
+    spcopy(accum::tee(accum::ref(sparse1), accum::ref(sparse2)), dense1);    // Test multiple items for accum::refs()
     auto dense2(spsparse::to_blitz(sparse1));
+    auto dense3(spsparse::to_blitz(sparse2));
 
     for (int i=0; i<dense1.extent(0); ++i) {
     for (int j=0; j<dense1.extent(0); ++j) {
         double const d1(dense1(i,j));
         double const d2(dense2(i,j));
+        double const d3(dense2(i,j));
 
         EXPECT_EQ(d1, d2);
+        EXPECT_EQ(d1, d3);
     }}
-
 }
 
 TEST_F(SpSparseTest, sparse_set)

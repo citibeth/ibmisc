@@ -24,6 +24,9 @@
 #include <vector>
 #include <ibmisc/blitz.hpp>
 #include <spsparse/spsparse.hpp>
+#include <boost/fusion/container.hpp>
+#include <boost/fusion/sequence.hpp>
+#include <boost/fusion/tuple.hpp>
 
 namespace spsparse {
 namespace accum {
@@ -65,6 +68,99 @@ public:
         { sub.add(index, val); }
 };
 // -----------------------------------------------------------
+/* Like the Unix "tee", sends output to more than one accumulator
+destinations.  For example:
+
+    spcopy(refs(accum_dest1, accum_dest2), accum_src);
+
+The number of destinations is arbitrary.
+*/
+template<class AccumT0, class... AccumTs>
+class Tee : public AccumTraits<AccumT0>
+{
+    typedef AccumTraits<AccumT0> super;
+    boost::fusion::tuple<AccumT0, AccumTs...> subs;
+public:
+
+    Tee(AccumT0 &&_sub0, AccumTs&&... _subs)
+        : subs(std::move(_sub0), std::move(_subs)...) {}
+
+    typename super::base_array_type &base()
+        { return boost::fusion::get<0>(subs).base(); }
+
+
+    // ----------------------------------------------
+private:
+    // Helper class for set_shape().  See
+    //    https://theboostcpplibraries.com/boost.fusion
+    struct _set_shape
+    {
+        std::array<long, super::rank> const &shape;
+
+        _set_shape(std::array<long, super::rank> const &_shape)
+        : shape(_shape) {}
+
+        template<class typei>
+        void operator()(typei &sub) const
+            { sub.set_shape(shape); }
+    };
+public:
+    void set_shape(std::array<long, super::rank> const &shape)
+    {
+        boost::fusion::for_each(subs, _set_shape(shape));
+    }
+    // ----------------------------------------------
+private:
+    // Helper class for add().  See
+    //    https://theboostcpplibraries.com/boost.fusion
+    struct _add
+    {
+
+        std::array<typename super::index_type, super::rank> const &index;
+        typename super::val_type const &val;
+
+        _add(std::array<typename super::index_type, super::rank> const &_index,
+            typename super::val_type const &_val)
+        : index(_index), val(_val) {}
+
+        template<class typei>
+        void operator()(typei &sub) const
+            { sub.add(index, val); }
+    };
+public:
+    void add(
+        std::array<typename super::index_type, super::rank> const &index,
+        typename super::val_type const &val)
+    {
+        boost::fusion::for_each(subs, _add(index, val));
+    }
+};
+
+template<class AccumT0, class ...AccumTs>
+Tee<AccumT0, AccumTs...> tee(AccumT0 &&sub0, AccumTs&&... subs)
+    { return Tee<AccumT0, AccumTs...>(std::move(sub0), std::move(subs)...); }
+// -----------------------------------------------------------
+/** Accumulator filters generally own the sub-accumulator upon which
+they are stacked; this makes it easy to create them on-the-fly in a
+spcopy() call.  However, these accumulators disappear once the
+spcopy() call is over, providing no way to accumulate into something
+permanent.  This shim references an already-created filter, allowing
+other filtes to wrap it on-the-fly.  For example:
+
+    // Simple copy is OK
+    TupleList<...> accum_dest;
+    spcopy(accum_dest, accum_src);
+
+    // Wrapping a raw destination is not OK.
+    spcopy(transposer(accum_dest), accum_src);
+
+    // Wrapping a raw destination is not OK; the transpose() filter needs
+    // to own its sub-filter.
+    spcopy(transposer(accum_dest), accum_src);
+
+    // This make it work:
+    spcopy(transposer(ref(accum_dest)), accum_src);
+*/
 template<class AccumT>
 class Ref : public AccumTraits<AccumT>
 {
