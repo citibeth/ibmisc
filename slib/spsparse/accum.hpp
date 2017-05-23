@@ -293,7 +293,33 @@ template<class AccumT>
 TransformAccum<AccumT,InvertFn> invert(char invert, AccumT &&sub)
     { return TransformAccum<AccumT,InvertFn>(InvertFn(invert), std::move(sub)); }
 // -------------------------------------------------------
+/** Accumulate the indices that get set */
+template<class IndexT, class ValT, size_t RANK>
+class Indices
+{
+public:
+    static const size_t rank = RANK;
+    typedef IndexT index_type;
+    // typedef void val_type;    // Doesn't have a val_type, so make an error (for now) if that is expected.
+    typedef Indices base_array_type;
 
+private:
+    std::vector<std::array<IndexT, RANK>> &indices;
+
+public:
+    Indices(std::vector<std::array<IndexT, RANK>> &_indices) :
+        indices(_indices) {}
+
+
+    void set_shape(std::array<long, RANK> const &_shape) {}
+
+    inline void add(std::array<index_type,rank> const &index, ValT const &val) {
+        indices.push_back(index);
+    }
+};
+
+// There is no obvious way to make a convenience function
+// indices() for this.
 
 
 

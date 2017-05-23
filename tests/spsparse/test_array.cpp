@@ -642,6 +642,27 @@ TEST_F(SpSparseTest, reshape)
 
 }
 // ------------------------------------------------------------------
+TEST_F(SpSparseTest, indices)
+{
+    typedef TupleList<int, double, 2> TupleListT;
+    TupleListT arr({3,4});
+
+    arr.add({0,0}, 1.);
+    arr.add({2,3}, 8.);
+    arr.add({2,3}, 9.);
+
+    std::vector<std::array<int,2>> idx;
+    spcopy(
+        accum::Indices<int,double,2>(idx),
+        arr);
+
+    EXPECT_EQ(3, idx.size());
+    EXPECT_TRUE((idx[0] == std::array<int,2>{0,0}));
+    EXPECT_TRUE((idx[1] == std::array<int,2>{2,3}));
+    EXPECT_TRUE((idx[2] == std::array<int,2>{2,3}));
+
+}
+// ------------------------------------------------------------------
 
 
 int main(int argc, char **argv) {
