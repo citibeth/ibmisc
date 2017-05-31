@@ -61,6 +61,26 @@ public:
     DenseT dense_extent() const
         { return _d2s.size(); }
 
+
+    /** Iterate throught the sparse indices (in dense order) */
+    std::vector<SparseT>::iterator sparse_begin()
+        { return _d2s.begin(); }
+    std::vector<SparseT>::iterator sparse_end()
+        { return _d2s.end(); }
+
+
+    /** Returns the sparse indices used by this SparseSet, in sorted
+        order. */
+    std::vector<SparseT> sparse_indices() const
+    {
+        std::vector<SparseT> ret;
+        ret.reserve(_d2s.size());
+        for (auto ii(_d2s.begin()); ii != _d2s.end(); ++ii)
+            ret.push_back(*ii);
+        std::sort(ret.begin(), ret.end());
+        return ret;
+    }
+
 private:
     void add(SparseT sparse_index)
     {

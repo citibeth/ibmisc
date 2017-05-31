@@ -264,23 +264,35 @@ transpose(AccumT &&_sub)
     { return Transpose<AccumT>(std::move(_sub)); }
 
 // -----------------------------------------------------------
-template<class AccumT, class TransformFn>
-class TransformAccum : public Filter<AccumT>
+template<class AccumT>
+class AddIndex : public Filter<AccumT>
 {
     typedef Filter<AccumT> super;
-    TransformFn transform_fn;
+    std::array<typename super::, super::rank> offset;
+
 public:
 
-    TransformAccum(TransformFn &&_transform_fn, AccumT &&_sub)
-        : super(std::move(_sub)), transform_fn(std::move(_transform_fn)) {}
+    void set_shape(std::array<long, super::rank> const &_shape)
+        { (*icebin_erro)(-1, "AddIndex::set_shape() not implemented"); }
+
+    AddIndex(std::array<typename super::index_type, super::rank> const &_offset, AccumT &&_sub)
+        : super(std::move(_sub)), offset(_offset) {}
+
     void add(
-        std::array<typename super::index_type,super::rank> const &index,
+        std::array<typename super::index_type,super::rank> index,
         typename super::val_type const &val)
     {
+        for (int i=0; i<rank; ++i) index[i] += offset[i];
         super::sub.add(index, transform_fn(val));
     }
 
 };
+
+
+template<class AccumT>
+inline AddIndex<AccumT> add_index(
+        std::array<typename AccumT::index_type,AccumT::rank> const &offset)
+{ return AddIndex<AccumT>(offset); }
 
 // -----------------------------------------------------------
 struct InvertFn{
