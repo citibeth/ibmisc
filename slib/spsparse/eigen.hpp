@@ -493,7 +493,7 @@ void nc_write_eigen(
     std::vector<size_t> countp = {1, 2};  // Write RANK elements at a time
     for (auto ii = begin(*A); ii != end(*A); ++ii, ++startp[0]) {
         auto index(ii->index());
-        auto val(ii->value());
+        auto &val(ii->value());
 
         indices_v.putVar(startp, countp, &index[0]);
         vals_v.putVar(startp, countp, &val);
@@ -534,7 +534,7 @@ void ncio_eigen(
     ibmisc::get_or_put_att(info_v, 'w', "shape", "int64", shape);
 
     get_or_add_var(ncio, vname + ".indices", "int64", dims);
-    get_or_add_var(ncio, vname + ".vals", "double", {dims[0]});
+    get_or_add_var(ncio, vname + ".values", "double", {dims[0]});
     ncio += std::bind(&nc_write_eigen<_Scalar, _Options, _StorageIndex>, ncio.nc, &A, vname);
 
 }
