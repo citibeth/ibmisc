@@ -92,6 +92,47 @@ TEST_F(BlitzTest, blitz_conv_array)
 
 }
 
+TEST_F(BlitzTest, blitz_reshape1)
+{
+    blitz::Array<int,2> arr(3,4);
+
+    {auto arr1(ibmisc::reshape1(arr));
+        EXPECT_EQ(12, arr1.extent(0));
+        EXPECT_EQ(12, arr1.size());
+        EXPECT_EQ(0, arr1.lbound(0));
+    }
+
+    {auto arr1f(ibmisc::reshape1(arr, 1));
+        EXPECT_EQ(12, arr1f.extent(0));
+        EXPECT_EQ(12, arr1f.size());
+        EXPECT_EQ(1, arr1f.lbound(0));
+    }
+
+    blitz::Array<int,2> arrf(4,3, blitz::fortranArray);
+    EXPECT_EQ(1, arrf.stride(0));
+    EXPECT_EQ(1, arrf.lbound(0));
+    EXPECT_EQ(1, arrf.lbound(1));
+    EXPECT_EQ(12, arrf.size());
+
+    {auto arr1(ibmisc::reshape1(arrf));
+        EXPECT_EQ(12, arr1.extent(0));
+        EXPECT_EQ(12, arr1.size());
+        EXPECT_EQ(0, arr1.lbound(0));
+    }
+
+    {auto arr1f(ibmisc::reshape1(arrf, 1));
+        EXPECT_EQ(12, arr1f.extent(0));
+        EXPECT_EQ(12, arr1f.size());
+        EXPECT_EQ(1, arr1f.lbound(0));
+    }
+
+
+
+
+
+}
+
+
 int main(int argc, char **argv) {
     ::testing::InitGoogleTest(&argc, argv);
     return RUN_ALL_TESTS();

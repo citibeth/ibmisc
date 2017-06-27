@@ -297,6 +297,46 @@ extern blitz::Array<T, dest_ndim> const reshape(
         blitz::neverDeleteData);
 }
 
+/** Simple method to reshape to a 1-D array.
+@param storage Set to blitz::fortranArray to get 1-based indexing.
+@param arr The array to reshape
+@param lbound Lower bound to use on reshaped array: 0 (C) or 1 (Fortran) */
+template<class TypeT, int RANK>
+blitz::Array<TypeT,1> reshape1(
+    blitz::Array<TypeT, RANK> &arr,
+    int lbound = 0);
+
+template<class TypeT, int RANK>
+blitz::Array<TypeT,1> reshape1(blitz::Array<TypeT, RANK> &arr,
+    int lbound = 0)
+{
+    if (!arr.isStorageContiguous()) (*ibmisc_error)(-1,
+        "Array must be contiguous for reshape1().");
+
+    // Get the stride we will use
+    blitz::diffType min_stride = arr.stride(0);
+    for (int i=1; i<RANK; ++i) min_stride = std::min(min_stride, arr.stride(i));
+
+    blitz::TinyVector<int,1> shape, stride;
+    blitz::GeneralArrayStorage<1> stor;
+    shape[0] = arr.size();
+    stride[0] = min_stride;
+    stor.base()[0] = lbound;
+    // stor Ordering is not needed because we're using stride
+    return blitz::Array<TypeT,1>(arr.data(), shape, stride,
+        blitz::neverDeleteData, stor);
+}
+
+/** const version of reshape1() */
+template<class TypeT, int RANK>
+blitz::Array<TypeT,1> const reshape1(blitz::Array<TypeT, RANK> const &arr,
+    int lbound = 0)
+{
+    return reshape1(
+        *const_cast<blitz::Array<TypeT, RANK> *>(&arr),
+        lbound);
+}
+
 #if 0
 // These templates SHOULD work.  But they haven't been tested or used,
 // so they're commented out for now.
