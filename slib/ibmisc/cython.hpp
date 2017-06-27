@@ -128,13 +128,15 @@ template<class T, int N>
 blitz::Array<T,N> np_to_blitz(
 PyObject *ovec,
 std::string const &vname,
-std::array<int,N> dims);
+std::array<int,N> dims,
+blitz::GeneralArrayStorage<N> const &storage = blitz::GeneralArrayStorage<N>());
 
 template<class T, int N>
 blitz::Array<T,N> np_to_blitz(
 PyObject *ovec,
 std::string const &vname,
-std::array<int,N> dims)
+std::array<int,N> dims,
+blitz::GeneralArrayStorage<N> const &storage)
 {
     // Check data types and cast
     PyArrayObject *vec = check_dimensions(ovec, vname, np_type_num<T>(), &dims[0], N);
@@ -153,7 +155,7 @@ std::array<int,N> dims)
     }
 
     return blitz::Array<T,N>((T*) PyArray_DATA(vec),shape,strides,
-        blitz::neverDeleteData);
+        blitz::neverDeleteData, storage);
 }
 
 
