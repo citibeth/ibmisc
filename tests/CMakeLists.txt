@@ -21,3 +21,9 @@ foreach(TEST array netcdf)
     target_link_libraries(spsparse_${TEST} ${ALL_LIBS})
     add_test(AllTests spsparse_${TEST})
 endforeach()
+
+# This test has a second Fortran file in it
+add_executable(ibmisc_fortranio ibmisc/test_fortranio.cpp ibmisc/help_fortranio.F90)
+#add_executable(ibmisc_fortranio ibmisc/test_fortranio.cpp)
+target_link_libraries(ibmisc_fortranio ${ALL_LIBS} gfortran)   # Linking in gfortran is GCC-only
+add_test(AllTests ibmisc_fortranio)

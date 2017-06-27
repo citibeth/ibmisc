@@ -8,7 +8,8 @@ set(IBMISC_SOURCE
     ibmisc/VarTransformer.cpp
     ibmisc/ConstantSet.cpp
     ibmisc/ncfile.cpp
-    ibmisc/indexing.cpp)
+    ibmisc/indexing.cpp
+    ibmisc/fortranio.cpp)
 
 
 if (USE_PROJ4)
