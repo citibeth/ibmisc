@@ -147,6 +147,10 @@ public:
         { return index(0); }
     ValT col() const
         { return index(1); }
+
+    bool operator<(Tuple<IndexT,ValT,RANK> const &other) const
+        { return _index < other._index; }
+
 };
 
 /** Serves as accumulator and iterable storage */
@@ -587,7 +591,45 @@ blitz::Array<val_type,1> to_blitz(
        blitz::neverDeleteData);
 }
 
+// ==============================================================
+// --------------------------------------------------------
+template<class TupleT>
+void consolidate(std::vector<TupleT> &A, bool zero_nan)
+{
 
+    // Sort the Tuples
+    std::stable_sort(A.begin(), A.end());
+
+    // Eliminate duplicates
+    enum {NORUN, INRUN} state = NORUN;
+
+    size_t dst=0;        // Where we're writing
+    size_t start = 0;    // Start of run
+    for (size_t i=0; i<A.size(); ++i) {
+        switch(state) {
+            case NORUN : {
+                if (!isnone(A[i])) {
+                    start = i;
+                    state = INRUN;
+                    A[dst] = A[i];
+                }
+            } break;
+            case INRUN : {
+                if (A[i].index() == A[start].index()) {
+                    // Skip 0 and NaN
+                    if (isnone(A[i].index(), zero_nan)) continue;
+
+                    // Continue a run
+                    A[dst].value += A[i].value;
+                } else {
+                    // Finish this run
+                    ++dst;
+                    state = NORUN;
+                }
+            } break;
+        }
+    }
+}
 
 
 /** @} */
