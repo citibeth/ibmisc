@@ -83,6 +83,29 @@ TEST_F(FortranIOTest, write_then_read)
 }
 
 
+TEST_F(FortranIOTest, cast)
+{
+    std::array<char, 80> str0, str1;
+    blitz::Array<long, 1> vals_l(17);
+    blitz::Array<int, 1> vals_i(17);
+
+    // Read as it was written
+    {std::ifstream fin("sample_fortranio", ios::binary | ios::in);
+        fortran::read(fin) >> str0 >> vals_i >> fortran::endr;
+    }
+
+    // Read, casting it to long
+    {std::ifstream fin("sample_fortranio", ios::binary | ios::in);
+        fortran::read(fin) >> str0 >>
+            fortran::blitz_cast<int, long, 1>(vals_l) >> fortran::endr;
+    }
+
+    for (int i=0; i<17; ++i) {
+        EXPECT_EQ(vals_i(i), vals_l(i));
+    }
+
+}
+
 
 int main(int argc, char **argv) {
     ::testing::InitGoogleTest(&argc, argv);

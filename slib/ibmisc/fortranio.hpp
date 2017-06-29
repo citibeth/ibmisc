@@ -1,3 +1,7 @@
+#ifndef IBMISC_FORTRANIO_HPP
+#define IBMISC_FORTRANIO_HPP
+
+#include <memory>
 #include <string>
 #include <vector>
 #include <array>
@@ -37,53 +41,101 @@ Example:
     fortran::read(fin) >> str1 >> vals >> str0 >> fortran::endr;
 */
 
-struct BufSpec {
-    char * const buf;
-    size_t const len;
+struct BufSpecI {
+    size_t const len;    // Length to read, in bytes
 
-    BufSpec(char *_buf, size_t _len) : buf(_buf), len(_len) {}
+    BufSpecI(size_t const _len) : len(_len) {}
+    virtual ~BufSpecI() {}
+    virtual void read(std::istream &infile) = 0;
+};
+
+struct BufSpec : public BufSpecI {
+    char * const buf;
+
+    BufSpec(char *_buf, size_t _len) : BufSpecI(_len), buf(_buf) {}
+    void read(std::istream &infile)
+    {
+        infile.read(buf, len);
+    }
 };
 
 class EndR {};
 
 extern EndR endr;
 
+/** Wrap double arrays in this when we want to read into a float. */
+template<class SrcT, class DestT, int RANK>
+class blitz_cast : public BufSpecI
+{
+    blitz::Array<double, RANK> dest;
+
+public:
+    blitz_cast(blitz::Array<DestT, RANK> &dest) :
+        BufSpecI(dest.size() * sizeof(SrcT))
+    {
+        if (!dest.isStorageContiguous()) (*ibmisc_error)(-1,
+            "Storage must be contiguous");
+    }
+
+    void read(std::istream &infile)
+    {
+        blitz::Array<float, 1> src(dest.size());
+
+        infile.read((char *)src.data(), len);
+
+        auto srci(src.begin());
+        auto desti(dest.begin());
+        for (; srci != src.end(); ++srci, ++desti) {
+            *desti = (DestT)*srci;
+        }
+    }
+};
+
 class read {
     std::istream *infile;
-    std::vector<BufSpec> specs;
+    std::vector<std::unique_ptr<BufSpec>> specs;
+
+    template<class BufSpecT>
+    read &add(BufSpecT &&spec)
+    {
+        specs.push_back(std::unique_ptr<BufSpec>((BufSpec *)new BufSpecT(std::move(spec))));
+        return *this;
+    }
+
 public:
     read(std::istream &_infile) : infile(&_infile) {}
+
+    template<class TypeT>
+    read &operator>>(TypeT val) {};
+
+
 
     template<class TypeT, int RANK>
     read &operator>>(blitz::Array<TypeT,RANK> &arr)
     {
-        specs.push_back(BufSpec((char *)arr.data(), sizeof(TypeT) * arr.size()));
-        return *this;
+        return this->add(BufSpec((char *)arr.data(), sizeof(TypeT) * arr.size()));
     }
+
 
     template<class TypeT, size_t SIZE>
     read &operator>>(std::array<TypeT, SIZE> &arr)
     {
-        specs.push_back(BufSpec((char *)&arr[0], sizeof(TypeT) * arr.size()));
-        return *this;
+        return this->add(BufSpec((char *)&arr[0], sizeof(TypeT) * arr.size()));
     }
 
     read &operator>>(float &val)
     {
-        specs.push_back(BufSpec((char *)&val, sizeof(float)));
-        return *this;
+        return this->add(BufSpec((char *)&val, sizeof(float)));
     }
 
     read &operator>>(int &val)
     {
-        specs.push_back(BufSpec((char *)&val, sizeof(int)));
-        return *this;
+        return this->add(BufSpec((char *)&val, sizeof(int)));
     }
 
     read &operator>>(double &val)
     {
-        specs.push_back(BufSpec((char *)&val, sizeof(double)));
-        return *this;
+        return this->add(BufSpec((char *)&val, sizeof(double)));
     }
 
 
@@ -109,3 +161,5 @@ std::string trim(std::array<char, SIZE> const &fstr)
 
 
 }}    // ibmisc::fortran
+
+#endif // guard

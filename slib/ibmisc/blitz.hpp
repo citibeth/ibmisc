@@ -24,6 +24,7 @@
 #include <blitz/array.h>
 #include <blitz/tinyvec2.h>
 #include <ibmisc/ibmisc.hpp>
+#include <ibmisc/error.hpp>
 
 namespace ibmisc {
 
@@ -386,6 +387,28 @@ std::vector<T> tiny_to_vector(blitz::TinyVector<T, len> const &tiny)
     for (int i=0; i<len; ++i) ret[i] = tiny[i];
     return ret;
 }
+// ----------------------------------------------------------------
+/** Casts from one Blitz array type to another */
+template<class SrcT, class DestT, int RANK>
+blitz::Array<DestT, RANK> blitz_cast(blitz::Array<SrcT, RANK> const &src)
+{
+    if (!src.isStorageContiguous) (*ibmisc_error)(-1,
+        "Storage must be contiguous");
+
+    blitz::Array<DestT, RANK> dest(src.shape());
+
+    auto srci(src.begin());
+    auto desti(dest.begin());
+    for (; srci != src.end(); ++srci, ++desti) {
+        *desti = (DestT)*srci;
+    }
+    return dest;
+}
+
+template<class SrcT, int RANK>
+blitz::Array<double, RANK> to_double(blitz::Array<SrcT, RANK> const &src)
+    { return blitz_cast<SrcT, double, RANK>(src); }
+
 #endif
 // ----------------------------------------------------------------
 

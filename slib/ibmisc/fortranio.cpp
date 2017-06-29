@@ -18,14 +18,14 @@ void read::operator>>(EndR const &endr)
     // Make sure desired body is right size
     if (specs.size() > 0) {
         size_t total = 0;
-        for (BufSpec const &spec : specs) total += spec.len;
+        for (auto &spec : specs) total += spec->len;
         if (total != len0) (*ibmisc_error)(-1,
             "Trying to read record of size %ld with pattern of size %ld",
             (long)len0, (long)total);
 
         // Read the bodies
-        for (BufSpec const &spec : specs) {
-            infile->read(spec.buf, spec.len);
+        for (auto &spec : specs) {
+            spec->read(*infile);
             if (infile->fail()) (*ibmisc_error)(-1,
                 "Error reading into a buffer");
         }
