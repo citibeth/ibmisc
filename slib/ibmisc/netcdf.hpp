@@ -183,13 +183,13 @@ extern std::vector<netCDF::NcDim> get_or_add_finite_dims(
 template<class TypeT, int RANK>
 std::vector<netCDF::NcDim> get_or_add_dims(
     NcIO &ncio,
-    blitz::Array<TypeT, RANK> &val,
+    blitz::Array<TypeT, RANK> const &val,
     std::vector<std::string> const &dim_names);
 
 template<class TypeT, int RANK>
 std::vector<netCDF::NcDim> get_or_add_dims(
     NcIO &ncio,
-    blitz::Array<TypeT, RANK> &val,
+    blitz::Array<TypeT, RANK> const &val,
     std::vector<std::string> const &dim_names)
 {
     std::vector<long> dim_sizes(RANK);

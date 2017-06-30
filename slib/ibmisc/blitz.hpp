@@ -190,24 +190,36 @@ stride in last dimension and one-based indexing) that shares the same memory. */
 template<class T, int rank>
 blitz::Array<T, rank> f_to_c(blitz::Array<T, rank> &arr);
 
-template<class T, int rank>
-blitz::Array<T, rank> f_to_c(blitz::Array<T, rank> &arr)
+template<class TypeT, int RANK>
+blitz::Array<TypeT, RANK> f_to_c(blitz::Array<TypeT, RANK> &arr)
 {
-    // Initialize an 11-dim vector of transpositions
-    // (because transpose() doesn't take a TinyVector)
-    int const max_dims = 11;
-    int rev[max_dims];
-    for (int i=rank; i<max_dims; ++i) rev[i] = 0;
+    // Set up shape and strides
+    blitz::TinyVector<int,RANK> shape;
+    blitz::TinyVector<int,RANK> strides;
+    blitz::GeneralArrayStorage<RANK> storage;
+    for (int i=0;i<RANK;++i)
+    {
+        int j = RANK-1 - i;
+        shape[i] = arr.extent(j);
+        // Python/Numpy strides are in bytes, Blitz++ in sizeof(T) units.
+        strides[i] = arr.stride(j);
+        storage.base()[i] = 0;
+        // Ordering is not needed because we're using stride
+        // storage.ordering()[i] = i;      // Fortran ordering, blitz++ manual p31
+    }
 
-    // Reverse dimensions
-    for (int i=0; i<rank; ++i) rev[i] = rank-1-i;
-    auto ret(arr.transpose(rev[0], rev[1], rev[2], rev[3], rev[4], rev[5], rev[6], rev[7], rev[8], rev[9], rev[10]));
-
-    // Re-base to 0
-    blitz::TinyVector<int, rank> base(0);
-    ret.reindexSelf(base);
+    auto ret(blitz::Array<TypeT,RANK>(arr.data(),shape,strides,
+        blitz::neverDeleteData, storage));
 
     return ret;
+
+}
+
+template<class TypeT, int RANK>
+blitz::Array<TypeT, RANK> const f_to_c(blitz::Array<TypeT, RANK> const &arr)
+{
+    return f_to_c(
+        *const_cast<blitz::Array<TypeT, RANK> *>(&arr));
 }
 // ---------------------------------------------------------
 /** Allows negative dimensions in dest_shape, as with Python's numpy.reshape().
@@ -338,10 +350,10 @@ blitz::Array<TypeT,1> const reshape1(blitz::Array<TypeT, RANK> const &arr,
         lbound);
 }
 
-#if 0
 // These templates SHOULD work.  But they haven't been tested or used,
 // so they're commented out for now.
 // ------------------------------------------------
+#if 0
 template<class T, int len>
 blitz::TinyVector<T, len> vector_to_tiny(std::vector<T> const &vec)
 {
@@ -356,38 +368,18 @@ blitz::TinyVector<T, len> vector_to_tiny(std::vector<T> const &vec)
     }
     return ret;
 }
-// ------------------------------------------------
-/** Reshape an array.  As long as src and dest have same total number
-of elements.  Assumes a dense array on both sides. */
-template<class T, int src_ndim, int dest_ndim>
-extern blitz::Array<T, dest_ndim> reshape(
-    blitz::Array<T, src_ndim> &src,
-    std::vector<int> const &dest_shape)
-{
-    return reshape(src, dest_shape,
-        vector_to_tiny<int, dest_ndim>(dest_shape));
-}
-
-/** Reshape an array.  As long as src and dest have same total number
-of elements.  Assumes a dense array on both sides. */
-template<class T, int src_ndim, int dest_ndim>
-extern blitz::Array<T, dest_ndim> reshape(
-    blitz::Array<T, src_ndim> const &src,
-    std::vector<int> const &dest_shape)
-{
-    return reshape(src, dest_shape,
-        vector_to_tiny<int, dest_ndim>(dest_shape));
-}
+#endif
 // ------------------------------------------------
 template<class T, int len>
 std::vector<T> tiny_to_vector(blitz::TinyVector<T, len> const &tiny)
 {
     std::vector<T> ret;
     ret.reserve(len);
-    for (int i=0; i<len; ++i) ret[i] = tiny[i];
+    for (int i=0; i<len; ++i) ret.push_back(tiny[i]);
     return ret;
 }
 // ----------------------------------------------------------------
+#if 0
 /** Casts from one Blitz array type to another */
 template<class SrcT, class DestT, int RANK>
 blitz::Array<DestT, RANK> blitz_cast(blitz::Array<SrcT, RANK> const &src)
