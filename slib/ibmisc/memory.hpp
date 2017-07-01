@@ -29,13 +29,22 @@ namespace ibmisc {
 /** Create a unique_ptr from a function that returns a value.  Eg:
     auto xptr(new_unique_ptr(make_x(...)));
 */
+
+#if 0
 template<class ValT>
 std::unique_ptr<ValT> new_unique_ptr(ValT &&val)
     { return std::unique_ptr<ValT>(new ValT(std::move(val))); }
 
+template<class ValT, typename... Args>
+std::unique_ptr<ValT> new_unique_ptr(Args... args)
+    { return std::unique_ptr<ValT>(new ValT(args...)); }
+#endif
+
+
 template<class ValT>
-std::unique_ptr<ValT> new_unique_ptr()
-    { return std::unique_ptr<ValT>(new ValT); }
+std::unique_ptr<ValT> new_unique_ptr(ValT &&val)
+    { return std::unique_ptr<ValT>(new ValT(std::move(val))); }
+
 
 template<class ValT>
 std::shared_ptr<ValT> new_shared_ptr()

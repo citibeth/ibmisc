@@ -13,7 +13,7 @@ EnvSearchPath::EnvSearchPath(std::string const &_env_var)
         boost::is_any_of(":;"));
 }
 
-std::string EnvSearchPath::locate(std::string const &file_name)
+std::string EnvSearchPath::locate(std::string const &file_name) const
 {
     for (auto &dir : path) {
         auto fname(boost::filesystem::path(dir) / file_name);

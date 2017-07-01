@@ -2,8 +2,14 @@
 
 namespace ibmisc {
 
+
+struct FileLocator {
+    virtual std::string locate(std::string const &file_name) const = 0;
+    ~FileLocator() {}
+};
+
 /** Locate existing files in a path given by an environnment variable. */
-class EnvSearchPath {
+class EnvSearchPath : public FileLocator {
 
     std::string env_var;
     std::vector<std::string> path;
@@ -11,7 +17,7 @@ class EnvSearchPath {
 public:
     EnvSearchPath(std::string const &_env_var);
 
-    std::string locate(std::string const &file_name);
+    std::string locate(std::string const &file_name) const;
 };
 
 }

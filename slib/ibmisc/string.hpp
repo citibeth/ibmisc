@@ -18,6 +18,7 @@
 
 #include <algorithm>
 #include <string>
+#include <vector>
 #include <cstdarg>
 
 namespace ibmisc {
@@ -53,6 +54,5 @@ inline std::string f_to_cpp(char *fstr, size_t len)
     // Copy to a C++ string
     return std::string (fstr, c+1-fstr);
 }
-
 
 }

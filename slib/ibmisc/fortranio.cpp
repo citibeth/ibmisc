@@ -22,7 +22,6 @@ void read::operator>>(EndR const &endr)
         if (total != len0) (*ibmisc_error)(-1,
             "Trying to read record of size %ld with pattern of size %ld",
             (long)len0, (long)total);
-
         // Read the bodies
         for (auto &spec : specs) {
             spec->read(*infile);

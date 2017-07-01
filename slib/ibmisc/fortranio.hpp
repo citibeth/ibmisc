@@ -41,18 +41,18 @@ Example:
     fortran::read(fin) >> str1 >> vals >> str0 >> fortran::endr;
 */
 
-struct BufSpecI {
+struct BufSpec {
     size_t const len;    // Length to read, in bytes
 
-    BufSpecI(size_t const _len) : len(_len) {}
-    virtual ~BufSpecI() {}
+    BufSpec(size_t const _len) : len(_len) {}
+    virtual ~BufSpec() {}
     virtual void read(std::istream &infile) = 0;
 };
 
-struct BufSpec : public BufSpecI {
+struct SimpleBufSpec : public BufSpec {
     char * const buf;
 
-    BufSpec(char *_buf, size_t _len) : BufSpecI(_len), buf(_buf) {}
+    SimpleBufSpec(char *_buf, size_t _len) : BufSpec(_len), buf(_buf) {}
     void read(std::istream &infile)
     {
         infile.read(buf, len);
@@ -65,13 +65,14 @@ extern EndR endr;
 
 /** Wrap double arrays in this when we want to read into a float. */
 template<class SrcT, class DestT, int RANK>
-class blitz_cast : public BufSpecI
+class BlitzCast : public BufSpec
 {
-    blitz::Array<double, RANK> dest;
+    blitz::Array<DestT, RANK> dest;
 
 public:
-    blitz_cast(blitz::Array<DestT, RANK> &dest) :
-        BufSpecI(dest.size() * sizeof(SrcT))
+    BlitzCast(blitz::Array<DestT, RANK> &_dest) :
+        BufSpec(_dest.size() * sizeof(SrcT)),
+        dest(_dest)
     {
         if (!dest.isStorageContiguous()) (*ibmisc_error)(-1,
             "Storage must be contiguous");
@@ -79,8 +80,7 @@ public:
 
     void read(std::istream &infile)
     {
-        blitz::Array<float, 1> src(dest.size());
-
+        blitz::Array<SrcT, 1> src(dest.size());
         infile.read((char *)src.data(), len);
 
         auto srci(src.begin());
@@ -91,51 +91,57 @@ public:
     }
 };
 
+template<class SrcT, class DestT, int RANK>
+std::unique_ptr<BufSpec> blitz_cast(blitz::Array<DestT, RANK> &dest)
+    { return std::unique_ptr<BufSpec>(new BlitzCast<SrcT,DestT,RANK>(dest)); }
+
+// ---------------------------------------------------------------
 class read {
     std::istream *infile;
     std::vector<std::unique_ptr<BufSpec>> specs;
 
-    template<class BufSpecT>
-    read &add(BufSpecT &&spec)
+    read &add_simple(char *buf, size_t len)
     {
-        specs.push_back(std::unique_ptr<BufSpec>((BufSpec *)new BufSpecT(std::move(spec))));
+        specs.push_back(std::unique_ptr<BufSpec>(new SimpleBufSpec(buf, len)));
         return *this;
     }
+
 
 public:
     read(std::istream &_infile) : infile(&_infile) {}
 
-    template<class TypeT>
-    read &operator>>(TypeT val) {};
-
-
+    read &operator>>(std::unique_ptr<BufSpec> &&specp)
+    {
+        specs.push_back(std::move(specp));
+        return *this;
+    }
 
     template<class TypeT, int RANK>
     read &operator>>(blitz::Array<TypeT,RANK> &arr)
     {
-        return this->add(BufSpec((char *)arr.data(), sizeof(TypeT) * arr.size()));
+        return add_simple((char *)arr.data(), sizeof(TypeT) * arr.size());
     }
 
 
     template<class TypeT, size_t SIZE>
     read &operator>>(std::array<TypeT, SIZE> &arr)
     {
-        return this->add(BufSpec((char *)&arr[0], sizeof(TypeT) * arr.size()));
+        return add_simple((char *)&arr[0], sizeof(TypeT) * arr.size());
     }
 
     read &operator>>(float &val)
     {
-        return this->add(BufSpec((char *)&val, sizeof(float)));
+        return add_simple((char *)&val, sizeof(float));
     }
 
     read &operator>>(int &val)
     {
-        return this->add(BufSpec((char *)&val, sizeof(int)));
+        return add_simple((char *)&val, sizeof(int));
     }
 
     read &operator>>(double &val)
     {
-        return this->add(BufSpec((char *)&val, sizeof(double)));
+        return add_simple((char *)&val, sizeof(double));
     }
 
 
