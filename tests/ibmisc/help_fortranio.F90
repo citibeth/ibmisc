@@ -9,7 +9,9 @@ implicit none
 
 contains
 
-subroutine write_sample() bind(C)
+subroutine write_single_sample(fname,convert)
+    character(*), intent(in) :: fname, convert
+    ! -------- Local Vars
     character(len=80) :: str0, str1
     integer :: vals(17)
     integer :: i
@@ -20,7 +22,7 @@ subroutine write_sample() bind(C)
     str0 = 'Hello World'
     str1 = 'Goodbye World'
 
-    open (1, File='sample_fortranio', Form='Unformatted', Status='REPLACE')
+    open (1, File=fname, Form='Unformatted', Status='REPLACE', CONVERT=convert)
     write (1) str0, vals
     write (1) vals, str0
 
@@ -31,6 +33,12 @@ subroutine write_sample() bind(C)
 
     close (1)
 
+end subroutine write_single_sample
+
+subroutine write_sample() bind(C)
+    call write_single_sample('sample_fortranio_be', 'BIG_ENDIAN')
+    call write_single_sample('sample_fortranio_le', 'LITTLE_ENDIAN')
 end subroutine write_sample
+
 
 end module help_fortranio

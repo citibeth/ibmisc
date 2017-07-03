@@ -20,9 +20,7 @@
 
 #include <gtest/gtest.h>
 #include <ibmisc/fortranio.hpp>
-#include <iostream>
 #include <cstdio>
-#include <fstream>
 
 using namespace std;
 using namespace ibmisc;
@@ -50,7 +48,8 @@ protected:
     // Code here will be called immediately after each test (right
     // before the destructor).
     virtual void TearDown() {
-        remove("sample_fortranio");
+//        remove("sample_fortranio_le");
+//        remove("sample_fortranio_be");
     }
 
 //    // The mock bar library shaed by all tests
@@ -58,12 +57,14 @@ protected:
 };
 
 
-TEST_F(FortranIOTest, write_then_read)
+
+
+void test_write_then_read(std::string const &fname, Endian endian)
 {
     std::array<char, 80> str0, str1;
     blitz::Array<int, 1> vals(17);
 
-    std::ifstream fin("sample_fortranio", ios::binary | ios::in);
+    fortran::UnformattedInput fin(fname, endian);
     fortran::read(fin) >> str0 >> vals >> fortran::endr;
 
     EXPECT_EQ("Hello World", fortran::trim(str0));
@@ -82,20 +83,19 @@ TEST_F(FortranIOTest, write_then_read)
     
 }
 
-
-TEST_F(FortranIOTest, cast)
+void test_cast(std::string const &fname, ibmisc::Endian endian)
 {
     std::array<char, 80> str0, str1;
     blitz::Array<long, 1> vals_l(17);
     blitz::Array<int, 1> vals_i(17);
 
     // Read as it was written
-    {std::ifstream fin("sample_fortranio", ios::binary | ios::in);
+    {fortran::UnformattedInput fin(fname, endian);
         fortran::read(fin) >> str0 >> vals_i >> fortran::endr;
     }
 
     // Read, casting it to long
-    {std::ifstream fin("sample_fortranio", ios::binary | ios::in);
+    {fortran::UnformattedInput fin(fname, endian);
         fortran::read(fin) >> str0 >>
             fortran::blitz_cast<int, long, 1>(vals_l) >> fortran::endr;
     }
@@ -104,6 +104,33 @@ TEST_F(FortranIOTest, cast)
         EXPECT_EQ(vals_i(i), vals_l(i));
     }
 
+}
+
+
+
+
+
+
+
+
+TEST_F(FortranIOTest, write_then_read_be)
+{
+    test_write_then_read("sample_fortranio_be", ibmisc::Endian::BIG);
+
+}
+TEST_F(FortranIOTest, write_then_read_le)
+{
+    test_write_then_read("sample_fortranio_le", ibmisc::Endian::LITTLE);
+}
+
+
+TEST_F(FortranIOTest, cast_be)
+{
+    test_cast("sample_fortranio_be", ibmisc::Endian::BIG);
+}
+TEST_F(FortranIOTest, cast_le)
+{
+    test_cast("sample_fortranio_le", ibmisc::Endian::LITTLE);
 }
 
 

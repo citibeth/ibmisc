@@ -9,6 +9,7 @@ set(IBMISC_SOURCE
     ibmisc/ConstantSet.cpp
     ibmisc/ncfile.cpp
     ibmisc/indexing.cpp
+    ibmisc/endian.cpp
     ibmisc/fortranio.cpp)
 
 

@@ -5,12 +5,26 @@
 #include <string>
 #include <vector>
 #include <array>
+#include <iostream>
+#include <fstream>
 
 #include <blitz/array.h>
 #include <ibmisc/error.hpp>
+#include <ibmisc/endian.hpp>
 
 namespace ibmisc {
 namespace fortran {
+
+struct UnformattedInput {
+    std::ifstream fin;
+    Endian const endian;
+
+    UnformattedInput(std::string const &fname, ibmisc::Endian _endian) :
+        fin(fname, std::ios::binary | std::ios::in),
+        endian(_endian) {}
+
+};
+
 
 /** This namespace provides FORTRAN-like functions to read unformatted
     record-based binary Fortran files.  The idea is NOT to be more
@@ -46,17 +60,16 @@ struct BufSpec {
 
     BufSpec(size_t const _len) : len(_len) {}
     virtual ~BufSpec() {}
-    virtual void read(std::istream &infile) = 0;
+    virtual void read(UnformattedInput &infile) = 0;
 };
 
 struct SimpleBufSpec : public BufSpec {
     char * const buf;
+    int item_size;    // 1, 2, 4, 8
+    long nitem;
 
-    SimpleBufSpec(char *_buf, size_t _len) : BufSpec(_len), buf(_buf) {}
-    void read(std::istream &infile)
-    {
-        infile.read(buf, len);
-    }
+    SimpleBufSpec(char *_buf, int item_size, long nitem);
+    void read(UnformattedInput &infile);
 };
 
 class EndR {};
@@ -70,26 +83,39 @@ class BlitzCast : public BufSpec
     blitz::Array<DestT, RANK> dest;
 
 public:
-    BlitzCast(blitz::Array<DestT, RANK> &_dest) :
-        BufSpec(_dest.size() * sizeof(SrcT)),
-        dest(_dest)
-    {
-        if (!dest.isStorageContiguous()) (*ibmisc_error)(-1,
-            "Storage must be contiguous");
-    }
+    BlitzCast(blitz::Array<DestT, RANK> &_dest);
 
-    void read(std::istream &infile)
-    {
-        blitz::Array<SrcT, 1> src(dest.size());
-        infile.read((char *)src.data(), len);
-
-        auto srci(src.begin());
-        auto desti(dest.begin());
-        for (; srci != src.end(); ++srci, ++desti) {
-            *desti = (DestT)*srci;
-        }
-    }
+    void read(UnformattedInput &infile);
 };
+
+
+template<class SrcT, class DestT, int RANK>
+BlitzCast<SrcT, DestT, RANK>::BlitzCast(blitz::Array<DestT, RANK> &_dest) :
+    BufSpec(_dest.size() * sizeof(SrcT)),
+    dest(_dest)
+{
+    if (!dest.isStorageContiguous()) (*ibmisc_error)(-1,
+        "Storage must be contiguous");
+}
+
+
+template<class SrcT, class DestT, int RANK>
+void BlitzCast<SrcT, DestT, RANK>::read(UnformattedInput &infile)
+{
+    blitz::Array<SrcT, 1> src(dest.size());
+    char * const buf = (char *)src.data();
+    infile.fin.read(buf, len);
+
+     // Swap for endian
+    endian_to_native(buf, sizeof(SrcT), dest.size(), infile.endian);
+
+    auto srci(src.begin());
+    auto desti(dest.begin());
+    for (; srci != src.end(); ++srci, ++desti) {
+        *desti = (DestT)*srci;
+    }
+}
+
 
 template<class SrcT, class DestT, int RANK>
 std::unique_ptr<BufSpec> blitz_cast(blitz::Array<DestT, RANK> &dest)
@@ -97,18 +123,18 @@ std::unique_ptr<BufSpec> blitz_cast(blitz::Array<DestT, RANK> &dest)
 
 // ---------------------------------------------------------------
 class read {
-    std::istream *infile;
+    UnformattedInput *infile;
     std::vector<std::unique_ptr<BufSpec>> specs;
 
-    read &add_simple(char *buf, size_t len)
+    read &add_simple(char *buf, int item_size, long nitem)
     {
-        specs.push_back(std::unique_ptr<BufSpec>(new SimpleBufSpec(buf, len)));
+        specs.push_back(std::unique_ptr<BufSpec>(new SimpleBufSpec(buf, item_size, nitem)));
         return *this;
     }
 
 
 public:
-    read(std::istream &_infile) : infile(&_infile) {}
+    read(UnformattedInput &_infile) : infile(&_infile) {}
 
     read &operator>>(std::unique_ptr<BufSpec> &&specp)
     {
@@ -119,29 +145,29 @@ public:
     template<class TypeT, int RANK>
     read &operator>>(blitz::Array<TypeT,RANK> &arr)
     {
-        return add_simple((char *)arr.data(), sizeof(TypeT) * arr.size());
+        return add_simple((char *)arr.data(), sizeof(TypeT), arr.size());
     }
 
 
     template<class TypeT, size_t SIZE>
     read &operator>>(std::array<TypeT, SIZE> &arr)
     {
-        return add_simple((char *)&arr[0], sizeof(TypeT) * arr.size());
+        return add_simple((char *)&arr[0], sizeof(TypeT), arr.size());
     }
 
     read &operator>>(float &val)
     {
-        return add_simple((char *)&val, sizeof(float));
+        return add_simple((char *)&val, sizeof(float), 1);
     }
 
     read &operator>>(int &val)
     {
-        return add_simple((char *)&val, sizeof(int));
+        return add_simple((char *)&val, sizeof(int), 1);
     }
 
     read &operator>>(double &val)
     {
-        return add_simple((char *)&val, sizeof(double));
+        return add_simple((char *)&val, sizeof(double), 1);
     }
 
 
