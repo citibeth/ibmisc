@@ -14,7 +14,9 @@ subroutine write_single_sample(fname,convert)
     ! -------- Local Vars
     character(len=80) :: str0, str1
     integer :: vals(17)
-    integer :: i
+    integer :: i,j
+    integer :: data(4,3)
+
 
     do i=1,17
         vals(i) = i
@@ -30,6 +32,14 @@ subroutine write_single_sample(fname,convert)
         vals(i) = 17-i
     end do
     write (1) str0,vals,str1
+
+    ! [4] Write a 2D array
+    do j=1,3
+    do i=1,4
+        data(i,j) = (i-1) * j;
+    end do
+    end do
+    write (1) str0, data, str1
 
     close (1)
 

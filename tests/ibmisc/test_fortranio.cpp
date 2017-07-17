@@ -48,8 +48,8 @@ protected:
     // Code here will be called immediately after each test (right
     // before the destructor).
     virtual void TearDown() {
-//        remove("sample_fortranio_le");
-//        remove("sample_fortranio_be");
+        remove("sample_fortranio_le");
+        remove("sample_fortranio_be");
     }
 
 //    // The mock bar library shaed by all tests
@@ -106,6 +106,75 @@ void test_cast(std::string const &fname, ibmisc::Endian endian)
 
 }
 
+void test_shape_cast(std::string const &fname, ibmisc::Endian endian)
+{
+    using namespace fortran;
+
+    std::array<char, 80> str0, str1;
+    std::vector<Shape<2>> stdshapes {
+        Shape<2>({"im1", "jm1"}, {1,4}),
+        Shape<2>({"im2", "jm2"}, {4,3})
+    };
+
+    // Don't retrieve shape
+    {fortran::UnformattedInput fin(fname, endian);
+        // Skip 3 records
+        for (int i=0; i<3; ++i)
+            fortran::read(fin) >> fortran::endr;
+
+        // Read record [4] using wildcard
+        blitz::Array<int,2> data;
+        fortran::read(fin)
+            >> str0
+            >> fortran::star<int,2>(data, stdshapes)
+            >> str1
+            >> fortran::endr;
+        EXPECT_EQ(1, data.lbound(0));
+        EXPECT_EQ(4, data.ubound(0));
+        EXPECT_EQ(1, data.lbound(1));
+        EXPECT_EQ(3, data.ubound(1));
+    }
+
+
+
+    // Retrieve shape
+    {fortran::UnformattedInput fin(fname, endian);
+        // Skip 3 records
+        for (int i=0; i<3; ++i)
+            fortran::read(fin) >> fortran::endr;
+
+        // Read record [4] using wildcard
+        blitz::Array<int,2> data;
+        Shape<2> const *data_shape;
+        fortran::read(fin)
+            >> str0
+            >> fortran::star<int,2>(data, data_shape, stdshapes)
+            >> str1
+            >> fortran::endr;
+
+        EXPECT_EQ(1, data.lbound(0));
+        EXPECT_EQ(4, data.ubound(0));
+        EXPECT_EQ(1, data.lbound(1));
+        EXPECT_EQ(3, data.ubound(1));
+        for (int i=1; i<=3; ++i) {
+        for (int j=1; j<=3; ++j) {
+            EXPECT_EQ((i-1)*j, data(i,j));
+        }}
+        EXPECT_EQ("im2", data_shape->sshape[0]);
+        EXPECT_EQ("jm2", data_shape->sshape[1]);
+    }
+
+
+
+
+
+}
+
+
+TEST_F(FortranIOTest, shape_cast_be)
+    { test_shape_cast("sample_fortranio_be", ibmisc::Endian::BIG); }
+TEST_F(FortranIOTest, shape_cast_le)
+    { test_shape_cast("sample_fortranio_le", ibmisc::Endian::LITTLE); }
 
 
 

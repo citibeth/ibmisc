@@ -8,9 +8,10 @@
 #include <iostream>
 #include <fstream>
 
-#include <blitz/array.h>
+#include <ibmisc/blitz.hpp>
 #include <ibmisc/error.hpp>
 #include <ibmisc/endian.hpp>
+#include <ibmisc/memory.hpp>
 
 namespace ibmisc {
 namespace fortran {
@@ -18,10 +19,15 @@ namespace fortran {
 struct UnformattedInput {
     std::ifstream fin;
     Endian const endian;
+    TmpAlloc tmp;
 
     UnformattedInput(std::string const &fname, ibmisc::Endian _endian) :
         fin(fname, std::ios::binary | std::ios::in),
         endian(_endian) {}
+
+    void close() { fin.close(); }
+
+    bool eof() const { return fin.eof(); }
 
 };
 
@@ -56,12 +62,19 @@ Example:
 */
 
 struct BufSpec {
-    size_t const len;    // Length to read, in bytes
+    long nbytes;    // Length to read, in bytes (-1 = wildcard, read all available)
+    bool const wildcard;    // Was this constructed with len<0 (wildcard matching length)?
 
-    BufSpec(size_t const _len) : len(_len) {}
+    BufSpec(size_t const _nbytes) : nbytes(_nbytes), wildcard(nbytes<0) {}
+
     virtual ~BufSpec() {}
+    // Call on wildcards
+    virtual void set_nbytes(long _nbytes)
+        { (*ibmisc_error)(-1, "BufSpec does not support set_nbytes()"); }
     virtual void read(UnformattedInput &infile) = 0;
 };
+class EndR {};
+extern EndR endr;
 
 struct SimpleBufSpec : public BufSpec {
     char * const buf;
@@ -72,109 +85,222 @@ struct SimpleBufSpec : public BufSpec {
     void read(UnformattedInput &infile);
 };
 
-class EndR {};
+/** This class is here to create a bunch of implicit conversions */
+struct BufSpecPtr : public std::unique_ptr<BufSpec>
+{
+    typedef std::unique_ptr<BufSpec> super;
 
-extern EndR endr;
+    BufSpecPtr(BufSpec *spec) : super(spec) {}
 
+    template<class TypeT, int RANK>
+    BufSpecPtr(blitz::Array<TypeT,RANK> &buf);
+
+    template<class TypeT, size_t SIZE>
+    BufSpecPtr(std::array<TypeT, SIZE> &arr)
+        : super(new SimpleBufSpec((char *)&arr[0], sizeof(TypeT), arr.size())) {}
+
+    BufSpecPtr(float &val)
+        : super(new SimpleBufSpec((char *)&val, sizeof(float), 1)) {}
+    BufSpecPtr(int &val)
+        : super(new SimpleBufSpec((char *)&val, sizeof(int), 1)) {}
+    BufSpecPtr(double &val)
+        : super(new SimpleBufSpec((char *)&val, sizeof(double), 1)) {}
+
+};
+// -----------------------------------------------------------------------------
+template<int RANK>
+struct Shape {
+    std::array<std::string, RANK> sshape;
+    std::array<int,RANK> shape;
+
+    Shape(
+        std::array<std::string, RANK> &&_sshape,
+        std::array<int,RANK> &&_shape)
+        : sshape(std::move(_sshape)), shape(std::move(_shape))
+    {}
+
+    long size() const {
+        long ret = 1;
+        for (int i=0; i<RANK; ++i) ret *= shape[i];    
+        return ret;
+    }
+};
+
+// ---------------------------------------------------------------------
+/** Reads 1-D arrays */
+template<class TypeT, int RANK>
+struct ArrayBuf : public BufSpec {
+    blitz::Array<TypeT,RANK> *buf;
+    Shape<RANK> const **buf_shape;
+    blitz::vector<Shape<RANK>> const *stdshapes;        // Possible shapes we might infer from nbytes
+    blitz::GeneralArrayStorage<RANK> const storage;
+
+    /** User-supplied pre-allocated buffer */
+    ArrayBuf(
+        blitz::Array<TypeT,RANK> *_buf)
+    : BufSpec(_buf->size() * sizeof(TypeT)), buf(_buf) {}
+
+    /** Wildcard: will allocate the array */
+    ArrayBuf(
+        blitz::Array<TypeT,RANK> *_buf,
+        Shape<RANK> const **_buf_shape,
+        blitz::vector<Shape<RANK>> const *_stdshapes,
+        blitz::GeneralArrayStorage<RANK> const &_storage = blitz::fortranArray)
+    : BufSpec(-1), buf(_buf), buf_shape(_buf_shape), stdshapes(_stdshapes), storage(_storage)
+    {}
+
+    /** Wildcard: will allocate the array, no user-supplied buffer at all. */
+    ArrayBuf(
+        blitz::vector<Shape<RANK>> const *_stdshapes,
+        blitz::GeneralArrayStorage<RANK> const &_storage = blitz::fortranArray)
+    : BufSpec(-1), buf(0), stdshapes(_stdshapes), storage(_storage)
+    {}
+
+    void set_nbytes(long _nbytes)
+    {
+        nbytes = _nbytes;
+    }
+
+    virtual void read(UnformattedInput &infile)
+    {
+        // Allocate the array, if this is a wildcard reader...
+        if (wildcard) {
+            blitz::TinyVector<int,RANK> shape;    // Dimensions we should allocate
+	        if (RANK == 1) {
+	            shape[0] = nbytes / sizeof(TypeT);
+	        } else {
+	            for (auto sh(stdshapes->begin()); ; ++sh) {
+	                if (sh->size() * sizeof(TypeT) == nbytes) {
+                        for (int i=0; i<RANK; ++i) shape[i] = sh->shape[i];
+                        if (buf_shape) *buf_shape = &*sh;
+	                    break;
+	                }
+	                if (sh == stdshapes->end()) (*ibmisc_error)(-1,
+	                    "Cannot find std shape for nbytes=%ld (sizeof=%ld)", nbytes, sizeof(TypeT));
+	            }
+	        }
+            if (!buf) {
+                buf = infile.tmp.newptr<blitz::Array<TypeT,RANK>>();
+            }
+            buf->reference(blitz::Array<TypeT,RANK>(shape, storage));
+        }
+
+        // Read it!
+        SimpleBufSpec sbuf((char *)buf->data(), sizeof(TypeT), buf->size());
+        sbuf.read(infile);
+    }
+        
+};
+
+/** User-supplied pre-allocated buffer */
+template<class TypeT, int RANK>
+BufSpecPtr::BufSpecPtr(blitz::Array<TypeT,RANK> &buf)
+    : super(new ArrayBuf<TypeT,RANK>(&buf))
+    {}
+
+/** Wildcard: will allocate the array */
+template<class TypeT, int RANK>
+BufSpecPtr star(
+    blitz::Array<TypeT,RANK> &_buf,
+    Shape<RANK> const *&_buf_shape,
+    blitz::vector<Shape<RANK>> const &_stdshapes,
+    blitz::GeneralArrayStorage<RANK> const &_storage = blitz::fortranArray)
+{ return BufSpecPtr(new ArrayBuf<TypeT,RANK>(&_buf, &_buf_shape, &_stdshapes, _storage)); }
+
+template<class TypeT, int RANK>
+BufSpecPtr star(
+    blitz::Array<TypeT,RANK> &_buf,
+    blitz::vector<Shape<RANK>> const &_stdshapes,
+    blitz::GeneralArrayStorage<RANK> const &_storage = blitz::fortranArray)
+{ return BufSpecPtr(new ArrayBuf<TypeT,RANK>(&_buf, NULL, &_stdshapes, _storage)); }
+
+// ============================================================================
+// ---------------------------------------------------------------------
 /** Wrap double arrays in this when we want to read into a float. */
 template<class SrcT, class DestT, int RANK>
 class BlitzCast : public BufSpec
 {
-    blitz::Array<DestT, RANK> dest;
+    TmpAlloc tmp;
+    blitz::Array<DestT, RANK> *dest;
+    std::unique_ptr<ArrayBuf<SrcT,RANK>> subbuf;
+
 
 public:
-    BlitzCast(blitz::Array<DestT, RANK> &_dest);
+    /** Cast into our pre-allocated array */
+    BlitzCast(
+        blitz::Array<DestT,RANK> *_dest)
+    : BufSpec(sizeof(SrcT) * _dest->size()),
+        dest(_dest),
+        subbuf(new ArrayBuf<SrcT,RANK>(tmp.newptr<blitz::Array<SrcT,RANK>>(_dest->shape())))
+    {}
+
+    /** Cast into a wildcard */
+    BlitzCast(
+        blitz::Array<DestT,RANK> *_dest,
+        blitz::vector<Shape<RANK>> const *_stdshapes,
+        blitz::GeneralArrayStorage<RANK> const &_storage = blitz::fortranArray)
+    : BufSpec(-1), dest(_dest),
+        subbuf(new ArrayBuf<SrcT,RANK>(_stdshapes, _storage)) {}
+
+    void set_nbytes(long _nbytes)
+        { subbuf->set_nbytes(_nbytes); }
 
     void read(UnformattedInput &infile);
 };
 
 
 template<class SrcT, class DestT, int RANK>
-BlitzCast<SrcT, DestT, RANK>::BlitzCast(blitz::Array<DestT, RANK> &_dest) :
-    BufSpec(_dest.size() * sizeof(SrcT)),
-    dest(_dest)
-{
-    if (!dest.isStorageContiguous()) (*ibmisc_error)(-1,
-        "Storage must be contiguous");
-}
-
-
-template<class SrcT, class DestT, int RANK>
 void BlitzCast<SrcT, DestT, RANK>::read(UnformattedInput &infile)
 {
-    blitz::Array<SrcT, 1> src(dest.size());
-    char * const buf = (char *)src.data();
-    infile.fin.read(buf, len);
+    subbuf->read(infile);
 
-     // Swap for endian
-    endian_to_native(buf, sizeof(SrcT), dest.size(), infile.endian);
+    if (subbuf->wildcard) {
+        dest->reference(blitz::Array<DestT,RANK>(subbuf->buf->shape(), subbuf->storage));
+    } else {
+        check_dimensions("array", *dest, tiny_to_vector(subbuf->buf->shape()));
+    }
 
-    auto srci(src.begin());
-    auto desti(dest.begin());
-    for (; srci != src.end(); ++srci, ++desti) {
+    // Copy the data over
+    auto srci(subbuf->buf->begin());
+    auto desti(dest->begin());
+    for (; srci != subbuf->buf->end(); ++srci, ++desti) {
         *desti = (DestT)*srci;
     }
 }
 
 
+
+
+/** Cast into our pre-allocated array */
 template<class SrcT, class DestT, int RANK>
-std::unique_ptr<BufSpec> blitz_cast(blitz::Array<DestT, RANK> &dest)
-    { return std::unique_ptr<BufSpec>(new BlitzCast<SrcT,DestT,RANK>(dest)); }
+BufSpecPtr blitz_cast(blitz::Array<DestT,RANK> &_dest)
+    { return BufSpecPtr(new BlitzCast<SrcT,DestT,RANK>(&_dest)); }
+
+/** Cast into a wildcard */
+template<class SrcT, class DestT, int RANK>
+BufSpecPtr blitz_cast(
+    blitz::Array<DestT,RANK> &_dest,
+    blitz::vector<Shape<RANK>> const *_stdshapes,
+    blitz::GeneralArrayStorage<RANK> const &_storage = blitz::fortranArray)
+    { return BufSpecPtr(new BlitzCast<SrcT,DestT,RANK>(&_dest, _stdshapes, _storage)); }
 
 // ---------------------------------------------------------------
 class read {
     UnformattedInput *infile;
     std::vector<std::unique_ptr<BufSpec>> specs;
 
-    read &add_simple(char *buf, int item_size, long nitem)
-    {
-        specs.push_back(std::unique_ptr<BufSpec>(new SimpleBufSpec(buf, item_size, nitem)));
-        return *this;
-    }
-
-
 public:
     read(UnformattedInput &_infile) : infile(&_infile) {}
 
-    read &operator>>(std::unique_ptr<BufSpec> &&specp)
+    read &operator>>(BufSpecPtr &&specp)
     {
         specs.push_back(std::move(specp));
         return *this;
     }
 
-    template<class TypeT, int RANK>
-    read &operator>>(blitz::Array<TypeT,RANK> &arr)
-    {
-        return add_simple((char *)arr.data(), sizeof(TypeT), arr.size());
-    }
 
-
-    template<class TypeT, size_t SIZE>
-    read &operator>>(std::array<TypeT, SIZE> &arr)
-    {
-        return add_simple((char *)&arr[0], sizeof(TypeT), arr.size());
-    }
-
-    read &operator>>(float &val)
-    {
-        return add_simple((char *)&val, sizeof(float), 1);
-    }
-
-    read &operator>>(int &val)
-    {
-        return add_simple((char *)&val, sizeof(int), 1);
-    }
-
-    read &operator>>(double &val)
-    {
-        return add_simple((char *)&val, sizeof(double), 1);
-    }
-
-
-
-    // Do the read!
+    // Do the read! (TODO: Do this with a destructor)
     void operator>>(EndR const &endr);
-
 };
 
 // -------------------------------------------------------
