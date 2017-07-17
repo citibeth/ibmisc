@@ -606,13 +606,26 @@ netCDF::NcVar ncio_blitz(
     bool alloc,
     std::string const &vname,
     std::string const &snc_type,
-    std::vector<netCDF::NcDim> const &dims)
+    std::vector<netCDF::NcDim> const &dims,
+    bool reverse = false)
 {
-    netCDF::NcVar ncvar = get_or_add_var(ncio, vname, snc_type, dims);
+
+    blitz::Array<TypeT, RANK> *valp;
+
+    std::vector<netCDF::NcDim> _dims(dims);
+    if (reverse) {
+        std::reverse(_dims.begin(), _dims.end());
+        auto &_val(ncio.tmp.move(ibmisc::f_to_c(val)));
+        valp = &_val;
+    } else {
+        valp = &val;
+    }
+
+    netCDF::NcVar ncvar = get_or_add_var(ncio, vname, snc_type, _dims);
 
     // const_cast allows us to re-use nc_rw_blitz for read and write
     ncio += std::bind(&nc_rw_blitz<TypeT, RANK>,
-        ncio.nc, ncio.rw, &val, alloc, vname);
+        ncio.nc, ncio.rw, valp, alloc, vname);
 
     return ncvar;
 }
@@ -624,8 +637,9 @@ netCDF::NcVar ncio_blitz(
     blitz::Array<TypeT, RANK> &val,
     bool alloc,
     std::string const &vname,
-    std::vector<netCDF::NcDim> const &dims)
-{ return ncio_blitz(ncio, val, alloc, vname, get_nc_type<TypeT>(), dims); }
+    std::vector<netCDF::NcDim> const &dims,
+    bool reverse = false)
+{ return ncio_blitz(ncio, val, alloc, vname, get_nc_type<TypeT>(), dims, reverse); }
 
 // ----------------------------------------------------
 // =================================================
