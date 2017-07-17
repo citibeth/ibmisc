@@ -25,6 +25,7 @@
 #include <blitz/tinyvec2.h>
 #include <ibmisc/ibmisc.hpp>
 #include <ibmisc/error.hpp>
+#include <ibmisc/memory.hpp>
 
 namespace ibmisc {
 
@@ -34,6 +35,45 @@ namespace ibmisc {
 @{
 */
 
+/** Allocates an array in which all elements have the same value.
+This is done by allocating a single value and setting all strides to 0.
+By default, the array will have base of zero.  If a base of 1 is
+desired, set storage = fortranArray. */
+template<class TypeT, int RANK>
+blitz::Array<TypeT, RANK> const_array(
+    blitz::TinyVector<int,RANK> const &shape,
+    TypeT const &val,
+    blitz::GeneralArrayStorage<RANK> const &storage = blitz::GeneralArrayStorage<RANK>());
+
+template<class TypeT, int RANK>
+blitz::Array<TypeT, RANK> const_array(
+    blitz::TinyVector<int,RANK> const &shape,
+    TypeT const &val,
+    blitz::GeneralArrayStorage<RANK> const &storage)
+{
+    blitz::TinyVector<int,RANK> strides;
+    for (int i=0;i<RANK;++i)
+    {
+        strides[i] = 0;
+    }
+
+    TypeT *data = new TypeT[1];
+    *data = val;
+
+    auto ret(blitz::Array<TypeT,RANK>(data,shape,strides,
+        blitz::deleteDataWhenDone, storage));
+
+    return ret;
+}
+
+/** Test if this array has all strides of 0.  This is useful because
+Array.isStorageContiguous() returns false for such arrays. */
+template<class TypeT, int RANK>
+bool is_const_array(blitz::Array<TypeT, RANK> &arr)
+{
+    for (int i=0; i<RANK; ++i) if (arr.stride(i) != 0) return false;
+    return true;
+}
 // ------------------------------------------------------------------
 #define VECTOR_TO_BLITZ_BODY \
     blitz::TinyVector<int,1> shape(0); \
@@ -89,6 +129,20 @@ std::vector<T> to_vector(std::array<T,len> const &arr)
     }
     return ret;
 }
+
+/** Cast data type (eg: float to double) while converting
+from std::array to std::vector */
+template<class SrcT, class DestT, size_t LEN>
+std::vector<DestT> to_vector_cast(std::array<SrcT,LEN> const &arr)
+{
+    std::vector<DestT> ret;
+    for (size_t i=0; i < LEN; ++i) {
+        ret.push_back(arr[i]);
+    }
+    return ret;
+}
+
+
 // ------------------------------------------------------------------
 template<class TinyT, class ArrayT, int RANK>
 blitz::TinyVector<TinyT, RANK> to_tiny(std::array<ArrayT, RANK> const &arr)
@@ -323,7 +377,7 @@ template<class TypeT, int RANK>
 blitz::Array<TypeT,1> reshape1(blitz::Array<TypeT, RANK> &arr,
     int lbound = 0)
 {
-    if (!arr.isStorageContiguous()) (*ibmisc_error)(-1,
+    if (!(is_const_array(arr) || arr.isStorageContiguous())) (*ibmisc_error)(-1,
         "Array must be contiguous for reshape1().");
 
     // Get the stride we will use
