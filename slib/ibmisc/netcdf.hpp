@@ -598,7 +598,14 @@ blitz::Array<TypeT, RANK> nc_read_blitz(
     return val;
 }
 
-/** Define and write a blitz::Array. */
+/** Define and write a blitz::Array.  This works with row-major or
+    column-major arrays, but not arrays with any other arbitrary
+    dimension ordering.
+@param val The array to read/write
+@param alloc If reading, should the array be allocated before the read?
+@param vname Name of NetCDF variable to write
+@param snc_type Data type to write in NetCDF variable.  See get_nc_type().
+@param dims Dimensions to define NetCDF variable.  See get_or_add_dims(). */
 template<class TypeT, int RANK>
 netCDF::NcVar ncio_blitz(
     NcIO &ncio,
@@ -606,9 +613,25 @@ netCDF::NcVar ncio_blitz(
     bool alloc,
     std::string const &vname,
     std::string const &snc_type,
-    std::vector<netCDF::NcDim> const &dims,
-    bool reverse = false)
+    std::vector<netCDF::NcDim> const &dims);
+
+template<class TypeT, int RANK>
+netCDF::NcVar ncio_blitz(
+    NcIO &ncio,
+    blitz::Array<TypeT, RANK> &val,
+    bool alloc,
+    std::string const &vname,
+    std::string const &snc_type,
+    std::vector<netCDF::NcDim> const &dims)
 {
+    bool reverse;
+    if (is_column_major(val)) {
+        reverse = true;
+    } else if (is_row_major(val)) {
+        reverse = false;
+    } else {
+        (*ibmisc_error)(-1, "Array must be either row-major or column-major");
+    }
 
     blitz::Array<TypeT, RANK> *valp;
 
@@ -637,9 +660,8 @@ netCDF::NcVar ncio_blitz(
     blitz::Array<TypeT, RANK> &val,
     bool alloc,
     std::string const &vname,
-    std::vector<netCDF::NcDim> const &dims,
-    bool reverse = false)
-{ return ncio_blitz(ncio, val, alloc, vname, get_nc_type<TypeT>(), dims, reverse); }
+    std::vector<netCDF::NcDim> const &dims)
+{ return ncio_blitz(ncio, val, alloc, vname, get_nc_type<TypeT>(), dims); }
 
 // ----------------------------------------------------
 // =================================================

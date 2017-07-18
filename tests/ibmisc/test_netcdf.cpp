@@ -113,6 +113,7 @@ TEST_F(NetcdfTest, blitz)
     }}
 
     blitz::Array<double,2> B(A*2);
+    blitz::Array<double,2> B_f(c_to_f(B));
 
     std::vector<std::string> strings = {"s1", "s2"};
 
@@ -121,7 +122,8 @@ TEST_F(NetcdfTest, blitz)
     ibmisc::NcIO ncio(fname, 'w');
     auto dims = ibmisc::get_or_add_dims(ncio, A, {"dim4", "dim5"});
     ibmisc::ncio_blitz(ncio, A, true, "A", "double", dims);
-    ibmisc::ncio_blitz(ncio, B, true, "B", "double", dims);
+    auto dims_f = ibmisc::get_or_add_dims(ncio, B_f, {"dim5", "dim4"});
+    ibmisc::ncio_blitz(ncio, B_f, true, "B", "double", dims_f);
 
     auto info_v = get_or_add_var(ncio, "info", "int64", {});
     get_or_put_att(info_v, ncio.rw, "strings", "", strings);    // Type ignored here

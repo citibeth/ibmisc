@@ -35,6 +35,34 @@ namespace ibmisc {
 @{
 */
 
+template<class TypeT, int RANK>
+bool is_row_major(blitz::Array<TypeT, RANK> &arr);
+
+template<class TypeT, int RANK>
+bool is_row_major(blitz::Array<TypeT, RANK> &arr)
+{
+    const blitz::TinyVector<int, RANK> &ordering(arr.ordering());
+
+    for (int i=0; i<RANK; ++i) {
+        if (ordering[RANK-i-1] != i) return false;
+    }
+    return true;
+}
+
+template<class TypeT, int RANK>
+bool is_column_major(blitz::Array<TypeT, RANK> &arr);
+
+template<class TypeT, int RANK>
+bool is_column_major(blitz::Array<TypeT, RANK> &arr)
+{
+    const blitz::TinyVector<int, RANK> &ordering(arr.ordering());
+    for (int i=0; i<RANK; ++i) {
+        if (ordering[i] != i) return false;
+    }
+    return true;
+}
+
+
 /** Allocates an array in which all elements have the same value.
 This is done by allocating a single value and setting all strides to 0.
 By default, the array will have base of zero.  If a base of 1 is
