@@ -602,10 +602,11 @@ void nc_rw_blitz(
 template<class TypeT, int RANK>
 blitz::Array<TypeT, RANK> nc_read_blitz(
     netCDF::NcGroup *nc,
-    std::string const &vname)
+    std::string const &vname,
+    blitz::GeneralArrayStorage<RANK> const &storage = blitz::GeneralArrayStorage<RANK>())    // In case we need to allocate
 {
     blitz::Array<TypeT, RANK> val;
-    nc_rw_blitz(nc, 'r', &val, true, vname);
+    nc_rw_blitz(nc, 'r', &val, true, vname, storage);
     return val;
 }
 

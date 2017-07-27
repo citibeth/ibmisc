@@ -21,7 +21,7 @@ public:
     // http://cpptruths.blogspot.com/2012/03/rvalue-references-in-constructor-when.html
     struct Meta {
         friend class ArrayBundle;
-    protected:
+
         std::string name;
         blitz::Array<TypeT, RANK> arr;
         blitz::TinyVector<int, RANK> shape;
@@ -87,6 +87,8 @@ public:
         std::array<std::string,RANK> sdims,
         std::initializer_list<std::string> const &vattr);
 
+    ArrayBundle() {}
+
     ArrayBundle(std::vector<Meta> _data);
 
 
@@ -97,6 +99,12 @@ public:
     void add(
         std::string const &name,
         blitz::TinyVector<int, RANK> const &shape,
+        std::array<std::string,RANK> sdims,
+        std::initializer_list<std::string> const &vattr);
+
+    void add(
+        std::string const &name,
+        blitz::Array<TypeT, RANK> &arr,
         std::array<std::string,RANK> sdims,
         std::initializer_list<std::string> const &vattr);
 
@@ -239,7 +247,7 @@ void ArrayBundle<TypeT,RANK>::add(
 {
     data.push_back(def(name, vattr));
     index.insert(data.back().name);
-    return data.back();
+//    return data.back();
 }
 
 template<class TypeT, int RANK>
@@ -251,7 +259,18 @@ void ArrayBundle<TypeT,RANK>::add(
 {
     data.push_back(def(name, shape, std::move(sdims), vattr));
     index.insert(data.back().name);
-    return data.back();
+//    return data.back();
+}
+
+template<class TypeT, int RANK>
+void ArrayBundle<TypeT,RANK>::add(
+    std::string const &name,
+    blitz::Array<TypeT,RANK> &arr,
+    std::array<std::string,RANK> sdims,
+    std::initializer_list<std::string> const &vattr)
+{
+    data.push_back(Meta(name, arr, arr.shape(),
+        std::move(sdims), make_attrs(vattr)));
 }
 
 
@@ -288,7 +307,7 @@ void ArrayBundle<TypeT,RANK>::allocate(
     blitz::GeneralArrayStorage<RANK> const &storage)
 {
     for (auto &meta : data) {
-        if (meta.shape[0] < 0 || !meta.data())
+        if (meta.shape[0] < 0 || !meta.arr.data())
             meta.allocate(_shape, std::move(sdims), check, storage);
     }
 }
