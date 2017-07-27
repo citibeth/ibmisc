@@ -41,7 +41,7 @@ protected:
     virtual ~NetcdfTest()
     {
         for (auto ii(tmpfiles.begin()); ii != tmpfiles.end(); ++ii) {
-//          ::remove(ii->c_str());
+          ::remove(ii->c_str());
         }
     }
 
