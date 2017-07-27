@@ -55,102 +55,142 @@ protected:
 //    MockBar m_bar;
 };
 
-struct ConstructAlloc {
-    ArrayBundle<int,2> bundle;
-    blitz::Array<int,2> a1;
-    blitz::Array<int,2> a2;
 
-    ConstructAlloc() :
-        a1(bundle.add("a1", blitz::shape(2,3), {"two", "three"}, {
-            std::make_tuple("longname", "Aye one"),
-            std::make_tuple("units", "m")
-        }, blitz::fortranArray)),
-        a2(bundle.add("a2", blitz::shape(2,3), {"two", "three"}, {
-            std::make_tuple("longname", "Aye two"),
-            std::make_tuple("units", "m")
-        }, blitz::fortranArray))
-    {}
 
+struct MyClass_Bundle : public ArrayBundle<int,2> {
+    MyClass_Bundle() : ArrayBundle<int,2>({
+        def("a1", blitz::shape(2,3), {"two", "three"}, {
+            "longname", "Aye one",
+            "units", "m"
+        }),
+        def("a2", blitz::shape(2,3), {"two", "three"}, {
+            "longname", "Aye two",
+            "units", "m"
+        }),
+
+    }) {}
+};
+
+struct MyClass {
+    MyClass_Bundle bundle;
+    blitz::Array<int,2> &a1;
+    blitz::Array<int,2> &a2;
+
+    MyClass() :
+        a1(bundle.array("a1")),
+        a2(bundle.array("a2"))
+    {
+        // bundle.allocate(true, blitz::fortranArray);
+    }
 };
 
 
 TEST_F(BundleTest, construct_alloc)
 {
-    ConstructAlloc rec;
+    // Allocate as C (row-major)
+    MyClass rec_c;
+    rec_c.bundle.allocate(true);
+    EXPECT_EQ(0, rec_c.a1.lbound(0));
+    EXPECT_EQ(1, rec_c.a1.ubound(0));
+    EXPECT_EQ(0, rec_c.a1.lbound(1));
+    EXPECT_EQ(2, rec_c.a1.ubound(1));
+    EXPECT_EQ(6, rec_c.a1.size());
+    EXPECT_TRUE(rec_c.a1.stride(0) > rec_c.a1.stride(1));
 
-//    EXPECT_NEQ(rec.a1.data(), rec.a2.data());
-    EXPECT_EQ(1, rec.a1.lbound(0));
-    EXPECT_EQ(2, rec.a1.ubound(0));
-    EXPECT_EQ(1, rec.a1.lbound(1));
-    EXPECT_EQ(3, rec.a1.ubound(1));
-    EXPECT_EQ(6, rec.a1.size());
+    // Allocate as Fortran (column-major)
+    MyClass rec_f;
+    rec_f.bundle.allocate(true, fortranArray);
+    EXPECT_EQ(1, rec_f.a1.lbound(0));
+    EXPECT_EQ(2, rec_f.a1.ubound(0));
+    EXPECT_EQ(1, rec_f.a1.lbound(1));
+    EXPECT_EQ(3, rec_f.a1.ubound(1));
+    EXPECT_EQ(6, rec_f.a1.size());
+    EXPECT_TRUE(rec_f.a1.stride(1) > rec_f.a1.stride(0));
+
+
 
     std::string fname("__bundle_construct_alloc.nc");
     tmpfiles.push_back(fname);
     ::remove(fname.c_str());
 
-    rec.a1 = 11;
-    rec.a2 = 22;
+    rec_f.a1 = 11;
+    rec_f.a2 = 22;
 
+    // Write it out
     {NcIO ncio(fname, 'w');
-        rec.bundle.ncio(ncio, "", "int");
+        rec_f.bundle.ncio(ncio, {}, false, "", "int");
     }
 
-    ConstructAlloc rec2;
-    rec2.a1 = 17;
-    {NcIO ncio(fname, 'r');
-        rec2.bundle.ncio(ncio, "", "int");
+    // Read it back, allocating as we go (as fortranArray)
+    {
+        MyClass rec2;
+        rec2.a1 = 17;
+        {NcIO ncio(fname, 'r');
+            rec2.bundle.ncio(ncio, {}, true, "", "int", fortranArray);
+        }
+        EXPECT_EQ(1, rec2.a1.lbound(0));
+        EXPECT_EQ(2, rec2.a1.ubound(0));
+        EXPECT_EQ(1, rec2.a1.lbound(1));
+        EXPECT_EQ(3, rec2.a1.ubound(1));
+        EXPECT_EQ(6, rec2.a1.size());
+        EXPECT_EQ(11, rec2.a1(1,1));
+        EXPECT_EQ(22, rec2.a2(1,1));
     }
-    EXPECT_EQ(11, rec2.a1(1,1));
-    EXPECT_EQ(22, rec2.a2(1,1));
+
+    // Read it back, allocating as we go (as C array; indices are reversed)
+    {
+        MyClass rec2;
+        rec2.a1 = 17;
+        {NcIO ncio(fname, 'r');
+            rec2.bundle.ncio(ncio, {}, true, "", "int");
+        }
+        EXPECT_EQ(0, rec2.a1.lbound(1));
+        EXPECT_EQ(1, rec2.a1.ubound(1));
+        EXPECT_EQ(0, rec2.a1.lbound(0));
+        EXPECT_EQ(2, rec2.a1.ubound(0));
+        EXPECT_EQ(6, rec2.a1.size());
+        EXPECT_EQ(11, rec2.a1(1,1));
+        EXPECT_EQ(22, rec2.a2(1,1));
+    }
+
 }
 // -----------------------------------------------------------
-struct ConstructMulti {
-    ArrayBundle<int,2> bundle;
-    blitz::Array<int,3> ARR;
+struct MyClass2_Bundle : public ArrayBundle<int,2> {
+    MyClass2_Bundle() : ArrayBundle<int,2>({
+        def("a1", {
+            "longname", "Aye one",
+            "units", "m"
+        }),
+        def("a2", {
+            "longname", "Aye two",
+            "units", "m"
+        }),
 
-    blitz::Array<int,2> a1;
-    blitz::Array<int,2> a2;
-
-    ConstructMulti() :
-        ARR(bundle.add(blitz::shape(2,3), {"two", "three"}, {
-            BundleSpec("a1", {
-                make_tuple("longname", "Aye one"),
-                make_tuple("units", "m")
-            }),
-            BundleSpec("a2", {
-                make_tuple("longname", "Aye two"),
-                make_tuple("units", "m")
-            })
-        })),
-        a1(bundle.at("a1")),
-        a2(bundle.at("a2"))
-    {}
-
+    }) {}
 };
 
-TEST_F(BundleTest, construct_multi)
+
+TEST_F(BundleTest, late_shape)
 {
-    ConstructMulti rec;
+    MyClass2_Bundle bundle;
+    bundle.at("a1").allocate(blitz::shape(2,3), {"two", "three"});
+    bundle.at("a2").allocate(blitz::shape(3,2), {"three", "two"});
 
-//    EXPECT_NEQ(rec.a1.data(), rec.a2.data());
-    EXPECT_EQ(0, rec.a1.lbound(0));
-    EXPECT_EQ(1, rec.a1.ubound(0));
-    EXPECT_EQ(0, rec.a1.lbound(1));
-    EXPECT_EQ(2, rec.a1.ubound(1));
-    EXPECT_EQ(6, rec.a1.size());
+    auto &a1(bundle.array("a1"));
+    EXPECT_EQ(0, a1.lbound(0));
+    EXPECT_EQ(1, a1.ubound(0));
+    EXPECT_EQ(0, a1.lbound(1));
+    EXPECT_EQ(2, a1.ubound(1));
+    EXPECT_EQ(6, a1.size());
 
-    std::string fname("__bundle_construct_multi.nc");
-    tmpfiles.push_back(fname);
-    ::remove(fname.c_str());
+    auto &a2(bundle.array("a2"));
+    EXPECT_EQ(0, a2.lbound(1));
+    EXPECT_EQ(1, a2.ubound(1));
+    EXPECT_EQ(0, a2.lbound(0));
+    EXPECT_EQ(2, a2.ubound(0));
+    EXPECT_EQ(6, a2.size());
 
-    rec.a1 = 11;
-    rec.a2 = 22;
-
-    NcIO ncio(fname, 'w');
-    rec.bundle.ncio(ncio, "", "int");
 }
-
 // -----------------------------------------------------------
 
 

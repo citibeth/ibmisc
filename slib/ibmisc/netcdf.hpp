@@ -25,6 +25,7 @@
 #include <functional>
 #include <tuple>
 #include <memory>
+#include <blitz/array.h>
 #include <ibmisc/ibmisc.hpp>
 #include <ibmisc/blitz.hpp>
 #include <ibmisc/enum.hpp>
@@ -476,7 +477,7 @@ void _check_blitz_strides(blitz::Array<TypeT, RANK> const &val, std::string cons
     for (int k=RANK-1; k >= 0; --k) {
         size_t actual_stride = val.stride(k);
         if (val.stride(k) != expected_stride)
-            (*ibmisc_error)(-1, "blitz::Array dimension %s-%d has unexpected stride %ld (vs %ld), cannot read/write with NetCDF (for now).", vname.c_str(), k, actual_stride, expected_stride);
+            (*ibmisc_error)(-1, "blitz::Array dimension %s-%d has unexpected stride %ld (vs %ld), cannot read/write with NetCDF.", vname.c_str(), k, actual_stride, expected_stride);
         expected_stride *= val.extent(k);
     }
 }
@@ -545,12 +546,14 @@ void nc_rw_blitz(
     char rw,
     blitz::Array<TypeT, RANK> *val,
     bool alloc,
-    std::string const &vname)
+    std::string const &vname,
+    blitz::GeneralArrayStorage<RANK> const &storage)    // In case we need to allocate
 {
     netCDF::NcVar ncvar = nc->getVar(vname);
 
     _check_nc_rank(ncvar, RANK);
 
+    bool reverse = false;
     if (alloc && rw == 'r') {
         blitz::TinyVector<int,RANK> shape;
         // NetCDF4-C++ library does not bounds check (as of 2016-01-15)
@@ -558,13 +561,21 @@ void nc_rw_blitz(
             (*ibmisc_error)(-1,
                 "nc_rw_blitz(): Rank mismatch between blitz::Array (%d) and NetCDF (%d)\n", RANK, ncvar.getDimCount());
         }
+        reverse = (storage.ordering(0) == 0);    // Guess col-major; if it's non-standard, an error will happen later
         for (int k=0; k<RANK; ++k) {
             netCDF::NcDim dim(ncvar.getDim(k));
             size_t size = dim.getSize();
-            shape[k] = size;
+            shape[RANK-1-storage.ordering(k)] = size;
         }
         // val->resize(shape);   // Is this buggy?
-        val->reference(blitz::Array<TypeT,RANK>(shape));
+        val->reference(blitz::Array<TypeT,RANK>(shape, storage));
+    }
+
+
+    blitz::Array<TypeT,RANK> _val;
+    if (reverse) {
+        _val.reference(ibmisc::f_to_c(*val));
+        val = &_val;
     }
 
     _check_blitz_strides(*val, vname);
@@ -613,7 +624,8 @@ netCDF::NcVar ncio_blitz(
     bool alloc,
     std::string const &vname,
     std::string const &snc_type,
-    std::vector<netCDF::NcDim> const &dims);
+    std::vector<netCDF::NcDim> const &dims,
+    blitz::GeneralArrayStorage<RANK> const &storage = blitz::GeneralArrayStorage<RANK>());    // In case we need to allocate
 
 template<class TypeT, int RANK>
 netCDF::NcVar ncio_blitz(
@@ -622,7 +634,8 @@ netCDF::NcVar ncio_blitz(
     bool alloc,
     std::string const &vname,
     std::string const &snc_type,
-    std::vector<netCDF::NcDim> const &dims)
+    std::vector<netCDF::NcDim> const &dims,
+    blitz::GeneralArrayStorage<RANK> const &storage)
 {
     bool reverse;
     if (is_column_major(val)) {
@@ -648,7 +661,7 @@ netCDF::NcVar ncio_blitz(
 
     // const_cast allows us to re-use nc_rw_blitz for read and write
     ncio += std::bind(&nc_rw_blitz<TypeT, RANK>,
-        ncio.nc, ncio.rw, valp, alloc, vname);
+        ncio.nc, ncio.rw, valp, alloc, vname, storage);
 
     return ncvar;
 }
