@@ -161,36 +161,40 @@ struct ArrayBuf : public BufSpec {
         nbytes = _nbytes;
     }
 
-    virtual void read(UnformattedInput &infile)
-    {
-        // Allocate the array, if this is a wildcard reader...
-        if (wildcard) {
-            blitz::TinyVector<int,RANK> shape;    // Dimensions we should allocate
-	        if (RANK == 1) {
-	            shape[0] = nbytes / sizeof(TypeT);
-	        } else {
-	            for (auto sh(stdshapes->begin()); ; ++sh) {
-	                if (sh->size() * sizeof(TypeT) == nbytes) {
-                        for (int i=0; i<RANK; ++i) shape[i] = sh->shape[i];
-                        if (buf_shape) *buf_shape = &*sh;
-	                    break;
-	                }
-	                if (sh == stdshapes->end()) (*ibmisc_error)(-1,
-	                    "Cannot find std shape for nbytes=%ld (sizeof=%ld)", nbytes, sizeof(TypeT));
-	            }
-	        }
-            if (!buf) {
-                buf = infile.tmp.newptr<blitz::Array<TypeT,RANK>>();
-            }
-            buf->reference(blitz::Array<TypeT,RANK>(shape, storage));
-        }
-
-        // Read it!
-        SimpleBufSpec sbuf((char *)buf->data(), sizeof(TypeT), buf->size());
-        sbuf.read(infile);
-    }
-        
+    virtual void read(UnformattedInput &infile);
 };
+
+template<class TypeT, int RANK>
+void ArrayBuf<TypeT,RANK>::read(UnformattedInput &infile)
+{
+    // Allocate the array, if this is a wildcard reader...
+    if (wildcard) {
+        blitz::TinyVector<int,RANK> shape;    // Dimensions we should allocate
+        if (RANK == 1) {
+            shape[0] = nbytes / sizeof(TypeT);
+        } else {
+            for (auto sh(stdshapes->begin()); ; ++sh) {
+                if (sh == stdshapes->end()) (*ibmisc_error)(-1,
+                    "Cannot find std shape for nbytes=%ld (sizeof=%ld)", nbytes, sizeof(TypeT));
+
+                if (sh->size() * sizeof(TypeT) == nbytes) {
+                    for (int i=0; i<RANK; ++i) shape[i] = sh->shape[i];
+                    if (buf_shape) *buf_shape = &*sh;
+                    break;
+                }
+            }
+        }
+        if (!buf) {
+            buf = infile.tmp.newptr<blitz::Array<TypeT,RANK>>();
+        }
+        buf->reference(blitz::Array<TypeT,RANK>(shape, storage));
+    }
+
+    // Read it!
+    SimpleBufSpec sbuf((char *)buf->data(), sizeof(TypeT), buf->size());
+    sbuf.read(infile);
+}
+        
 
 /** User-supplied pre-allocated buffer */
 template<class TypeT, int RANK>

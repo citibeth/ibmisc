@@ -3,6 +3,8 @@
 #include <ibmisc/endian.hpp>
 #include <boost/endian/conversion.hpp>
 #include <ibmisc/endian.hpp>
+#include <iostream>
+#include <fstream>
 
 namespace ibmisc {
 namespace fortran {
@@ -36,6 +38,8 @@ void read::operator>>(EndR const &endr)
     } else {
         boost::endian::little_to_native_inplace(nbytes0);
     }
+    // Some GISS files terminate with a zero-length record.
+    if (nbytes0 == 0) infile->fin.setstate(std::ios::eofbit);
     if (infile->eof()) return;    // We're done, user must check for EOF
     if (infile->fin.fail()) (*ibmisc_error)(-1,
         "Error reading nbytes0\n");
