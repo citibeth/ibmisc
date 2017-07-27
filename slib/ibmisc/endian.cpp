@@ -70,4 +70,32 @@ void endian_to_native(char *buf, int const item_size, long nitem, Endian endian)
 
 }     // namespace
 
+// =================================================================
+namespace boost {
 
+template<>
+ibmisc::Endian lexical_cast<ibmisc::Endian, std::string>(std::string const &token)
+{
+    if (token == "little")
+        return ibmisc::Endian::LITTLE;
+    if (token == "big")
+        return ibmisc::Endian::BIG;
+
+    throw boost::bad_lexical_cast();    
+}
+
+template<>
+std::string lexical_cast<std::string, ibmisc::Endian>(ibmisc::Endian const &endian)
+{
+    switch(endian) {
+        case ibmisc::Endian::LITTLE:
+            return "little";
+        case ibmisc::Endian::BIG:
+            return "big";
+    }
+
+    throw boost::bad_lexical_cast();    
+}
+
+}    // namespace boost
+// =================================================================
