@@ -38,34 +38,20 @@ public:
         : name(_name), arr(_arr), shape(_shape), sdims(std::move(_sdims)), attr(std::move(_attr)) {}
 
     public:
+        /** Sets the shape of a bundle variable, but does not allocate. */
         void set_shape(
             blitz::TinyVector<int, RANK> const &_shape,
             std::array<std::string,RANK> _sdims,
-            bool check = true)
-        {
-            if (check && shape[0] >= 0) (*ibmisc_error)(-1,
-                "ArrayBundle variable %s shape already set", name.c_str());
-            shape = _shape;
-            sdims = std::move(_sdims);
-        }
+            bool check = true);
 
         void allocate(bool check = true,
-            blitz::GeneralArrayStorage<RANK> const &storage = blitz::GeneralArrayStorage<RANK>())
-        {
-            if (check && arr.data()) (*ibmisc_error)(-1,
-                "ArrayBundle variable %s already allocated", name.c_str());
-            arr.reference(blitz::Array<TypeT,RANK>(shape, storage));
-        }
+            blitz::GeneralArrayStorage<RANK> const &storage = blitz::GeneralArrayStorage<RANK>());
 
         void allocate(
             blitz::TinyVector<int, RANK> const &_shape,
             std::array<std::string,RANK> _sdims,
             bool check = true,
-            blitz::GeneralArrayStorage<RANK> const &storage = blitz::GeneralArrayStorage<RANK>())
-        {
-            set_shape(_shape, std::move(_sdims), check);
-            allocate(check, storage);
-        }
+            blitz::GeneralArrayStorage<RANK> const &storage = blitz::GeneralArrayStorage<RANK>());
     };    // struct Meta
     // -------------------------------------------------------------------
 
@@ -88,70 +74,31 @@ public:
 private:
 
     static std::vector<std::tuple<std::string, std::string>> make_attrs(
-        std::initializer_list<std::string> const &vattr)
-    {
-        std::vector<std::tuple<std::string, std::string>> ret;
-        for (auto ii = vattr.begin(); ii != vattr.end(); ) {
-            std::string const &key(*ii++);
-            if (ii == vattr.end()) (*ibmisc_error)(-1,
-                "Odd number of strings in (key,value) attr list");
-            std::string const &value(*ii++);
+        std::initializer_list<std::string> const &vattr);
 
-            ret.push_back(std::make_tuple(key, value));
-        }
-        return ret;
-    }
 public:
     static Meta def(
         std::string const &name,
-        std::initializer_list<std::string> const &vattr)
-    {
-        blitz::TinyVector<int,RANK> shape;
-        std::array<std::string,RANK> sdims;
-        for (int i=0; i<RANK; ++i) shape[i] = -1;
-        return Meta(name, blitz::Array<TypeT,RANK>(), shape,
-            std::move(sdims), make_attrs(vattr));
-    }
+        std::initializer_list<std::string> const &vattr);
 
     static Meta def(
         std::string const &name,
         blitz::TinyVector<int, RANK> const &shape,
         std::array<std::string,RANK> sdims,
-        std::initializer_list<std::string> const &vattr)
-    {
-        return Meta(name, blitz::Array<TypeT,RANK>(), shape,
-            std::move(sdims), make_attrs(vattr));
-    }
+        std::initializer_list<std::string> const &vattr);
 
-    ArrayBundle(std::vector<Meta> _data) : data(std::move(_data))
-    {
-        for (Meta &meta : data) {
-            index.insert(meta.name);
-        }
-    }
+    ArrayBundle(std::vector<Meta> _data);
 
 
-
-
-    Meta &add(
+    void add(
         std::string const &name,
-        std::initializer_list<std::string> const &vattr)
-    {
-        data.push_back(def(name, vattr));
-        index.insert(data.back().name);
-        return data.back();
-    }
+        std::initializer_list<std::string> const &vattr);
 
-    Meta &add(
+    void add(
         std::string const &name,
         blitz::TinyVector<int, RANK> const &shape,
         std::array<std::string,RANK> sdims,
-        std::initializer_list<std::string> const &vattr)
-    {
-        data.push_back(def(name, shape, std::move(sdims), vattr));
-        index.insert(data.back().name);
-        return data.back();
-    }
+        std::initializer_list<std::string> const &vattr);
 
 
     // ------------------------------------------------------------------
@@ -160,34 +107,16 @@ public:
     void set_shape(
         blitz::TinyVector<int, RANK> const &shape,
         std::array<std::string,RANK> sdims,
-        bool check = true)
-    {
-        for (auto &meta : data) {
-            if (meta.shape[0] < 0)
-                meta.set_shape(shape, std::move(sdims), check);
-        }
-    }
+        bool check = true);
 
     void allocate(bool check = true,
-        blitz::GeneralArrayStorage<RANK> const &storage = blitz::GeneralArrayStorage<RANK>())
-    {
-        for (auto &meta : data) {
-            if (!meta.arr.data())
-                meta.allocate(check, storage);
-        }
-    }
+        blitz::GeneralArrayStorage<RANK> const &storage = blitz::GeneralArrayStorage<RANK>());
 
     void allocate(
         blitz::TinyVector<int, RANK> const &_shape,
         std::array<std::string,RANK> sdims,
         bool check = true,
-        blitz::GeneralArrayStorage<RANK> const &storage = blitz::GeneralArrayStorage<RANK>())
-    {
-        for (auto &meta : data) {
-            if (meta.shape[0] < 0 || !meta.data())
-                meta.allocate(_shape, std::move(sdims), check, storage);
-        }
-    }
+        blitz::GeneralArrayStorage<RANK> const &storage = blitz::GeneralArrayStorage<RANK>());
 
     // ------------------------------------------------------------------
     // Allocate Some Variables in a Bundle
@@ -196,38 +125,19 @@ public:
         std::vector<std::string> const &vnames,
         blitz::TinyVector<int, RANK> const &shape,
         std::array<std::string,RANK> sdims,
-        bool check = true)
-    {
-        for (auto &vname : vnames) {
-            auto &meta(data[index.at(vname)]);
-            meta.set_shape(shape, std::move(sdims), check);
-        }
-    }
+        bool check = true);
 
     void allocate(
         std::vector<std::string> const &vnames,
         bool check = true,
-        blitz::GeneralArrayStorage<RANK> const &storage = blitz::GeneralArrayStorage<RANK>())
-    {
-        for (auto &vname : vnames) {
-            auto &meta(data[index.at(vname)]);
-            meta.allocate(check, storage);
-        }
-    }
+        blitz::GeneralArrayStorage<RANK> const &storage = blitz::GeneralArrayStorage<RANK>());
 
     void allocate(
         std::vector<std::string> const &vnames,
         blitz::TinyVector<int, RANK> const &_shape,
         std::array<std::string,RANK> sdims,
         bool check = true,
-        blitz::GeneralArrayStorage<RANK> const &storage = blitz::GeneralArrayStorage<RANK>())
-    {
-        for (auto &vname : vnames) {
-            auto &meta(data[index.at(vname)]);
-            meta.allocate(_shape, std::move(sdims), check, storage);
-        }
-    }
-
+        blitz::GeneralArrayStorage<RANK> const &storage = blitz::GeneralArrayStorage<RANK>());
 
     void ncio(
         NcIO &ncio,
@@ -239,8 +149,191 @@ public:
 
 };
 // -----------------------------------------------------------------
+template<class TypeT, int RANK>
+void ArrayBundle<TypeT,RANK>::Meta::set_shape(
+    blitz::TinyVector<int, RANK> const &_shape,
+    std::array<std::string,RANK> _sdims,
+    bool check)
+{
+    if (check && shape[0] >= 0) (*ibmisc_error)(-1,
+        "ArrayBundle variable %s shape already set", name.c_str());
+    shape = _shape;
+    sdims = std::move(_sdims);
+}
 
 
+template<class TypeT, int RANK>
+void ArrayBundle<TypeT,RANK>::Meta::allocate(bool check,
+    blitz::GeneralArrayStorage<RANK> const &storage)
+{
+    if (check && arr.data()) (*ibmisc_error)(-1,
+        "ArrayBundle variable %s already allocated", name.c_str());
+    arr.reference(blitz::Array<TypeT,RANK>(shape, storage));
+}
+
+template<class TypeT, int RANK>
+void ArrayBundle<TypeT,RANK>::Meta::allocate(
+    blitz::TinyVector<int, RANK> const &_shape,
+    std::array<std::string,RANK> _sdims,
+    bool check,
+    blitz::GeneralArrayStorage<RANK> const &storage)
+{
+    set_shape(_shape, std::move(_sdims), check);
+    allocate(check, storage);
+}
+// --------------------------------------------------------------------
+template<class TypeT, int RANK>
+std::vector<std::tuple<std::string, std::string>> ArrayBundle<TypeT,RANK>::make_attrs(
+    std::initializer_list<std::string> const &vattr)
+{
+    std::vector<std::tuple<std::string, std::string>> ret;
+    for (auto ii = vattr.begin(); ii != vattr.end(); ) {
+        std::string const &key(*ii++);
+        if (ii == vattr.end()) (*ibmisc_error)(-1,
+            "Odd number of strings in (key,value) attr list");
+        std::string const &value(*ii++);
+
+        ret.push_back(std::make_tuple(key, value));
+    }
+    return ret;
+}
+
+template<class TypeT, int RANK>
+typename ArrayBundle<TypeT,RANK>::Meta ArrayBundle<TypeT,RANK>::def(
+    std::string const &name,
+    std::initializer_list<std::string> const &vattr)
+{
+    blitz::TinyVector<int,RANK> shape;
+    std::array<std::string,RANK> sdims;
+    for (int i=0; i<RANK; ++i) shape[i] = -1;
+    return Meta(name, blitz::Array<TypeT,RANK>(), shape,
+        std::move(sdims), make_attrs(vattr));
+}
+
+template<class TypeT, int RANK>
+typename ArrayBundle<TypeT,RANK>::Meta ArrayBundle<TypeT,RANK>::def(
+    std::string const &name,
+    blitz::TinyVector<int, RANK> const &shape,
+    std::array<std::string,RANK> sdims,
+    std::initializer_list<std::string> const &vattr)
+{
+    return Meta(name, blitz::Array<TypeT,RANK>(), shape,
+        std::move(sdims), make_attrs(vattr));
+}
+
+template<class TypeT, int RANK>
+ArrayBundle<TypeT,RANK>::ArrayBundle(std::vector<Meta> _data) : data(std::move(_data))
+{
+    for (Meta &meta : data) {
+        index.insert(meta.name);
+    }
+}
+
+
+
+
+template<class TypeT, int RANK>
+void ArrayBundle<TypeT,RANK>::add(
+    std::string const &name,
+    std::initializer_list<std::string> const &vattr)
+{
+    data.push_back(def(name, vattr));
+    index.insert(data.back().name);
+    return data.back();
+}
+
+template<class TypeT, int RANK>
+void ArrayBundle<TypeT,RANK>::add(
+    std::string const &name,
+    blitz::TinyVector<int, RANK> const &shape,
+    std::array<std::string,RANK> sdims,
+    std::initializer_list<std::string> const &vattr)
+{
+    data.push_back(def(name, shape, std::move(sdims), vattr));
+    index.insert(data.back().name);
+    return data.back();
+}
+
+
+// ------------------------------------------------------------------
+// Allocate All Variables in a Bundle
+
+template<class TypeT, int RANK>
+void ArrayBundle<TypeT,RANK>::set_shape(
+    blitz::TinyVector<int, RANK> const &shape,
+    std::array<std::string,RANK> sdims,
+    bool check)
+{
+    for (auto &meta : data) {
+        if (meta.shape[0] < 0)
+            meta.set_shape(shape, std::move(sdims), check);
+    }
+}
+
+template<class TypeT, int RANK>
+void ArrayBundle<TypeT,RANK>::allocate(bool check,
+    blitz::GeneralArrayStorage<RANK> const &storage)
+{
+    for (auto &meta : data) {
+        if (!meta.arr.data())
+            meta.allocate(check, storage);
+    }
+}
+
+template<class TypeT, int RANK>
+void ArrayBundle<TypeT,RANK>::allocate(
+    blitz::TinyVector<int, RANK> const &_shape,
+    std::array<std::string,RANK> sdims,
+    bool check,
+    blitz::GeneralArrayStorage<RANK> const &storage)
+{
+    for (auto &meta : data) {
+        if (meta.shape[0] < 0 || !meta.data())
+            meta.allocate(_shape, std::move(sdims), check, storage);
+    }
+}
+
+// ------------------------------------------------------------------
+// Allocate Some Variables in a Bundle
+
+template<class TypeT, int RANK>
+void ArrayBundle<TypeT,RANK>::set_shape(
+    std::vector<std::string> const &vnames,
+    blitz::TinyVector<int, RANK> const &shape,
+    std::array<std::string,RANK> sdims,
+    bool check)
+{
+    for (auto &vname : vnames) {
+        auto &meta(data[index.at(vname)]);
+        meta.set_shape(shape, std::move(sdims), check);
+    }
+}
+
+template<class TypeT, int RANK>
+void ArrayBundle<TypeT,RANK>::allocate(
+    std::vector<std::string> const &vnames,
+    bool check,
+    blitz::GeneralArrayStorage<RANK> const &storage)
+{
+    for (auto &vname : vnames) {
+        auto &meta(data[index.at(vname)]);
+        meta.allocate(check, storage);
+    }
+}
+
+template<class TypeT, int RANK>
+void ArrayBundle<TypeT,RANK>::allocate(
+    std::vector<std::string> const &vnames,
+    blitz::TinyVector<int, RANK> const &_shape,
+    std::array<std::string,RANK> sdims,
+    bool check,
+    blitz::GeneralArrayStorage<RANK> const &storage)
+{
+    for (auto &vname : vnames) {
+        auto &meta(data[index.at(vname)]);
+        meta.allocate(_shape, std::move(sdims), check, storage);
+    }
+}
 // --------------------------------------------------------------------
 
 template<class TypeT, int RANK>
