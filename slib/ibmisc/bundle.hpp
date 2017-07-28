@@ -285,7 +285,7 @@ void ArrayBundle<TypeT,RANK>::set_shape(
 {
     for (auto &meta : data) {
         if (meta.shape[0] < 0)
-            meta.set_shape(shape, std::move(sdims), check);
+            meta.set_shape(shape, sdims, check);
     }
 }
 
@@ -308,7 +308,7 @@ void ArrayBundle<TypeT,RANK>::allocate(
 {
     for (auto &meta : data) {
         if (meta.shape[0] < 0 || !meta.arr.data())
-            meta.allocate(_shape, std::move(sdims), check, storage);
+            meta.allocate(_shape, sdims, check, storage);
     }
 }
 
@@ -324,7 +324,7 @@ void ArrayBundle<TypeT,RANK>::set_shape(
 {
     for (auto &vname : vnames) {
         auto &meta(data[index.at(vname)]);
-        meta.set_shape(shape, std::move(sdims), check);
+        meta.set_shape(shape, sdims, check);
     }
 }
 
@@ -350,7 +350,7 @@ void ArrayBundle<TypeT,RANK>::allocate(
 {
     for (auto &vname : vnames) {
         auto &meta(data[index.at(vname)]);
-        meta.allocate(_shape, std::move(sdims), check, storage);
+        meta.allocate(_shape, sdims, check, storage);
     }
 }
 // --------------------------------------------------------------------
@@ -375,6 +375,7 @@ void ArrayBundle<TypeT,RANK>::ncio(
     } else {
         myvars = &vars;
     }
+
 
     for (auto &var : *myvars) {
         int i=index.at(var);
