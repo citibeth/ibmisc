@@ -253,11 +253,11 @@ void TupleList<IndexT,ValT,RANK>::add(std::array<index_type,rank> const &index, 
 
 template<class ArrayT>
 extern Eigen::SparseMatrix<typename ArrayT::val_type,0,typename ArrayT::index_type>
-    to_eigen(ArrayT const &tuples);
+    to_eigen_sparsematrix(ArrayT const &tuples);
 
 template<class ArrayT>
 Eigen::SparseMatrix<typename ArrayT::val_type,0,typename ArrayT::index_type>
-    to_eigen(ArrayT const &tuples)
+    to_eigen_sparsematrix(ArrayT const &tuples)
 {
     Eigen::SparseMatrix<typename ArrayT::val_type,0,typename ArrayT::index_type> M(tuples.base().shape(0), tuples.base().shape(1));
     M.setFromTriplets(tuples.base().begin(), tuples.base().end());
@@ -386,6 +386,45 @@ blitz::Array<_Scalar,1> sum(
 }
 
 
+
+std::array<blitz::Array<_Scalar,1>,2> sums(
+    Eigen::SparseMatrix<ARGS> const &M, char invert='+');
+
+/** Sum the rows or columns of an Eigen SparseMatrix.
+@param dimi 0: sum rows, 1: sum columns */
+template<class _Scalar, int _Options, class _StorageIndex>
+std::array<blitz::Array<_Scalar,1>,2> sums(
+    Eigen::SparseMatrix<ARGS> const &M, char invert='+')
+{
+    // Get our weight vector (in dense coordinate space)
+    std::array<blitz::Array<_Scalar,1>> rets;
+    rets[0].reference(blitz::Array<_Scalar,1>(M.rows()));
+    rets[1].reference(blitz::Array<_Scalar,1>(M.cols()));
+
+    rets[0] = 0;
+    rets[1] = 0;
+
+    // See here for note on iterating through Eigen::SparseMatrix
+    // http://eigen.tuxfamily.org/bz/show_bug.cgi?id=1104
+    for (int k=0; k<M.outerSize(); ++k) {
+    for (typename Eigen::SparseMatrix<ARGS>::InnerIterator ii(M,k); ii; ++ii) {
+        rets[0](ii.row()) += ii.value();
+        rets[1](ii.col()) += ii.value();
+    }}
+
+    if (invert == '-') {
+        for (int j=0; j<2; ++j) {
+        for (int i=0; i<rets[j].extent(0); ++i) {
+            rets[j](i) = 1./rets[j](i);
+        }}
+    }
+
+    return rets;
+}
+
+
+
+
 template<class _Scalar, int _Options, class _StorageIndex>
 Eigen::SparseMatrix<ARGS> sum_to_diagonal(
     Eigen::SparseMatrix<ARGS> const &M, int dimi, char invert='+');
@@ -446,33 +485,54 @@ public:
         are added are NOT transposed.
     */
     MakeDenseEigen(
+        std::vector<SparsifyTransform> const &sparsify_transform,
+        std::array<SparseSetT *,2> const &_dims,
+        char transpose = '.');    // '.' or 'T
+
+    MakeDenseEigen(
         std::function<void (AccumT &)> const &fn,
-        SparsifyTransform sparsify_transform,
+        std::vector<SparsifyTransform> const &sparsify_transform,
         std::array<SparseSetT *,2> const &_dims,
         char transpose = '.')    // '.' or 'T
-    : dims(_dims),
-        permute((transpose == 'T') ? ibmisc::make_array(1,0) : ibmisc::make_array(0,1)),
-        accum(
-        accum::sparsify(sparsify_transform,
-            accum::in_index_type<typename SparseSetT::sparse_type>(),
-            dims,
-        accum::permute(accum::in_rank<2>(), permute,
-        accum::ref(M))))
+    : MakeDenseEigen(sparsify_transform, _dims, transpose)
     {
         fn(accum);
     }
 
-    EigenSparseMatrixT to_eigen()
-    {
-        Eigen::SparseMatrix<typename AccumT::val_type,0,typename AccumT::index_type> M(
-            accum.dim(permute[0]).extent(),
-            accum.dim(permute[1]).extent());
-
-        // This segfaults if indices are out of bounds
-        M.setFromTriplets(accum.base().begin(), accum.base().end());
-        return M;
-    }
+    EigenSparseMatrixT to_eigen();
 };
+
+
+template<class SparseIndexT, class _Scalar, int _Options, class _StorageIndex>
+MakeDenseEigen<SparseIndexT,_Scalar,_Options,_StorageIndex>::MakeDenseEigen(
+    std::function<void (AccumT &)> const &fn,
+    std::vector<SparsifyTransform> const &sparsify_transform,
+    std::array<SparseSetT *,2> const &_dims,
+    char transpose)    // '.' or 'T
+: dims(_dims),
+    permute((transpose == 'T') ? ibmisc::make_array(1,0) : ibmisc::make_array(0,1)),
+    accum(
+    accum::sparsify(sparsify_transform,
+        accum::in_index_type<typename SparseSetT::sparse_type>(),
+        dims,
+    accum::permute(accum::in_rank<2>(), permute,
+    accum::ref(M))))
+{}
+
+template<class SparseIndexT, class _Scalar, int _Options, class _StorageIndex>
+EigenSparseMatrixT MakeDenseEigen<SparseIndexT,_Scalar,_Options,_StorageIndex>::to_eigen()
+{
+    Eigen::SparseMatrix<typename AccumT::val_type,0,typename AccumT::index_type> M(
+        accum.dim(permute[0]).extent(),
+        accum.dim(permute[1]).extent());
+
+    // This segfaults if indices are out of bounds
+    M.setFromTriplets(accum.base().begin(), accum.base().end());
+    return M;
+}
+
+
+
 
 // ------------------------------------------
 
@@ -589,6 +649,51 @@ blitz::Array<val_type,1> to_blitz(
        M_tmp.data(),
        blitz::shape(M_tmp.cols()),
        blitz::neverDeleteData);
+}
+
+// ==============================================================
+template<class Scalar>
+Eigen::Map<Eigen::Matrix<Scalar,Eigen::Dynamic,Eigen::Dynamic>>
+    map_eigen_matrix(blitz::Array<Scalar,2> &A_b);
+
+/** View 2-D blitz::Array as an Eigen::Matrix */
+template<class Scalar>
+Eigen::Map<Eigen::Matrix<Scalar,Eigen::Dynamic,Eigen::Dynamic>>
+    map_eigen_matrix(blitz::Array<Scalar,2> &A_b)
+{
+    if (is_row_major(A_b)) {
+        return Eigen::Map<Eigen::Matrix<Scalar,Eigen::Dynamic,Eigen::Dynamic>>(
+            A_b.data(), A_b.extent(1), A_b.extent(0));
+    } else if (is_column_major(A_b)) {
+        return Eigen::Map<Eigen::Matrix<Scalar,Eigen::Dynamic,Eigen::Dynamic>>(
+            A_b.data(), A_b.extent(0), A_b.extent(1));
+    } else (*ibmisc_error)(-1, "Matrix must be row-major or column-major");
+}
+
+/** View 1-D blitz::Array as an Eigen column vector */
+template<class Scalar>
+Eigen::Map<Eigen::Matrix<Scalar,Eigen::Dynamic,1>>
+    map_eigen_colvector(blitz::Array<Scalar,1> &A_b)
+{
+    return Eigen::Map<Eigen::Matrix<Scalar,Eigen::Dynamic,1>>(
+        A_b.data(), A_b.extent(0));
+}
+
+/** View 1-D blitz::Array as an Eigen row vector */
+template<class Scalar>
+Eigen::Map<Eigen::Matrix<Scalar,1,Eigen::Dynamic>>
+    map_eigen_rowvector(blitz::Array<Scalar,1> &A_b)
+{
+    return Eigen::Map<Eigen::Matrix<Scalar,Eigen::Dynamic,1>>(
+        A_b.data(), A_b.extent(0));
+}
+
+/** View 1-D blitz::Array as a diagonal Eigen matrix */
+template<class Scalar>
+const Eigen::DiagonalWrapper<Eigen::Map<Eigen::Matrix<Scalar,1,Eigen::Dynamic>>>
+    map_eigen_diagonal(blitz::Array<Scalar,1> &A_b)
+{
+    return map_eigen_colvector(A_b).asDiagonal();
 }
 
 // ==============================================================
