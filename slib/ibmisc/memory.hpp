@@ -41,6 +41,12 @@ std::unique_ptr<ValT> new_unique_ptr(Args... args)
 #endif
 
 
+/** Convenience function to store an rvalue reference in a shared_ptr */
+template<class ValT>
+void reset_ptr(std::unique_ptr<ValT> &ptr, ValT &&val)
+{ ptr.reset(new ValT(std::move(val))); }
+
+
 template<class ValT>
 std::unique_ptr<ValT> new_unique_ptr(ValT &&val)
     { return std::unique_ptr<ValT>(new ValT(std::move(val))); }
