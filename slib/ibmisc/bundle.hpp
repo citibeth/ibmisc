@@ -392,16 +392,38 @@ void ArrayBundle<TypeT,RANK>::ncio(
         auto ncvar(ncio_blitz(ncio, meta.arr, alloc, prefix + meta.name, snc_type, dims_f, storage));
 
         // Read/write attributes
-        for (auto &kv : meta.attr) {
-            std::string const &name(std::get<0>(kv));
-            std::string &value(std::get<1>(kv));    // Read back into ArrayMeta
+        if (ncio.rw == 'w') {
+            for (auto &kv : meta.attr) {
+                std::string const &name(std::get<0>(kv));
+                std::string &value(std::get<1>(kv));    // Read back into ArrayMeta
 
-            get_or_put_att(ncvar, ncio.rw, name, value);
+                get_or_put_att(ncvar, ncio.rw, name, value);
+            }
+        } else {
         }
     }
 }
-
-
+// -------------------------------------------------------------
+template<class TypeT, int RANK>
+ArrayBundle<TypeT,1> reshape1(
+    ArrayBundle<TypeT, RANK> &bundle,
+    int lbound = 0,
+    std::array<std::string,1>> const &sdims = {""})
+{
+    ArrayBundle<TypeT,1> bundle1;
+    for (size_t i=0; i<bundle.size(); ++i) {
+        auto &meta(bundle.data[i]);
+        ArrayBundle<TypeT,1>::Meta meta1;
+            meta1.name = meta.name;
+            meta1.arr = reshape1(meta.arr, lbound);
+            meta1.shape = blitz::shape(meta1.arr.extent(0));
+            meta1.sdims = sdims;
+            meta1.attr = meta.attr;
+        bundle1.index.insert(meta.name);
+        bundle1.data.push_back(meta1);
+    }
+    return bundle1;
+}
 
 }
 
