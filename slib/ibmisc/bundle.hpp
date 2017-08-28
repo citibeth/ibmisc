@@ -408,12 +408,12 @@ template<class TypeT, int RANK>
 ArrayBundle<TypeT,1> reshape1(
     ArrayBundle<TypeT, RANK> &bundle,
     int lbound = 0,
-    std::array<std::string,1>> const &sdims = {""})
+    std::vector<std::string> const &sdims = {""})
 {
     ArrayBundle<TypeT,1> bundle1;
     for (size_t i=0; i<bundle.size(); ++i) {
         auto &meta(bundle.data[i]);
-        ArrayBundle<TypeT,1>::Meta meta1;
+        typename ArrayBundle<TypeT,1>::Meta meta1;
             meta1.name = meta.name;
             meta1.arr = reshape1(meta.arr, lbound);
             meta1.shape = blitz::shape(meta1.arr.extent(0));

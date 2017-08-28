@@ -187,14 +187,14 @@ namespace accum {
 /** Accumulator to create a SparseSet of the indices used */
 template<class SparseSetT, class ValueT, int RANK>
 class SparseSetAccum {
-    std::array<SpraseSetT *, RANK> dims;
+    std::array<SparseSetT *, RANK> dims;
 public:
-    SparseSetAccum(std::array<SpraseSetT *, RANK> _dims)
+    SparseSetAccum(std::array<SparseSetT *, RANK> _dims)
         : dims(_dims) {}
 
     void add(std::array<typename SparseSetT::sparse_type,RANK> const &index, ValueT const &val)
     {
-        for (int i=0; i<RANK; ++i) if (dim[i]) dim[i]->add(index[i]);
+        for (int i=0; i<RANK; ++i) if (dims[i]) dims[i]->add(index[i]);
     }
 
 };
@@ -341,7 +341,7 @@ inline SparsifyT sparsify(
         std::array<SparseSetT *, AccumT::rank> const &sparse_sets,
         AccumT &&sub)
 {
-    return SparsifyT(transform, sparse_sets, std::move(sub));
+    return SparsifyT(transforms, sparse_sets, std::move(sub));
 }
 #undef SparsifyT
 #undef SPARSIFY_TPARAMS
@@ -355,25 +355,25 @@ template<SPARSIFY_TPARAMS>
 inline ToDenseT to_dense(
         std::array<SparseSetT *, AccumT::rank> const &dims,
         AccumT &&sub)
-{ return ToDenseT(SparsifyTransform::TO_DENSE, dims, std::move(sub)); }
+{ return ToDenseT({SparsifyTransform::TO_DENSE}, dims, std::move(sub)); }
 
 template<SPARSIFY_TPARAMS>
 inline ToDenseT to_dense_ignore_missing(
         std::array<SparseSetT *, AccumT::rank> const &dims,
         AccumT &&sub)
-{ return ToDenseT(SparsifyTransform::TO_DENSE_IGNORE_MISSING, dims, std::move(sub)); }
+{ return ToDenseT({SparsifyTransform::TO_DENSE_IGNORE_MISSING}, dims, std::move(sub)); }
 
 template<SPARSIFY_TPARAMS>
 inline ToDenseT add_dense(
         std::array<SparseSetT *, AccumT::rank> const &dims,
         AccumT &&sub)
-{ return ToDenseT(SparsifyTransform::ADD_DENSE, dims, std::move(sub)); }
+{ return ToDenseT({SparsifyTransform::ADD_DENSE}, dims, std::move(sub)); }
 
 template<SPARSIFY_TPARAMS>
 inline ToSparseT to_sparse(
         std::array<SparseSetT *, AccumT::rank> const &dims,
         AccumT &&sub)
-{ return ToSparseT(SparsifyTransform::TO_SPARSE, dims, std::move(sub)); }
+{ return ToSparseT({SparsifyTransform::TO_SPARSE}, dims, std::move(sub)); }
 
 #undef ToSparseT
 #undef ToDenseT

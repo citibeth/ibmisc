@@ -19,6 +19,7 @@
 #pragma once
 
 #include <Eigen/SparseCore>
+#include <ibmisc/error.hpp>
 #include <ibmisc/iter.hpp>
 #include <ibmisc/netcdf.hpp>
 #include <ibmisc/memory.hpp>
@@ -387,6 +388,7 @@ blitz::Array<_Scalar,1> sum(
 
 
 
+template<class _Scalar, int _Options, class _StorageIndex>
 std::array<blitz::Array<_Scalar,1>,2> sums(
     Eigen::SparseMatrix<ARGS> const &M, char invert='+');
 
@@ -397,7 +399,7 @@ std::array<blitz::Array<_Scalar,1>,2> sums(
     Eigen::SparseMatrix<ARGS> const &M, char invert='+')
 {
     // Get our weight vector (in dense coordinate space)
-    std::array<blitz::Array<_Scalar,1>> rets;
+    std::array<blitz::Array<_Scalar,1>,2> rets;
     rets[0].reference(blitz::Array<_Scalar,1>(M.rows()));
     rets[1].reference(blitz::Array<_Scalar,1>(M.cols()));
 
@@ -450,7 +452,7 @@ Eigen::SparseMatrix<ARGS> sum_to_diagonal(
             tuples[i].value() = 1. / tuples[i].value();
     }
 
-    return to_eigen(tuples);
+    return to_eigen_sparsematrix(tuples);
 }
 #undef ARGS
 // --------------------------------------------------------------
@@ -505,7 +507,6 @@ public:
 
 template<class SparseIndexT, class _Scalar, int _Options, class _StorageIndex>
 MakeDenseEigen<SparseIndexT,_Scalar,_Options,_StorageIndex>::MakeDenseEigen(
-    std::function<void (AccumT &)> const &fn,
     std::vector<SparsifyTransform> const &sparsify_transform,
     std::array<SparseSetT *,2> const &_dims,
     char transpose)    // '.' or 'T
@@ -519,8 +520,9 @@ MakeDenseEigen<SparseIndexT,_Scalar,_Options,_StorageIndex>::MakeDenseEigen(
     accum::ref(M))))
 {}
 
+#define ARGS SparseIndexT,_Scalar,_Options,_StorageIndex
 template<class SparseIndexT, class _Scalar, int _Options, class _StorageIndex>
-EigenSparseMatrixT MakeDenseEigen<SparseIndexT,_Scalar,_Options,_StorageIndex>::to_eigen()
+typename MakeDenseEigen<ARGS>::EigenSparseMatrixT MakeDenseEigen<ARGS>::to_eigen()
 {
     Eigen::SparseMatrix<typename AccumT::val_type,0,typename AccumT::index_type> M(
         accum.dim(permute[0]).extent(),
@@ -530,7 +532,7 @@ EigenSparseMatrixT MakeDenseEigen<SparseIndexT,_Scalar,_Options,_StorageIndex>::
     M.setFromTriplets(accum.base().begin(), accum.base().end());
     return M;
 }
-
+#undef ARGS
 
 
 
@@ -667,7 +669,7 @@ Eigen::Map<Eigen::Matrix<Scalar,Eigen::Dynamic,Eigen::Dynamic>>
     } else if (is_column_major(A_b)) {
         return Eigen::Map<Eigen::Matrix<Scalar,Eigen::Dynamic,Eigen::Dynamic>>(
             A_b.data(), A_b.extent(0), A_b.extent(1));
-    } else (*ibmisc_error)(-1, "Matrix must be row-major or column-major");
+    } else (*ibmisc::ibmisc_error)(-1, "Matrix must be row-major or column-major");
 }
 
 /** View 1-D blitz::Array as an Eigen column vector */

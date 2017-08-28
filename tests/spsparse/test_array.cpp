@@ -180,7 +180,7 @@ TEST_F(SpSparseTest, sparse_set)
     TupleListT arr2d;
     spcopy(
         accum::sparsify(
-            SparsifyTransform::TO_DENSE,
+            {SparsifyTransform::TO_DENSE},
             accum::in_index_type<int>(),
             ibmisc::make_array(&dim0, nullptr),
         accum::ref(arr2d)),
@@ -334,7 +334,7 @@ TEST_F(SpSparseTest, make_dense_eigen)
     std::array<MakeDenseEigenT::SparseSetT, 2> dims;
     MakeDenseEigenT M_m(
         std::bind(&sample_makedense, _1),
-        SparsifyTransform::ADD_DENSE,
+        {SparsifyTransform::ADD_DENSE},
         {&dims[0], &dims[1]}, '.');
 
     auto ii(M_m.accum.base().begin());
@@ -448,7 +448,7 @@ TEST_F(SpSparseTest, sum)
     arr.add({2,3}, 8.);
     arr.add({2,1}, 16.);
 
-    auto M(to_eigen(arr));
+    auto M(to_eigen_sparsematrix(arr));
 
     {auto arrb(sum(M,0,'+'));
         EXPECT_EQ(3, arrb.extent(0));
@@ -485,7 +485,7 @@ TEST_F(SpSparseTest, sum_to_diagonal)
     arr.add({2,3}, 8.);
     arr.add({2,1}, 16.);
 
-    auto M(to_eigen(arr));
+    auto M(to_eigen_sparsematrix(arr));
 
     {auto M2(sum_to_diagonal(M,0,'+'));
         EXPECT_EQ(3, M2.rows());
