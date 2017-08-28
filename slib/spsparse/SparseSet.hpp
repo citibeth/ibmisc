@@ -194,10 +194,15 @@ public:
 
     void add(std::array<typename SparseSetT::sparse_type,RANK> const &index, ValueT const &val)
     {
-        for (int i=0; i<RANK; ++i) if (dims[i]) dims[i]->add(index[i]);
+        for (int i=0; i<RANK; ++i) if (dims[i]) dims[i]->add_dense(index[i]);
     }
 
 };
+
+template<class SparseSetT, class ValueT, int RANK>
+SparseSetAccum<SparseSetT, ValueT, RANK> sparse_set(std::array<SparseSetT *, RANK> _dims)
+    { return SparseSetAccum<SparseSetT,ValueT,RANK>(_dims); }
+
 // -----------------------------------------------------------
 
 #define SPARSIFY_TPARAMS class AccumT, class SparseSetT, class InIndexT

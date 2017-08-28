@@ -105,6 +105,17 @@ TEST_F(MemoryTest, tmp_alloc)
 
 }
 // -----------------------------------------------------------
+struct MyClass2 {
+    int const x;
+    MyClass2(int _x) : x(_x) {}
+};
+
+TEST_F(MemoryTest, reset_ptr)
+{
+    std::unique_ptr<MyClass2> ptr;
+    reset_ptr(ptr, MyClass2(17));
+    EXPECT_EQ(17, ptr->x);
+}
 // -----------------------------------------------------------
 
 

@@ -321,6 +321,32 @@ TEST_F(SpSparseTest, transpose_accum)
 
 }
 // -----------------------------------------------
+TEST_F(SpSparseTest, sparse_set_accum)
+{
+    SparseSet<long,int> dimA, dimB;
+
+    accum::SparseSetAccum<SparseSet<long,int>, double, 3> acc(
+        {&dimA, nullptr, &dimB});
+
+    acc.add({6L,7L, 2L}, 8.);
+    acc.add({1L,7L, 1L}, 16.);
+    acc.add({6L,8L, 0L}, 17.);
+
+    EXPECT_EQ(2, dimA.dense_extent());
+    EXPECT_EQ(true, dimA.in_sparse(6L));
+    EXPECT_EQ(true, dimA.in_sparse(1L));
+    EXPECT_EQ(6L, dimA.to_sparse(0));
+    EXPECT_EQ(1L, dimA.to_sparse(1));
+
+    EXPECT_EQ(3, dimB.dense_extent());
+    EXPECT_EQ(true, dimB.in_sparse(2L));
+    EXPECT_EQ(true, dimB.in_sparse(1L));
+    EXPECT_EQ(true, dimB.in_sparse(0L));
+    EXPECT_EQ(2L, dimB.to_sparse(0));
+    EXPECT_EQ(1L, dimB.to_sparse(1));
+    EXPECT_EQ(0L, dimB.to_sparse(2));
+}
+// -----------------------------------------------
 typedef MakeDenseEigen<long,double,0,int> MakeDenseEigenT;
 
 void sample_makedense(MakeDenseEigenT::AccumT &accum)
