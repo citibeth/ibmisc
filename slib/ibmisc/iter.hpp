@@ -155,23 +155,6 @@ public:
 };
 // ------------------------------------------------------------
 template<class KeyT, class ValueT, class WrappedIterT>
-class DerefIter : public forward_iterator<ValueT, DerefIter<KeyT, ValueT, WrappedIterT>>
-{
-public:
-    WrappedIterT wrapped;
-    DerefIter(WrappedIterT &&ii) : wrapped(ii) {}
-
-    ValueT &operator*() const
-        { return *wrapped; }
-
-    DerefIter &operator++()
-        { ++wrapped; return *this; }
-
-    bool operator==(const DerefIter& rhs) const
-        {return wrapped == rhs.wrapped;}
-};
-// ------------------------------------------------------------
-template<class KeyT, class ValueT, class WrappedIterT>
 class DerefSecondIter : public forward_iterator<ValueT, DerefSecondIter<KeyT, ValueT, WrappedIterT>>
 {
 public:
