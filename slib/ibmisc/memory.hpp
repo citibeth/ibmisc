@@ -56,8 +56,15 @@ template<class ValT>
 std::shared_ptr<ValT> new_shared_ptr()
     { return std::shared_ptr<ValT>(new ValT); }
 
-
+// --------------------------------------------------------
 // http://ficksworkshop.com/blog/14-coding/86-how-to-static-cast-std-unique-ptr 
+template<typename D, typename B>
+/** Static-cast a unique_ptr while moving it to another unique_ptr */
+void static_move(std::unique_ptr<D> &dest, std::unique_ptr<B>& base)
+{
+    dest.reset(static_cast<D*>(base.release()));
+}
+
 template<typename D, typename B>
 std::unique_ptr<D> static_cast_unique_ptr(std::unique_ptr<B>& base)
 {
@@ -69,7 +76,13 @@ std::unique_ptr<D> static_cast_unique_ptr(std::unique_ptr<B>&& base)
 {
     return std::unique_ptr<D>(static_cast<D*>(base.release()));
 }
-
+// --------------------------------------------------------
+/** Dynamic-cast a unique_ptr while moving it to another unique_ptr */
+template<typename D, typename B>
+void dynamic_move(std::unique_ptr<D> &dest, std::unique_ptr<B>& base)
+{
+    dest.reset(dynamic_cast<D*>(base.release()));
+}
 
 template<typename D, typename B>
 std::unique_ptr<D> dynamic_cast_unique_ptr(std::unique_ptr<B>& base)
@@ -82,6 +95,7 @@ std::unique_ptr<D> dynamic_cast_unique_ptr(std::unique_ptr<B>&& base)
 {
     return std::unique_ptr<D>(dynamic_cast<D*>(base.release()));
 }
+// --------------------------------------------------------
 
 
 
@@ -184,6 +198,16 @@ public:
         deleters.push_back(std::bind(&TmpAlloc::del<T>, ret));
         return ret;
     }
+
+	/** Allocates, and stores a pointer to it in ptr.
+	This template is eaiser to use than newptr() above, requires no type tags */
+    template<class T, typename... Args>
+    void reset_ptr(T *&ptr, Args... args)
+    {
+        ptr = new T(args...);
+        deleters.push_back(std::bind(&TmpAlloc::del<T>, ptr));
+    }
+
 
     /** Allocate and run an arbitrary constructor */
     template<class T, typename... Args>
