@@ -22,6 +22,7 @@
 #include <algorithm>
 #include <ibmisc/array.hpp>
 #include <ibmisc/netcdf.hpp>
+#include <ibmisc/permutation.hpp>
 #include <spsparse/accum.hpp>
 #include <spsparse/blitz.hpp>
 
@@ -170,12 +171,14 @@ SparseSetT id_sparse_set(typename SparseSetT::dense_type n)
 }
 
 // -----------------------------------------------------------
+// This is in priority order to process; see process_order below.
 enum class SparsifyTransform {
-    ID,           // No transformation
-    TO_DENSE,     // Convert sparse to dense indices
     TO_DENSE_IGNORE_MISSING,
+    TO_DENSE,     // Convert sparse to dense indices
+    TO_SPARSE,    // Convert dense to sparse indices
     ADD_DENSE,    // Convert sparse to dense, adding to the SparseSet if it's not already there.
-    TO_SPARSE    // Convert dense to sparse indices
+    ID           // No transformation
+
 };
 
 
@@ -204,7 +207,6 @@ SparseSetAccum<SparseSetT, ValueT, RANK> sparse_set(std::array<SparseSetT *, RAN
     { return SparseSetAccum<SparseSetT,ValueT,RANK>(_dims); }
 
 // -----------------------------------------------------------
-
 #define SPARSIFY_TPARAMS class AccumT, class SparseSetT, class InIndexT
 #define SparsifyT Sparsify<AccumT,SparseSetT,InIndexT>
 
@@ -240,8 +242,14 @@ private:
 
     std::vector<Data> data;
 
+    // The order in which we will process dimensions.
+    // This way, we can process dimensions that don't change
+    // state (eg TO_DENSE_IGNORE_MISSING) before dimensions
+    // that do change state.
+    std::array<int, (size_t)super::rank> process_order;
+
 public:
-    Data const &dim(int ix)
+    Data &dim(int ix)
         { return data[ix]; }
 
     /** @param _transform.  Either a single item (used for all dimensions), or one per dimension.
@@ -288,7 +296,9 @@ public:
         // {ADD_DENSE, TO_DENSE_IGNORE_MISSING}.  This allows one to create
         // a matrix based on a subset of the input, adding only the output
         // grid cells that are needed.
-        for (int i=super::rank-1; i>=0; --i) {
+        for (int ix=0; ix<super::rank; ++ix) {
+            int const i = process_order[ix];
+
             switch(data[i].transform) {
                 case SparsifyTransform::ID:
                     // Use the index given, no transform
@@ -332,6 +342,18 @@ SparsifyT::Sparsify(
         data.push_back(Data(sparse_sets[i],
             sparse_sets[i] ? transform : SparsifyTransform::ID));
     }
+
+    // Determine processing order of the ranks
+    // Iterate in reverse order to accommodate the common case of
+    // {ADD_DENSE, TO_DENSE_IGNORE_MISSING}.  This allows one to create
+    // a matrix based on a subset of the input, adding only the output
+    // grid cells that are needed.
+    std::vector<int> _process_order;
+    ibmisc::sorted_permutation(data.begin(), data.end(), _process_order,
+        [&](Data const &a, Data const &b)
+            { return a.transform < b.transform; }
+    );
+    std::copy_n(_process_order.begin(), super::rank, process_order.begin());
 }
 
 template<class X>
