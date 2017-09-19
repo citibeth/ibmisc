@@ -224,6 +224,31 @@ public:
         return *ptr;
     }
 
+
+    /** Move to allocated location from an rvalue reference.
+    This version is easeier to call than the move() above because
+    template parameters can usually be deduced. */
+    template<class T>
+    void move(T *&ptr, T &&val)
+    {
+        ptr = new T(std::move(val));
+        deleters.push_back(std::bind(&TmpAlloc::del<T>, ptr));
+    }
+
+
+    /** Take over memory management from a unique_ptr.
+    Works for all types, no object constructors are required or called.
+    @return Raw pointer to the object, now managed by this TmpAlloc. */
+    template<class T>
+    T *take(std::unique_ptr<T> &&uptr)
+    {
+        T *ptr(uptr.release());
+        deleters.push_back(std::bind(&TmpAlloc::del<T>, ptr));
+        return ptr;
+    }
+
+
+
     /** Allocate and copy from an existing object */
     template<class T>
     T &copy(T const &val)
