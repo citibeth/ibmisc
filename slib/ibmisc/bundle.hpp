@@ -404,21 +404,29 @@ void ArrayBundle<TypeT,RANK>::ncio(
     }
 }
 // -------------------------------------------------------------
+/** Reshapes a bundle of Blitz++ arrays to a bundle of 1-D Blitz++ array */
 template<class TypeT, int RANK>
 ArrayBundle<TypeT,1> reshape1(
     ArrayBundle<TypeT, RANK> &bundle,
     int lbound = 0,
-    std::vector<std::string> const &sdims = {""})
+    std::array<std::string,1> const &sdims = {""});
+
+template<class TypeT, int RANK>
+ArrayBundle<TypeT,1> reshape1(
+    ArrayBundle<TypeT, RANK> &bundle,
+    int lbound = 0,
+    std::array<std::string,1> const &sdims = {""})
 {
     ArrayBundle<TypeT,1> bundle1;
-    for (size_t i=0; i<bundle.size(); ++i) {
+    for (size_t i=0; i<bundle.index.size(); ++i) {
         auto &meta(bundle.data[i]);
-        typename ArrayBundle<TypeT,1>::Meta meta1;
-            meta1.name = meta.name;
-            meta1.arr = reshape1(meta.arr, lbound);
-            meta1.shape = blitz::shape(meta1.arr.extent(0));
-            meta1.sdims = sdims;
-            meta1.attr = meta.attr;
+        blitz::Array<TypeT,1> meta1_arr(reshape1(meta.arr, lbound));
+        typename ArrayBundle<TypeT,1>::Meta meta1(
+            meta.name,
+            meta1_arr,
+            blitz::shape(meta1_arr.extent(0)),
+            sdims,
+            meta.attr);
         bundle1.index.insert(meta.name);
         bundle1.data.push_back(meta1);
     }
