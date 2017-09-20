@@ -199,13 +199,16 @@ public:
         return ret;
     }
 
+    // ----------------------------------------------------
+
 	/** Allocates, and stores a pointer to it in ptr.
 	This template is eaiser to use than newptr() above, requires no type tags */
     template<class T, typename... Args>
-    void reset_ptr(T *&ptr, Args... args)
+    T &make(T *&ptr, Args... args)
     {
         ptr = new T(args...);
         deleters.push_back(std::bind(&TmpAlloc::del<T>, ptr));
+        return *ptr;
     }
 
 
@@ -215,9 +218,11 @@ public:
         { return *newptr<T>(args...); }
 
 
+    // ----------------------------------------------------
+
     /** Move to allocated location from an rvalue reference */
     template<class T>
-    T &move(T &&val)
+    T &take(T &&val)
     {
         T *ptr(new T(std::move(val)));
         deleters.push_back(std::bind(&TmpAlloc::del<T>, ptr));
@@ -229,10 +234,21 @@ public:
     This version is easeier to call than the move() above because
     template parameters can usually be deduced. */
     template<class T>
-    void move(T *&ptr, T &&val)
+    T &take(T *&ptr, T &&val)
     {
         ptr = new T(std::move(val));
         deleters.push_back(std::bind(&TmpAlloc::del<T>, ptr));
+        return *ptr;
+    }
+
+
+    template<class T>
+    T const &take(T const *&ptr, T &&val)
+    {
+        T *_ptr = new T(std::move(val));
+        deleters.push_back(std::bind(&TmpAlloc::del<T>, _ptr));
+        ptr = _ptr;
+        return *ptr;
     }
 
 
@@ -240,30 +256,29 @@ public:
     Works for all types, no object constructors are required or called.
     @return Raw pointer to the object, now managed by this TmpAlloc. */
     template<class T>
-    T *take(std::unique_ptr<T> &&uptr)
+    T &take(std::unique_ptr<T> &&uptr)
     {
         T *ptr(uptr.release());
         deleters.push_back(std::bind(&TmpAlloc::del<T>, ptr));
-        return ptr;
+        return *ptr;
     }
 
-
+    // ----------------------------------------------------
 
     /** Allocate and copy from an existing object */
     template<class T>
     T &copy(T const &val)
         { return *newptr<T>(val); }
 
+    // ----------------------------------------------------
+
     ~TmpAlloc() { free(); }
-    void free() {
-        for (auto ii(deleters.begin()); ii != deleters.end(); ++ii) {
-            (*ii)();
-        }
-        deleters.clear();
-    }
+    void free();
 
 };
 
+
+// ====================================================
 
 
 }   // namespace ibmisc

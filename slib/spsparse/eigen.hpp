@@ -615,7 +615,7 @@ blitz::Array<val_type,2> to_blitz(
     Eigen::Matrix<val_type, Eigen::Dynamic, Eigen::Dynamic> &&M,
     ibmisc::TmpAlloc &tmp)
 {
-   auto &M_tmp(tmp.move<Eigen::Matrix<val_type, Eigen::Dynamic, Eigen::Dynamic>>(std::move(M)));
+   auto &M_tmp(tmp.take<Eigen::Matrix<val_type, Eigen::Dynamic, Eigen::Dynamic>>(std::move(M)));
 
    return blitz::Array<double,2>(
        M_tmp.data(),
@@ -631,7 +631,7 @@ blitz::Array<val_type,1> to_blitz(
     Eigen::Matrix<val_type, Eigen::Dynamic, 1> &&M,
     ibmisc::TmpAlloc &tmp)
 {
-   auto &M_tmp(tmp.move<Eigen::Matrix<val_type, Eigen::Dynamic, 1>>(std::move(M)));
+   auto &M_tmp(tmp.take<Eigen::Matrix<val_type, Eigen::Dynamic, 1>>(std::move(M)));
 
    return blitz::Array<double,1>(
        M_tmp.data(),
@@ -647,7 +647,7 @@ blitz::Array<val_type,1> to_blitz(
     Eigen::Matrix<val_type, 1, Eigen::Dynamic> &&M,
     ibmisc::TmpAlloc &tmp)
 {
-   auto &M_tmp(tmp.move<Eigen::Matrix<val_type, 1, Eigen::Dynamic>>(std::move(M)));
+   auto &M_tmp(tmp.take<Eigen::Matrix<val_type, 1, Eigen::Dynamic>>(std::move(M)));
 
    return blitz::Array<double,1>(
        M_tmp.data(),

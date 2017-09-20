@@ -652,7 +652,7 @@ netCDF::NcVar ncio_blitz(
     std::vector<netCDF::NcDim> _dims(dims);
     if (reverse) {
         std::reverse(_dims.begin(), _dims.end());
-        auto &_val(ncio.tmp.move(ibmisc::f_to_c(val)));
+        auto &_val(ncio.tmp.take(ibmisc::f_to_c(val)));
         valp = &_val;
     } else {
         valp = &val;

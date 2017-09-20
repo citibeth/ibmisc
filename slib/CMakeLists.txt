@@ -10,7 +10,8 @@ set(IBMISC_SOURCE
     ibmisc/ncfile.cpp
     ibmisc/indexing.cpp
     ibmisc/endian.cpp
-    ibmisc/fortranio.cpp)
+    ibmisc/fortranio.cpp
+    ibmisc/memory.cpp)
 
 
 if (USE_PROJ4)
