@@ -657,7 +657,6 @@ blitz::Array<val_type,1> to_blitz(
 
 // ==============================================================
 // ------------------------------------------------------------------
-/** @return Blitz++ reference to a dense Eigen Matrix */
 template<class val_type>
 blitz::Array<val_type,2> to_blitz(
     Eigen::Matrix<val_type, Eigen::Dynamic, Eigen::Dynamic> &M)
@@ -668,7 +667,6 @@ blitz::Array<val_type,2> to_blitz(
        blitz::neverDeleteData);
 }
 
-/** @return const Blitz++ reference to a const dense Eigen Matrix */
 template<class val_type>
 blitz::Array<val_type,2> const to_blitz(
     Eigen::Matrix<val_type, Eigen::Dynamic, Eigen::Dynamic> const &M)
@@ -679,7 +677,6 @@ blitz::Array<val_type,2> const to_blitz(
        blitz::neverDeleteData);
 }
 // ------------------------------------------------------------------
-/** @return Blitz++ reference to an Eigen column vector */
 template<class val_type>
 blitz::Array<val_type,1> to_blitz(
     Eigen::Matrix<val_type, Eigen::Dynamic, 1> &M)
@@ -690,7 +687,6 @@ blitz::Array<val_type,1> to_blitz(
        blitz::neverDeleteData);
 }
 
-/** @return const Blitz++ reference to a const Eigen column vector */
 template<class val_type>
 blitz::Array<val_type,1> const to_blitz(
     Eigen::Matrix<val_type, Eigen::Dynamic, 1> const &M)
@@ -701,7 +697,6 @@ blitz::Array<val_type,1> const to_blitz(
        blitz::neverDeleteData);
 }
 // ------------------------------------------------------------------
-/** @return Blitz++ reference to an Eigen row vector */
 template<class val_type>
 blitz::Array<val_type,1> to_blitz(
     Eigen::Matrix<val_type, 1, Eigen::Dynamic> &M)
@@ -711,8 +706,6 @@ blitz::Array<val_type,1> to_blitz(
        blitz::shape(M.cols()),
        blitz::neverDeleteData);
 }
-
-/** @return const Blitz++ reference to a const Eigen row vector */
 template<class val_type>
 blitz::Array<val_type,1> const to_blitz(
     Eigen::Matrix<val_type, 1, Eigen::Dynamic> &M)
@@ -724,6 +717,7 @@ blitz::Array<val_type,1> const to_blitz(
 }
 
 // ==============================================================
+
 template<class Scalar>
 Eigen::Map<Eigen::Matrix<Scalar,Eigen::Dynamic,Eigen::Dynamic>>
     map_eigen_matrix(blitz::Array<Scalar,2> &A_b);
@@ -741,9 +735,8 @@ Eigen::Map<Eigen::Matrix<Scalar,Eigen::Dynamic,Eigen::Dynamic>>
             A_b.data(), A_b.extent(0), A_b.extent(1));
     } else (*ibmisc::ibmisc_error)(-1, "Matrix must be row-major or column-major");
 }
-// -------------------------------------------------------------------
-/** View 1-D blitz::Array as an Eigen column vector
-@return Eigen reference (as column vector) to a Blitz++ 1D array */
+
+/** View 1-D blitz::Array as an Eigen column vector */
 template<class Scalar>
 Eigen::Map<Eigen::Matrix<Scalar,Eigen::Dynamic,1>>
     map_eigen_colvector(blitz::Array<Scalar,1> &A_b)
@@ -751,9 +744,6 @@ Eigen::Map<Eigen::Matrix<Scalar,Eigen::Dynamic,1>>
     return Eigen::Map<Eigen::Matrix<Scalar,Eigen::Dynamic,1>>(
         A_b.data(), A_b.extent(0));
 }
-
-/** View 1-D const blitz::Array as a const Eigen column vector.
-@return const Eigen reference (as column vector) to a const Blitz++ 1D array */
 template<class Scalar>
 Eigen::Map<Eigen::Matrix<Scalar,Eigen::Dynamic,1>> const
     map_eigen_colvector(blitz::Array<Scalar,1> const &A_b)
@@ -761,9 +751,10 @@ Eigen::Map<Eigen::Matrix<Scalar,Eigen::Dynamic,1>> const
     return map_eigen_colvector(
         const_cast<blitz::Array<Scalar,1> &>(A_b));
 }
-// -------------------------------------------------------------------
-/** View 1-D blitz::Array as an Eigen row vector
-@return Eigen reference (as row vector) to a Blitz++ 1D array */
+
+
+
+/** View 1-D blitz::Array as an Eigen row vector */
 template<class Scalar>
 Eigen::Map<Eigen::Matrix<Scalar,1,Eigen::Dynamic>>
     map_eigen_rowvector(blitz::Array<Scalar,1> &A_b)
@@ -771,28 +762,24 @@ Eigen::Map<Eigen::Matrix<Scalar,1,Eigen::Dynamic>>
     return Eigen::Map<Eigen::Matrix<Scalar,Eigen::Dynamic,1>>(
         A_b.data(), A_b.extent(0));
 }
-
-/** View 1-D const blitz::Array as an Eigen row vector
-@return const Eigen reference (as row vector) to a const Blitz++ 1D array */
 template<class Scalar>
-Eigen::Map<Eigen::Matrix<Scalar,1,Eigen::Dynamic>> const
+Eigen::Map<Eigen::Matrix<Scalar,Eigen::Dynamic,1>> const
     map_eigen_rowvector(blitz::Array<Scalar,1> const &A_b)
 {
     return map_eigen_rowvector(
         const_cast<blitz::Array<Scalar,1> &>(A_b));
 }
-// -------------------------------------------------------------------
-/** View 1-D blitz::Array as a diagonal Eigen matrix
-@return Eigen reference (as a diagonal matrix) to a Blitz++ array */
+
+
+
+
+/** View 1-D blitz::Array as a diagonal Eigen matrix */
 template<class Scalar>
 const Eigen::DiagonalWrapper<const Eigen::Map<Eigen::Matrix<Scalar,Eigen::Dynamic,1>>>
     map_eigen_diagonal(blitz::Array<Scalar,1> &A_b)
 {
     return map_eigen_colvector(A_b).asDiagonal();
 }
-
-/** View 1-D const blitz::Array as a diagonal Eigen matrix
-@return const Eigen reference (as a diagonal matrix) to a const Blitz++ array */
 template<class Scalar>
 Eigen::Map<Eigen::Matrix<Scalar,Eigen::Dynamic,1>> const
     map_eigen_diagonal(blitz::Array<Scalar,1> const &A_b)
