@@ -526,6 +526,12 @@ MakeDenseEigen<SparseIndexT,_Scalar,_Options,_StorageIndex>::MakeDenseEigen(
 template<class SparseIndexT, class _Scalar, int _Options, class _StorageIndex>
 typename MakeDenseEigen<ARGS>::EigenSparseMatrixT MakeDenseEigen<ARGS>::to_eigen()
 {
+    for (int i=0; i<2; ++i) {
+        if (accum.dim(i).extent() < 0) {
+            (*ibmisc::ibmisc_error)(-1, "MakeDenseEigen requires dimensions to have a computed extent.  It is not compatible with SparsifyTransform::ID");
+        }
+    }
+
     Eigen::SparseMatrix<typename AccumT::val_type,0,typename AccumT::index_type> M(
         accum.dim(permute[0]).extent(),
         accum.dim(permute[1]).extent());
