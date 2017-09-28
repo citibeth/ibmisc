@@ -125,6 +125,9 @@ public:
         std::function<void(netCDF::NcVar)> const &_configure_var =
             std::bind(NcIO::default_configure_var, std::placeholders::_1));
 
+    /** Create a "dummy" NcIO from an already-opened NetCDF file */
+    NcIO(netCDF::NcGroup *_nc, char _rw) : own_nc(false), nc(_nc), rw(_rw), define(rw=='w') {}
+
     ~NcIO() { close(); }
 
     /** Converts a string to a NetCDF type */
@@ -547,68 +550,22 @@ void nc_rw_blitz(
     blitz::Array<TypeT, RANK> *val,
     bool alloc,
     std::string const &vname,
-    blitz::GeneralArrayStorage<RANK> const &storage)    // In case we need to allocate
+    bool rowmajor)    // Column ordering of val
 {
     netCDF::NcVar ncvar = nc->getVar(vname);
-
-    _check_nc_rank(ncvar, RANK);
-
-    bool reverse = false;
-    if (alloc && rw == 'r') {
-        blitz::TinyVector<int,RANK> shape;
-        // NetCDF4-C++ library does not bounds check (as of 2016-01-15)
-        if (RANK != ncvar.getDimCount()) {
-            (*ibmisc_error)(-1,
-                "nc_rw_blitz(): Rank mismatch between blitz::Array (%d) and NetCDF (%d)\n", RANK, ncvar.getDimCount());
-        }
-        reverse = (storage.ordering(0) == 0);    // Guess col-major; if it's non-standard, an error will happen later
-        for (int k=0; k<RANK; ++k) {
-            netCDF::NcDim dim(ncvar.getDim(k));
-            size_t size = dim.getSize();
-            shape[RANK-1-storage.ordering(k)] = size;
-        }
-        // val->resize(shape);   // Is this buggy?
-        val->reference(blitz::Array<TypeT,RANK>(shape, storage));
-    }
-
-
-    blitz::Array<TypeT,RANK> _val;
-    if (reverse) {
-        _val.reference(ibmisc::f_to_c(*val));
-        val = &_val;
-    }
-
-    _check_blitz_strides(*val, vname);
-    _check_nc_rank(ncvar, RANK);
-    _check_blitz_dims(ncvar, *val, rw);
 
     std::vector<size_t> startp(RANK);
     std::vector<size_t> countp(RANK);
     for (int k=0; k<RANK; ++k) {
+        int const mem_k = rowmajor ? k : RANK-k-1;
+
         startp[k] = 0;  // Start on disk, which always starts at 0
-        countp[k] = val->extent(k);
+        countp[k] = val->extent(mem_k);
     }
-    switch(rw) {
-        case 'r' :
-            ncvar.getVar(startp, countp, val->data());
-        break;
-        case 'w' :
-            ncvar.putVar(startp, countp, val->data());
-        break;
-    }
+
+    get_or_put_var(ncvar, rw, startp, countp, val->data());
 }
 // ---------------------------------------------------
-
-template<class TypeT, int RANK>
-blitz::Array<TypeT, RANK> nc_read_blitz(
-    netCDF::NcGroup *nc,
-    std::string const &vname,
-    blitz::GeneralArrayStorage<RANK> const &storage = blitz::GeneralArrayStorage<RANK>())    // In case we need to allocate
-{
-    blitz::Array<TypeT, RANK> val;
-    nc_rw_blitz(nc, 'r', &val, true, vname, storage);
-    return val;
-}
 
 /** Define and write a blitz::Array.  This works with row-major or
     column-major arrays, but not arrays with any other arbitrary
@@ -632,50 +589,133 @@ template<class TypeT, int RANK>
 netCDF::NcVar ncio_blitz(
     NcIO &ncio,
     blitz::Array<TypeT, RANK> &val,
-    bool alloc,
+    bool alloc,                            // Only used on READ
     std::string const &vname,
-    std::string const &snc_type,
-    std::vector<netCDF::NcDim> const &dims,
-    blitz::GeneralArrayStorage<RANK> const &storage)
+    std::string const &snc_type,            // Only on write
+    std::vector<netCDF::NcDim> const &dims,    // Same dimension order as val / storage
+    blitz::GeneralArrayStorage<RANK> const &storage)    // Only used if alloc
 {
-    bool reverse;
-    if (is_column_major(val)) {
-        reverse = true;
-    } else if (is_row_major(val)) {
-        reverse = false;
-    } else {
-        (*ibmisc_error)(-1, "Array must be either row-major or column-major");
+    bool rowmajor;            // True if val is a column-major array
+    netCDF::NcVar ncvar;
+
+    if (ncio.rw == 'w') {
+        if (is_row_major(val)) rowmajor = true;
+        else if (is_column_major(val)) rowmajor = false;
+        else (*ibmisc_error)(-1, "Array must be either row-major or column-major");
+
+        if (RANK != dims.size()) (*ibmisc_error)(-1,
+            "Size of dims=%ld must equal RANK=%d",
+            dims.size(), RANK);
+
+
+        std::vector<netCDF::NcDim> _dims(dims);
+        if (!rowmajor) {
+            std::reverse(_dims.begin(), _dims.end());
+        }
+
+        ncvar = get_or_add_var(ncio, vname, snc_type, _dims);
+    } else if (ncio.rw == 'r') {
+        // Allocate array if not already allocated 
+        ncvar = ncio.nc->getVar(vname);
+
+        // NetCDF4-C++ library does not bounds check (as of 2016-01-15)
+        if (RANK != ncvar.getDimCount()) (*ibmisc_error)(-1,
+                "nc_rw_blitz(): Rank mismatch between blitz::Array (%d) and NetCDF (%d)\n", RANK, ncvar.getDimCount());
+
+        // Determine whether val is (will be) column-major format,
+        // which requires dimensions to be reversed between memory and NetCDF
+        if (RANK == 1) {
+            rowmajor = true;
+        } else {
+            if (alloc) {
+                rowmajor = (storage.ordering(0) != 0);
+            } else {
+                if (is_row_major(val)) rowmajor = true;
+                else if (is_column_major(val)) rowmajor = false;
+                else (*ibmisc_error)(-1, "Array must be either row-major or column-major");
+            }
+        }
+
+        // Check NetCDF variable against user-provided dimensions, if provided
+        if (dims.size() != 0) {
+            if (RANK != dims.size()) (*ibmisc_error)(-1,
+                "Size of dims=%ld must be 0, or equal to RANK=%d",
+                dims.size(), RANK);
+
+            for (int k=0; k<RANK; ++k) {
+                int const mem_k = rowmajor ? k : RANK-k-1;
+
+                // The dimensions must match, not just their extents
+                if (dims[mem_k] != ncvar.getDim(k)) (*ibmisc_error)(-1,
+                    "User-supplied dimension[%d] does not match netCDF dimension[%d]=%s",
+                    mem_k, k, ncvar.getDim(k).getName().c_str());
+            }
+        }
+
+        // Ensure that in-memory variable shape is same as NetCDF variable
+        blitz::TinyVector<int,RANK> shape;    // Shape to allocate
+        if (!alloc) {
+            shape = val.extent();
+
+            // Check: in-memory variable shape matches NetCDF variable shape
+            for (int k=0; k<RANK; ++k) {
+                int const mem_k = rowmajor ? k : RANK-k-1;
+                if (shape[mem_k] != ncvar.getDim(k).getSize()) (*ibmisc_error)(-1,
+                    "C++ variable extent[%d]=%d does not match NetCDF variable extent[%d]=%d",
+                    mem_k, shape[mem_k], k, ncvar.getDim(k).getSize());
+            }
+        } else {
+            // Determine var shape based on NetCDF variable
+            for (int k=0; k<RANK; ++k) {
+                int const mem_k = rowmajor ? k : RANK-k-1;
+                shape[mem_k] = ncvar.getDim(k).getSize();
+            }
+        }
+
+        // All checks look OK; allocate the in-memory vairable if needed
+        val.reference(blitz::Array<TypeT,RANK>(shape));
     }
-
-    blitz::Array<TypeT, RANK> *valp;
-
-    std::vector<netCDF::NcDim> _dims(dims);
-    if (reverse) {
-        std::reverse(_dims.begin(), _dims.end());
-        auto &_val(ncio.tmp.take(ibmisc::f_to_c(val)));
-        valp = &_val;
-    } else {
-        valp = &val;
-    }
-
-    netCDF::NcVar ncvar = get_or_add_var(ncio, vname, snc_type, _dims);
 
     // const_cast allows us to re-use nc_rw_blitz for read and write
     ncio += std::bind(&nc_rw_blitz<TypeT, RANK>,
-        ncio.nc, ncio.rw, valp, alloc, vname, storage);
+        ncio.nc, ncio.rw, &val, alloc, vname, rowmajor);
 
     return ncvar;
 }
 
-
+/** Convenience method; deduce NetCDF type based on C++ type */
 template<class TypeT, int RANK>
 netCDF::NcVar ncio_blitz(
     NcIO &ncio,
     blitz::Array<TypeT, RANK> &val,
     bool alloc,
     std::string const &vname,
-    std::vector<netCDF::NcDim> const &dims)
-{ return ncio_blitz(ncio, val, alloc, vname, get_nc_type<TypeT>(), dims); }
+    std::vector<netCDF::NcDim> const &dims,
+    blitz::GeneralArrayStorage<RANK> const &storage = blitz::GeneralArrayStorage<RANK>())
+{
+    return ncio_blitz(ncio, val, alloc, vname, get_nc_type<TypeT>(), dims, storage);
+}
+
+
+/** Convenience method: reads data from NetCDF, returns as a newly allocate blitz::Array */
+template<class TypeT, int RANK>
+blitz::Array<TypeT,RANK> nc_read_blitz(
+    netCDF::NcGroup *nc,
+    std::string const &vname,
+    blitz::GeneralArrayStorage<RANK> const &storage = blitz::GeneralArrayStorage<RANK>());
+
+template<class TypeT, int RANK>
+blitz::Array<TypeT,RANK> nc_read_blitz(
+    netCDF::NcGroup *nc,
+    std::string const &vname,
+    blitz::GeneralArrayStorage<RANK> const &storage = blitz::GeneralArrayStorage<RANK>())
+{
+    NcIO ncio(nc, 'r');    // Dummy
+    blitz::Array<TypeT,RANK> val;
+    ncio_blitz(ncio, val, true, vname, {}, storage);
+    return val;
+}
+
 
 // ----------------------------------------------------
 // =================================================

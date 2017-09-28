@@ -115,6 +115,10 @@ TEST_F(NetcdfTest, blitz)
     blitz::Array<double,2> B(A*2);
     blitz::Array<double,2> B_f(c_to_f(B));
 
+    blitz::Array<double,1> C(17);
+    for (int i=0; i<C.extent(0); ++i) C(i) = 52 + i*2;
+    blitz::Array<double,1> C_f(c_to_f(C));
+
     std::vector<std::string> strings = {"s1", "s2"};
 
     // ---------- Write
@@ -125,6 +129,9 @@ TEST_F(NetcdfTest, blitz)
     auto dims_f = ibmisc::get_or_add_dims(ncio, B_f, {"dim5", "dim4"});
     ibmisc::ncio_blitz(ncio, B_f, true, "B", "double", dims_f);
 
+    auto dimsC = ibmisc::get_or_add_dims(ncio, C, {"dim17"});
+    ibmisc::ncio_blitz(ncio, C, true, "C", "double", dimsC);
+
     auto info_v = get_or_add_var(ncio, "info", "int64", {});
     get_or_put_att(info_v, ncio.rw, "strings", "", strings);    // Type ignored here
 
@@ -134,17 +141,21 @@ TEST_F(NetcdfTest, blitz)
     // ---------- Read
     ibmisc::NcIO ncio(fname, NcFile::read);
 
-    blitz::Array<double,2> A2, B2;
+    blitz::Array<double,2> A2;
+    blitz::Array<double,1> C2;
     std::vector<std::string> strings2;
     auto dims = ibmisc::get_or_add_dims(ncio, A, {"dim4", "dim5"});
     ibmisc::ncio_blitz(ncio, A2, true, "A", "double", dims);
-    ibmisc::ncio_blitz(ncio, B2, true, "B", "double", dims);
+    auto B2(ibmisc::nc_read_blitz<double,2>(ncio.nc, "B"));
+//    auto dimsC = ibmisc::get_or_add_dims(ncio, C, {"dim17"});
+    auto dimsC = ibmisc::get_dims(ncio, {"dim17"});
+    ibmisc::ncio_blitz(ncio, C2, true, "C", "double", dimsC);
 
     auto info_v = get_or_add_var(ncio, "info", "int64", {});
     get_or_put_att(info_v, ncio.rw, "strings", "", strings2);
 
     ncio.close();
-
+    EXPECT_EQ(A.extent(0), A2.extent(0));
     for (int i=0; i<A.extent(0); ++i) {
     for (int j=0; j<A.extent(1); ++j) {
         EXPECT_EQ(A(i,j), A2(i,j));
@@ -152,6 +163,11 @@ TEST_F(NetcdfTest, blitz)
     EXPECT_EQ(strings.size(), strings2.size());
     for (size_t i=0; i<strings.size(); ++i) {
         EXPECT_EQ(strings[i], strings2[i]);
+    }
+
+    EXPECT_EQ(C.extent(0), C2.extent(0));
+    for (int i=0; i<C.extent(0); ++i) {
+        EXPECT_EQ(C(i), C2(i));
     }
 
 }
