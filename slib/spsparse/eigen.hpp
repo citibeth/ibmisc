@@ -515,11 +515,11 @@ MakeDenseEigen<SparseIndexT,_Scalar,_Options,_StorageIndex>::MakeDenseEigen(
 : dims(_dims),
     permute((transpose == 'T') ? ibmisc::make_array(1,0) : ibmisc::make_array(0,1)),
     accum(
-    accum::sparsify(sparsify_transform,
-        accum::in_index_type<typename SparseSetT::sparse_type>(),
-        dims,
-    accum::permute(accum::in_rank<2>(), permute,
-    accum::ref(M))))
+        accum::sparsify(sparsify_transform,
+            accum::in_index_type<typename SparseSetT::sparse_type>(),
+            dims,
+        accum::permute(accum::in_rank<2>(), permute,
+        accum::ref(M))))
 {}
 
 #define ARGS SparseIndexT,_Scalar,_Options,_StorageIndex
