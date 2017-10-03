@@ -288,6 +288,16 @@ class EigenSparseMatrixIterator :
         EigenSparseMatrixIterator<ARGS>>
 {
     typedef EigenSparseMatrixIterator<ARGS> IteratorT;
+
+    // Run this every time ii is changed.
+    void validate_ii()
+    {
+        while (k != M.outerSize() && !ii) {
+            ++k;
+            ii.~InnerIterator();
+            new (&ii) typename Eigen::SparseMatrix<ARGS>::InnerIterator(M,k);
+        }
+    }
 public:
     typedef _StorageIndex index_type;
     typedef _Scalar val_type;
@@ -299,7 +309,9 @@ public:
     
     EigenSparseMatrixIterator(Eigen::SparseMatrix<ARGS> const &_M, int _k)
         : M(_M), k(_k),
-        ii(typename Eigen::SparseMatrix<ARGS>::InnerIterator(M,k)) {}
+        ii(typename Eigen::SparseMatrix<ARGS>::InnerIterator(M,k)) {
+            validate_ii();
+        }
 
     // ---------------------------------------------------------
     // http://www.cplusplus.com/reference/iterator/
@@ -311,8 +323,6 @@ public:
         if (k != other->k) return false;
         return (k == M.outerSize()) || (ii == other->ii);
     }
-//    bool operator==(IteratorT const other) const
-//        { return (k == other->k) && (ii == other->ii); }
 
     IteratorT &operator*()
         { return *this; }
@@ -339,12 +349,7 @@ template<class _Scalar, int _Options, class _StorageIndex>
 EigenSparseMatrixIterator<ARGS> &EigenSparseMatrixIterator<ARGS>::operator++() 
 {    // Prefix ++
     ++ii;
-    while (!ii) {
-        ++k;
-        if (k == M.outerSize()) break;    // Iteration is over
-        ii.~InnerIterator();
-        new (&ii) typename Eigen::SparseMatrix<ARGS>::InnerIterator(M,k);
-    }
+    validate_ii();
     return *this;
 }
 
@@ -482,7 +487,7 @@ public:
     TupleListT<2> M;
     std::array<SparseSetT *,2> const dims;
     std::array<int,2> const permute;    // {1,0} for transpse=='T'
-    AccumT accum;
+    AccumT accum;    // References M
 
     /** @param transpose Use '.' for regular, 'T' for transpose.  If transposing
         in the final TupleList output, the SparseSets to which indices

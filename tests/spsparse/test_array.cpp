@@ -467,7 +467,9 @@ TEST_F(SpSparseTest, sum)
     typedef TupleList<int, double, 2> TupleListT;
     TupleListT arr({3,4});
 
-    arr.add({0,0}, 1.);
+    // Note there is NOTHING in column 0 of the matrix.
+    // This tests correctness of the begin() and end() iterators
+    arr.add({0,2}, 1.);
     arr.add({0,1}, 2.);
     arr.add({0,3}, 4.);
 
@@ -475,6 +477,15 @@ TEST_F(SpSparseTest, sum)
     arr.add({2,1}, 16.);
 
     auto M(to_eigen_sparsematrix(arr));
+
+    // Test correctness of iterator
+    int n=0;
+    for (auto ii(begin(M)); ii != end(M); ++ii) {
+        // printf("M(%d, %d) = %f\n", ii->row(), ii->col(), ii->value());
+        ++n;
+    }
+    EXPECT_EQ(5, n);
+
 
     {auto arrb(sum(M,0,'+'));
         EXPECT_EQ(3, arrb.extent(0));
@@ -492,9 +503,9 @@ TEST_F(SpSparseTest, sum)
 
     {auto arrb(sum(M,1,'+'));
         EXPECT_EQ(4, arrb.extent(0));
-        EXPECT_EQ(1., arrb(0));
+        EXPECT_EQ(0., arrb(0));
         EXPECT_EQ(18., arrb(1));
-        EXPECT_EQ(0., arrb(2));
+        EXPECT_EQ(1., arrb(2));
         EXPECT_EQ(12., arrb(3));
     }
 }
