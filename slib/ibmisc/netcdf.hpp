@@ -654,7 +654,16 @@ netCDF::NcVar ncio_blitz(
 
         // Ensure that in-memory variable shape is same as NetCDF variable
         blitz::TinyVector<int,RANK> shape;    // Shape to allocate
-        if (!alloc) {
+        if (alloc) {
+            // Determine var shape based on NetCDF variable
+            for (int k=0; k<RANK; ++k) {
+                int const mem_k = rowmajor ? k : RANK-k-1;
+                shape[mem_k] = ncvar.getDim(k).getSize();
+            }
+
+            // All checks look OK; allocate the in-memory vairable if needed
+            val.reference(blitz::Array<TypeT,RANK>(shape));
+        } else {
             shape = val.extent();
 
             // Check: in-memory variable shape matches NetCDF variable shape
@@ -664,16 +673,8 @@ netCDF::NcVar ncio_blitz(
                     "C++ variable extent[%d]=%d does not match NetCDF variable extent[%d]=%d",
                     mem_k, shape[mem_k], k, ncvar.getDim(k).getSize());
             }
-        } else {
-            // Determine var shape based on NetCDF variable
-            for (int k=0; k<RANK; ++k) {
-                int const mem_k = rowmajor ? k : RANK-k-1;
-                shape[mem_k] = ncvar.getDim(k).getSize();
-            }
         }
 
-        // All checks look OK; allocate the in-memory vairable if needed
-        val.reference(blitz::Array<TypeT,RANK>(shape));
     }
 
     // const_cast allows us to re-use nc_rw_blitz for read and write
