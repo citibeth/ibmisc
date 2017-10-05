@@ -191,6 +191,14 @@ class TmpAlloc {
         { delete t; }
 
 public:
+
+    TmpAlloc() {}
+    /** Delete copy constructor; this would result in multiple de-allocations. */
+    TmpAlloc(TmpAlloc const &) = delete;
+
+    TmpAlloc(TmpAlloc &&other) :
+        deleters(std::move(other.deleters)) {}
+
     template<class T, typename... Args>
     T *newptr(Args... args)
     {
