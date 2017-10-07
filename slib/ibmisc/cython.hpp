@@ -159,7 +159,16 @@ blitz::GeneralArrayStorage<N> const &storage)
 }
 
 
-/** Allocates a Numpy array of a given type and size */
+/** Allocates a Numpy array of a given type and size
+For memory allocation issues, see:
+http://grokbase.com/t/python/python-list/005ttee301/decrefing-and-pyarray-functions-in-c-extensions
+
+    Every PyArrayObject that you successfully receive from a PyArray_XXXXXX
+    call has an increased reference count (you own a reference). Unless you
+    are returning the object to the user (using return PyArray_Return(obj) or
+    PyArray_BuildValue with the "N" construct) you must DECREF the object
+    before leaving the subroutine or you will create a memory leak..
+*/
 template<class T, int N>
 PyObject *new_pyarray(std::array<int,N> dims)
 {
