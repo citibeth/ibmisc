@@ -66,7 +66,53 @@ inline void exit()
 }
 
 // --------------------------------------------------------------------
-// Convert template types to Numpy type_nums
+// ======================================================
+
+// Primitive Python types
+class pytype_long {};
+
+// ======================================================
+
+/** General template to box a primitive value into a Python object */
+template<class PyTypeT, class TypeT>
+inline PyObject *py_build(TypeT const &ival)
+{
+    PyErr_SetString(PyExc_ValueError, "py_build(): Unknown type combination");
+    ibmisc::cython::exit();
+}
+template<> inline PyObject *py_build<pytype_long, int>(int const &ival)
+    { return PyLong_FromLong(ival); }
+template<> inline PyObject *py_build<pytype_long, long>(long const &ival)
+    { return PyLong_FromLong(ival); }
+
+
+// ======================================================
+
+/** Convenient template to build a Python tuple from a std::array
+http://effbot.org/pyfaq/how-do-i-use-py-buildvalue-to-create-a-tuple-of-arbitrary-length.htm */
+template<class PyTypeT, class TypeT, int RANK>
+PyObject *py_build_tuple(std::array<TypeT,RANK> val);
+
+template<class PyTypeT, class TypeT, int RANK>
+PyObject *py_build_tuple(std::array<TypeT,RANK> val)
+{
+    PyObject *result = PyTuple_New(RANK);
+    if (!result) return NULL;
+
+    for (int i=0; i<RANK; ++i) {
+        PyObject *value = py_build<PyTypeT,TypeT>(val[i]);
+        if (!value) {
+            Py_DECREF(result);
+            return NULL;
+        }
+        PyTuple_SetItem(result, i, value);
+    }
+    return result;
+}
+// ======================================================
+
+// --------------------------------------------------------------------
+// Convert C++ template types to Numpy type_nums
 
 template<class T>
 inline int np_type_num()
