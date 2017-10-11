@@ -53,6 +53,30 @@ bool replace(std::string& str, const std::string& from, const std::string& to) {
     return true;
 }
 
+/** Wrap a paragraph of text, splitting on word boundaries.
+https://www.rosettacode.org/wiki/Word_wrap#C.2B.2B */
+std::string wrap(std::string const &text, size_t line_length)
+{
+    std::istringstream words(text);
+    std::ostringstream wrapped;
+    std::string word;
+ 
+    if (words >> word) {
+        wrapped << word;
+        size_t space_left = line_length - word.length();
+        while (words >> word) {
+            if (space_left < word.length() + 1) {
+                wrapped << '\n' << word;
+                space_left = line_length - word.length();
+            } else {
+                wrapped << ' ' << word;
+                space_left -= word.length() + 1;
+            }
+        }
+    }
+    return wrapped.str();
+}
+
 // ---------------------------------------------------------------------
 
 

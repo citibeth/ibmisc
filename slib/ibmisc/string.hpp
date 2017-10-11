@@ -20,6 +20,8 @@
 #include <string>
 #include <vector>
 #include <cstdarg>
+#include <iostream>
+#include <sstream>
 
 namespace ibmisc {
 
@@ -54,5 +56,10 @@ inline std::string f_to_cpp(char *fstr, size_t len)
     // Copy to a C++ string
     return std::string (fstr, c+1-fstr);
 }
+
+
+/** Wrap a paragraph of text, splitting on word boundaries.
+https://www.rosettacode.org/wiki/Word_wrap#C.2B.2B */
+extern std::string wrap(std::string const &text, size_t line_length = 72);
 
 }
