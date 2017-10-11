@@ -17,6 +17,7 @@
 from libcpp cimport bool
 from libcpp.string cimport string
 from libcpp.vector cimport vector
+from libcpp.memory cimport shared_ptr, unique_ptr
 cimport cblitz
 from cpython.object cimport *
 
@@ -40,3 +41,25 @@ cdef extern from "ibmisc/cython.hpp" namespace "ibmisc::cython":
     cdef extern void init()
     cdef extern call_import_array()
     cdef NcIO *new_ncio(string fname, string sFileMode)
+
+# See: https://github.com/apache/arrow/commit/000e1e34d6ad3b6c1a1bc430974f2eac05f96173
+cdef extern from "<memory>" namespace "std" nogil:
+
+    cdef cppclass unique_ptr[T]:
+        unique_ptr()
+        unique_ptr(T*)
+        T* get()
+        T* release()
+        void reset()
+        void reset(nullptr_t)
+        void reset(T*)
+        void swap(unique_ptr&)
+
+    cdef cppclass shared_ptr[T]:
+        shared_ptr()
+        shared_ptr(T*)
+        T* get()
+        void reset()
+        void reset(T* p)
+        void swap(shared_ptr&)
+

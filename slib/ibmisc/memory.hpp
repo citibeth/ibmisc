@@ -58,8 +58,8 @@ std::shared_ptr<ValT> new_shared_ptr()
 
 // --------------------------------------------------------
 // http://ficksworkshop.com/blog/14-coding/86-how-to-static-cast-std-unique-ptr 
-template<typename D, typename B>
 /** Static-cast a unique_ptr while moving it to another unique_ptr */
+template<typename D, typename B>
 void static_move(std::unique_ptr<D> &dest, std::unique_ptr<B>& base)
 {
     dest.reset(static_cast<D*>(base.release()));
