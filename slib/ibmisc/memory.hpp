@@ -199,6 +199,11 @@ public:
     TmpAlloc(TmpAlloc &&other) :
         deleters(std::move(other.deleters)) {}
 
+    void operator=(TmpAlloc &&other)
+    {
+        this->deleters = std::move(other.deleters);
+    }
+
     template<class T, typename... Args>
     T *newptr(Args... args)
     {
