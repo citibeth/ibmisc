@@ -24,8 +24,6 @@
 
 namespace ibmisc {
 
-static double const nan = std::numeric_limits<double>::quiet_NaN();
-
 class ConstantSet
 {
 public:
@@ -45,7 +43,7 @@ public:
         : name(_name),
         units(_units),
         description(_description),
-        val(nan)
+        val(std::numeric_limits<double>::quiet_NaN())
         {}
     };
 
