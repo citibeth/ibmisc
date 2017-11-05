@@ -123,6 +123,24 @@ public:
 };
 
 
+template <class KeyT, class ValueT>
+struct IndexedVector : public std::vector<ValueT>
+{
+    IndexSet<KeyT> &index;
+
+    IndexedVector(IndexSet<KeyT> &_index) : index(_index) {}
+    IndexedVector(IndexSet<KeyT> &_index, std::initializer_list<ValueT> list) :
+        std::vector<ValueT>(list), index(_index) {}
+
+    ValueT &at(KeyT const &key)
+        { return std::vector<ValueT>::operator[](index.at(key)); }
+
+    ValueT const &at(KeyT const &key) const
+        { return std::vector<ValueT>::operator[](index.at(key)); }
+};
+
+
+
 template<class KeyT>
 std::ostream &operator<<(std::ostream &out, ibmisc::IndexSet<KeyT> const &con)
 {

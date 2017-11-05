@@ -253,6 +253,24 @@ TEST_F(IndexingTest, index_set)
 }
 
 
+TEST_F(IndexingTest, indexed_vector)
+{
+    IndexSet<std::string> names;
+
+    names.insert("A");
+    names.insert("B");
+    names.insert("C");
+
+    IndexedVector<std::string, int> values(names, {0,1,2});
+
+    EXPECT_EQ(0, values[0]);
+    EXPECT_EQ(0, values.at("A"));
+    EXPECT_EQ(1, values[1]);
+    EXPECT_EQ(1, values.at("B"));
+    EXPECT_EQ(2, values[2]);
+    EXPECT_EQ(2, values.at("C"));
+}
+
 // -----------------------------------------------------------
 
 int main(int argc, char **argv) {
