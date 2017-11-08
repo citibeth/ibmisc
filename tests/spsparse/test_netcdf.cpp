@@ -21,9 +21,7 @@
 #include <gtest/gtest.h>
 #include <spsparse/eigen.hpp>
 #include <iostream>
-#ifdef USE_EVERYTRACE
 #include <everytrace.h>
-#endif
 #include <netcdf>
 #include <spsparse/netcdf.hpp>
 
@@ -117,9 +115,8 @@ TEST_F(SpSparseTest, NetCDF) {
 
 
 int main(int argc, char **argv) {
-#ifdef USE_EVERYTRACE
     everytrace_init();
-#endif
+
     ::testing::InitGoogleTest(&argc, argv);
     return RUN_ALL_TESTS();
 }

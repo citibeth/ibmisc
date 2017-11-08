@@ -274,10 +274,10 @@ TEST_F(IndexingTest, indexed_vector)
 // -----------------------------------------------------------
 
 int main(int argc, char **argv) {
-#ifdef USE_EVERYTRACE
-    everytrace_init();    // Don't want everytrace for this test, it eats exceptions
-    ibmisc_error = ibmisc::exception_error;
-#endif
+    // For test, configure Everytrace to silently throw exceptions (which we can catch)
+    everytrace_init();
+    everytrace_exit = &everytrace_exit_silent_exception;
+
     ::testing::InitGoogleTest(&argc, argv);
     return RUN_ALL_TESTS();
 }

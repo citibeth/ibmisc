@@ -20,6 +20,7 @@
 //#define NPY_NO_DEPRECATED_API NPY_1_7_API_VERSION
 #include <Python.h>     // This wants to be first on a Mac.
 
+#include <everytrace.hpp>
 #include <ibmisc/ibmisc.hpp>
 #include <ibmisc/cython.hpp>
 #include <exception>
@@ -32,9 +33,10 @@ namespace cython {
 
 void init()
 {
-    // Don't use Everytrace in Python!
-    // Use exceptions instead, which play nicely with Python.
-    ibmisc_error = &ibmisc::exception_error;
+    everytrace_exit = &everytrace_exit_exception;
+
+    // Using Fortran dumps is OK
+    // everytrace_dump_with_fortran = 0;
 }
 
 

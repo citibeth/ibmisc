@@ -121,6 +121,9 @@ inline int np_type_num()
     ibmisc::cython::exit();
 }
 
+template<> inline int np_type_num<char>()
+    { return NPY_INT8; }
+
 template<> inline int np_type_num<short>()
     { return NPY_SHORT; }
 

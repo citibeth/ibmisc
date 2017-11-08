@@ -387,7 +387,7 @@ extern blitz::Array<T, dest_ndim> const reshape(
     blitz::TinyVector<int,dest_ndim> const &dest_shape)
 {
     /* Do the reshaping */
-    return (blitz::Array<T,dest_ndim> const)(src.data(),
+    return blitz::Array<T,dest_ndim>(const_cast<T *>(src.data()),
         reshape_get_dest_shape(src.shape(), dest_shape),
         blitz::neverDeleteData);
 }

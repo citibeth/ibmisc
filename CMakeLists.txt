@@ -11,16 +11,9 @@ find_package(Eigen3 REQUIRED)
 include_directories(${EIGEN3_INCLUDE_DIR})
 
 # -----------------------------------------
-if (NOT DEFINED USE_EVERYTRACE)
-    set(USE_EVERYTRACE NO)
-endif()
-
-if (USE_EVERYTRACE)
-    find_package(Everytrace REQUIRED)
-    add_definitions(-DUSE_EVERYTRACE)
-    include_directories(${EVERYTRACE_INCLUDE_DIR})
-    list(APPEND EXTERNAL_LIBS ${EVERYTRACE_LIBRARY})
-endif()
+find_package(Everytrace REQUIRED)
+include_directories(${EVERYTRACE_INCLUDE_DIR})
+list(APPEND EXTERNAL_LIBS ${EVERYTRACE_LIBRARY})
 # -----------------------------------------
 if (NOT DEFINED USE_PROJ4)
     set(USE_PROJ4 YES)

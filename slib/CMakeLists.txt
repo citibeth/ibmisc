@@ -3,7 +3,7 @@ set(IBMISC_SOURCE
     ibmisc/string.cpp
     ibmisc/filesystem.cpp
     ibmisc/datetime.cpp
-    ibmisc/ibmisc.cpp
+    ibmisc/error.cpp
     ibmisc/geodesy.cpp
     ibmisc/VarTransformer.cpp
     ibmisc/ConstantSet.cpp
@@ -11,7 +11,8 @@ set(IBMISC_SOURCE
     ibmisc/indexing.cpp
     ibmisc/endian.cpp
     ibmisc/fortranio.cpp
-    ibmisc/memory.cpp)
+    ibmisc/memory.cpp
+    ibmisc/stdio.cpp)
 
 
 if (USE_PROJ4)
@@ -30,11 +31,8 @@ if (USE_UDUNITS2)
         ibmisc/udunits2.cpp)
 endif()
 
-if (USE_EVERYTRACE)
-    add_library (ibmisc SHARED ${EVERYTRACE_c_REFADDR} ${IBMISC_SOURCE})
-else()
-    add_library(ibmisc SHARED ${IBMISC_SOURCE})
-endif()
+# Use Everytrace here
+add_library (ibmisc SHARED ${EVERYTRACE_c_REFADDR} ${IBMISC_SOURCE})
 
 target_link_libraries(ibmisc ${EXTERNAL_LIBS})
 
