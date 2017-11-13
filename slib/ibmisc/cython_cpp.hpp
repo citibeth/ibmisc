@@ -33,6 +33,7 @@ namespace cython {
 
 void init()
 {
+    everytrace_init();    // In case it wasn't initialized elsewhere; catch signals
     everytrace_exit = &everytrace_exit_exception;
 
     // Using Fortran dumps is OK
