@@ -44,6 +44,15 @@ inline bool ends_with(std::string const &fullString, std::string const &ending)
     }
 }
 
+inline bool starts_with(std::string const &fullString, std::string const &prefix)
+{
+    if (fullString.length() >= prefix.length()) {
+        return (0 == fullString.compare(0, prefix.length(), prefix));
+    } else {
+        return false;
+    }
+}
+
 bool replace(std::string& str, const std::string& from, const std::string& to);
 
 // Convert Fortran to C++ string
