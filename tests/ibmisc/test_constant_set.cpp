@@ -20,11 +20,14 @@
 
 #include <gtest/gtest.h>
 #include <ibmisc/ConstantSet.hpp>
+#include <ibmisc/string.hpp>
 #include <iostream>
+#include <fstream>
 #include <cstdio>
 #include <memory>
 #include <map>
 
+using namespace std;
 using namespace ibmisc;
 using namespace netCDF;
 
@@ -93,6 +96,11 @@ TEST_F(ConstantSetTest, constant_set)
     EXPECT_DOUBLE_EQ(17., length_m);
     double width_m = cs.get_as("width", "m");
     EXPECT_DOUBLE_EQ(4., width_m);
+}
+
+#if 0
+TEST_F(ConstantSetTestNcIO, constant_set)
+{
 
 // This was never implemented...
 //  // Try out operator<<
@@ -124,6 +132,72 @@ TEST_F(ConstantSetTest, constant_set)
         EXPECT_EQ(datum.val, datum2.val);
     }
 }
+#else
+std::string const constants_cdl =
+    "netcdf __constants2 {\n"
+    "dimensions:\n"
+    "\tone = 1 ;\n"
+    "variables:\n"
+    "\tdouble constant.lhe(one) ;\n"
+    "\t\tconstant.lhe:value = 2500000. ;\n"
+    "\t\tconstant.lhe:units = \"J kg-1\" ;\n"
+    "\t\tconstant.lhe:description = \"latent heat of evap at 0 C 2.5008d6\" ;\n"
+    "\tdouble constant.lhm(one) ;\n"
+    "\t\tconstant.lhm:value = 334000. ;\n"
+    "\t\tconstant.lhm:units = \"J kg-1\" ;\n"
+    "\t\tconstant.lhm:description = \"latent heat of melt at 0 C 334590\" ;\n"
+    "data:\n"
+    "\n"
+    " constant.lhe = _ ;\n"
+    "\n"
+    " constant.lhm = _ ;\n"
+    "\n"
+    "}\n";
+
+
+
+
+TEST_F(ConstantSetTest, constant_set_ncread)
+{
+    // Test the NetCDF I/O
+    std::string fname("__constants2");
+//    tmpfiles.push_back(fname+".cdl");
+//    tmpfiles.push_back(fname+".nc");
+    ::remove((fname+".cdl").c_str());
+
+    // Write .cdl to temporary file
+    {ofstream fout;
+        fout.open((fname+".cdl").c_str());
+        fout << constants_cdl;
+        fout.close();
+    }
+
+    // Convert to .nc
+     std::string const cmd(string_printf("ncgen -o %s.nc %s.cdl", fname.c_str(), fname.c_str()));
+
+    FILE *in = popen(cmd.c_str(), "r");
+    EXPECT_NE(nullptr, in);
+ 
+    char buf[512];
+    while(fgets(buf, sizeof(buf), in)!=NULL){
+        std::cout << buf;
+    }
+    pclose(in);
+
+
+    // Read the .nc file
+    UTSystem ut_system("");
+    ConstantSet cs;
+    cs.init(&ut_system);
+    {NcIO ncio(fname+".nc", 'r');
+        cs.read_nc(ncio.nc, "");
+    }
+
+    double const lhe = cs.get_as("constant.lhe", "J kg-1");
+    EXPECT_EQ(2500000., lhe);
+    EXPECT_EQ(334000., cs.get_as("constant.lhm", "J kg-1"));
+}
+#endif
 
 // -----------------------------------------------------------
 
@@ -132,3 +206,4 @@ int main(int argc, char **argv) {
     ::testing::InitGoogleTest(&argc, argv);
     return RUN_ALL_TESTS();
 }
+

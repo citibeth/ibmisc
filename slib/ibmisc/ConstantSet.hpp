@@ -105,7 +105,7 @@ public:
     double get_as(std::string const &name,
         std::string const &sunits) const;
 
-
+    void read_nc(netCDF::NcGroup *nc, std::string const &prefix);
 
     void ncio(NcIO &ncio, std::string const &vname);
 };

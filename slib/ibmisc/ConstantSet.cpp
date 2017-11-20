@@ -87,41 +87,25 @@ double ConstantSet::get_as(std::string const &name,
 }
 
 // =======================================================
-void ConstantSet::ncio(NcIO &ncio, std::string const &vname)
+void ConstantSet::read_nc(netCDF::NcGroup *nc, std::string const &prefix)
 {
-    auto constants_v = get_or_add_var(ncio, vname, "int64", {});
+    std::multimap<std::string,NcVar> vars(nc->getVars());
+    for (auto ii=vars.begin(); ii != vars.end(); ++ii) {
+        std::string const &var_name(ii->first);
+        if (!starts_with(var_name, prefix)) continue;
+        NcVar &var(ii->second);
 
-    // Get a list of the names of our constants
-    if (ncio.rw == 'w') {
-        // Store the constants as attributes
-        for (size_t i=0; i<size(); ++i) {
-            constants_v.putAtt(data[i].name, ncDouble, data[i].val);
-            constants_v.putAtt(data[i].name + "_units", data[i].units);
-            constants_v.putAtt(data[i].name + "_description", data[i].description);
-        }
-    } else {
-        auto atts(constants_v.getAtts());   // Get all atts for this var
-        for (auto ii=atts.begin(); ii != atts.end(); ++ii) {
+        std::string const const_name(var_name.substr(prefix.length(), var_name.length() - prefix.length()));
 
-            // Loop through the MAIN attribute for each constant
-            std::string const &name(ii->first);
-            NcAtt &att(ii->second);
-            if (att.getType() != ncDouble) continue;
 
-            // Get its value
-            if (att.getAttLength() != 1) (*ibmisc_error)(-1,
-                "Attribute %s must have length 1", name.c_str());
-            double val;
-            att.getValues(&val);
+        double value;
+        get_or_put_att(var, 'r', "value", &value, 1);
+        std::string units;
+        get_or_put_att(var, 'r', "units", units);
+        std::string description;
+        get_or_put_att(var, 'r', "description", description);
 
-            // Look up other attributes
-            std::string units, description;
-            get_or_put_att(constants_v, 'r', name + "_units", units);
-            get_or_put_att(constants_v, 'r', name + "_description", description);
-
-            // Create the constant
-            set(name, val, units, description);
-        }
+        set(const_name, value, units, description);
     }
 }
 
