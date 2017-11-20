@@ -161,8 +161,8 @@ TEST_F(ConstantSetTest, constant_set_ncread)
 {
     // Test the NetCDF I/O
     std::string fname("__constants2");
-//    tmpfiles.push_back(fname+".cdl");
-//    tmpfiles.push_back(fname+".nc");
+    tmpfiles.push_back(fname+".cdl");
+    tmpfiles.push_back(fname+".nc");
     ::remove((fname+".cdl").c_str());
 
     // Write .cdl to temporary file
