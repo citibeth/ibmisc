@@ -645,10 +645,11 @@ netCDF::NcVar ncio_blitz(
             for (int k=0; k<RANK; ++k) {
                 int const mem_k = rowmajor ? k : RANK-k-1;
 
+printf("B rowmajor=%d %d %d %d\n", rowmajor, RANK, k, mem_k);
                 // The dimensions must match, not just their extents
                 if (dims[mem_k] != ncvar.getDim(k)) (*ibmisc_error)(-1,
-                    "User-supplied dimension[%d] does not match netCDF dimension[%d]=%s",
-                    mem_k, k, ncvar.getDim(k).getName().c_str());
+                    "User-supplied dimension[%d]=%s does not match netCDF dimension[%d]=%s",
+                    mem_k, dims[mem_k].getName().c_str(), k, ncvar.getDim(k).getName().c_str());
             }
         }
 
@@ -662,7 +663,7 @@ netCDF::NcVar ncio_blitz(
             }
 
             // All checks look OK; allocate the in-memory vairable if needed
-            val.reference(blitz::Array<TypeT,RANK>(shape));
+            val.reference(blitz::Array<TypeT,RANK>(shape, storage));
         } else {
             shape = val.extent();
 

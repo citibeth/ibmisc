@@ -124,7 +124,6 @@ TEST_F(BundleTest, construct_alloc)
     // Read it back, allocating as we go (as fortranArray)
     {
         MyClass rec2;
-        rec2.a1 = 17;
         {NcIO ncio(fname, 'r');
             rec2.bundle.ncio(ncio, {}, true, "", "int", fortranArray);
         }
@@ -140,7 +139,6 @@ TEST_F(BundleTest, construct_alloc)
     // Read it back, allocating as we go (as C array; indices are reversed)
     {
         MyClass rec2;
-        rec2.a1 = 17;
         {NcIO ncio(fname, 'r');
             rec2.bundle.ncio(ncio, {}, true, "", "int");
         }

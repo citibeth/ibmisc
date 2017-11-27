@@ -379,17 +379,26 @@ void ArrayBundle<TypeT,RANK>::ncio(
 
     for (auto &var : *myvars) {
         int i=index.at(var);
-
         auto &meta(data[i]);
 
+        bool const rowmajor = (alloc ?
+            (storage.ordering(0) != 0)
+            : is_row_major(meta.arr));
+
         // Set up the dimensions
-        auto dims_f(get_or_add_dims(ncio,
+        auto dims(get_or_add_dims(ncio,
             meta.arr,
             to_vector(meta.sdims)));
 
+        if (!rowmajor) {
+printf("REVERSING\n");
+            std::reverse(dims.begin(), dims.end());
+        }
+else { printf("NOT REVERSING\n"); }
+
         // Read/Write the NetCDF variable
         // (will auto-reverse dims if it detects column major)
-        auto ncvar(ncio_blitz(ncio, meta.arr, alloc, prefix + meta.name, snc_type, dims_f, storage));
+        auto ncvar(ncio_blitz(ncio, meta.arr, alloc, prefix + meta.name, snc_type, dims, storage));
 
         // Read/write attributes
         if (ncio.rw == 'w') {
