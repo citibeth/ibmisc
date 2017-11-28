@@ -148,6 +148,9 @@ netCDF::NcDim get_or_add_dim(NcIO &ncio, std::string const &dim_name)
 
 netCDF::NcDim get_or_add_dim(NcIO &ncio, std::string const &dim_name, size_t dim_size)
 {
+    // dim_size < 0 means "unlimited"
+    if (dim_size < 0) return get_or_add_dim(ncio, dim_name);
+
     NcDim dim = ncio.nc->getDim(dim_name);
     if (dim.isNull()){
         // The dim does NOT exist!
