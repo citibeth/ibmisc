@@ -78,6 +78,12 @@ struct F90Array {
 
 };
 
+template<class ArrT, int rank>
+inline F90Array<ArrT,rank> f90array(blitz::Array<ArrT,rank> &arr)
+    { return F90Array<ArrT,rank>(arr); }
+
+
+
 /** Print details of array */
 template<class ArrT, int rank>
 std::ostream& operator<<(std::ostream& os, F90Array<ArrT, rank> const &arr_f)
