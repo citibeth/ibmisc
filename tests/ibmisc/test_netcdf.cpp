@@ -24,7 +24,6 @@
 #include <netcdf>
 #include <everytrace.h>
 #include <ibmisc/netcdf.hpp>
-#include <ibmisc/netcdf2.hpp>
 
 using namespace ibmisc;
 using namespace netCDF;
