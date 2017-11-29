@@ -131,7 +131,7 @@ TEST_F(NetcdfTest, blitz)
     ncio_blitz_alloc(ncio, B_f, "B", "double", dims_f, false);
 
     auto dimsC = ibmisc::get_or_add_dims(ncio, C, {"dim17"});
-    ncio_blitz_whole(ncio, C, "C", "double", dimsC);
+    ncio_blitz(ncio, C, "C", "double", dimsC);
 
     auto info_v = get_or_add_var(ncio, "info", "int64", {});
     get_or_put_att(info_v, ncio.rw, "strings", "", strings);    // Type ignored here

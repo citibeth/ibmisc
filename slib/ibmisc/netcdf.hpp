@@ -914,7 +914,7 @@ NcIOBlitzInfo<RANK> _partial(
 // ==================================================================
 
 template<class TypeT, int RANK>
-inline netCDF::NcVar ncio_blitz_whole(
+inline netCDF::NcVar ncio_blitz(
     NCIO_BLITZ_PARAMS,
     std::vector<netCDF::NcDim> const &dims,
     bool equal_dim_order=false,
