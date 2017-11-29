@@ -389,7 +389,8 @@ void ArrayBundle<TypeT,RANK>::ncio(
 
         // Read/Write the NetCDF variable
         // (will auto-reverse dims if it detects column major)
-        auto ncvar(ncio_blitz(ncio, meta.arr, alloc, prefix + meta.name, snc_type, dims_f, storage));
+//        auto ncvar(ncio_blitz(ncio, meta.arr, alloc, prefix + meta.name, snc_type, dims_f, storage));
+netCDF::NcVar ncvar;
 
         // Read/write attributes
         if (ncio.rw == 'w') {

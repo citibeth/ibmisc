@@ -166,7 +166,11 @@ using ncio_blitz_helper = std::function<NcIOBlitzInfo<RANK> (NcIO &, netCDF::NcV
 #define NCIO_BLITZ_ARGS \
     ncio, arr, vname, snc_type
 
-/** Maps a blitz::Array directly to/from a NetCDF array */
+/** Maps a blitz::Array directly to/from a NetCDF array
+@param val The array to read/write
+@param vname Name of NetCDF variable to write
+@param snc_type Data type to write in NetCDF variable.  See get_nc_type().
+@param dims Dimensions to define NetCDF variable.  See get_or_add_dims(). */
 template<class TypeT, int RANK>
 netCDF::NcVar ncio_blitz(
     NCIO_BLITZ_PARAMS,

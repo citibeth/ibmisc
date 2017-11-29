@@ -17,7 +17,7 @@ static void nc_write_timespan(netCDF::NcGroup *nc, std::array<double,2> const &t
 void ncio_timespan(NcIO &ncio, std::array<double,2> &timespan, ibmisc::TimeUnit const &time_unit, std::string const &vname)
 {
     auto &timespan_b(ncio.tmp.take(to_blitz<double,2>(timespan)));    // Copy the input
-    ncio_blitz<double,1>(ncio, timespan_b, false, vname, "double",
+    ncio_blitz_whole<double,1>(ncio, timespan_b, vname, "double",
         get_or_add_dims(ncio, {vname + ".length"}, {timespan.size()}));
 
     if (ncio.rw == 'w') {
@@ -30,7 +30,7 @@ void ncio_timespan(NcIO &ncio, std::array<double,2> &timespan, ibmisc::TimeUnit 
             std::string sdate = to_iso8601(dt);
             for (int j=0; j<iso8601_length; ++j) timespan_c(i,j) = sdate[j];
         }
-        ncio_blitz<char,2>(ncio, timespan_c, false, vname+".txt", "char",
+        ncio_blitz_whole<char,2>(ncio, timespan_c, vname+".txt", "char",
             get_or_add_dims(ncio,
                 {vname + ".length", "iso8601.length"},
                 {timespan.size(), iso8601_length}));
