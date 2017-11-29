@@ -614,7 +614,8 @@ void _check_vector_dims(
     }
 }
 // =================================================
-// -------------------------------------------------------------------
+namespace _ncio_blitz {
+
 template<class TypeT, int RANK>
 void nc_rw_blitz2(
     netCDF::NcGroup *nc,
@@ -825,18 +826,6 @@ NcIOBlitzInfo<RANK> _whole1(
     return ret;
 }
 
-template<class TypeT, int RANK>
-netCDF::NcVar ncio_blitz_whole(
-    NCIO_BLITZ_PARAMS,
-    std::vector<netCDF::NcDim> const &dims,
-    bool equal_dim_order=false,
-    bool dims_in_nc_order=true)
-{
-    using namespace std::placeholders;
-    return ncio_blitz<TypeT,RANK>(NCIO_BLITZ_ARGS,
-        std::bind(&_whole1<TypeT,RANK>, _1, _2, _3,
-            dims, equal_dim_order, dims_in_nc_order));
-}
 // -------------------------------------------------------------------------------
 template<class TypeT, int RANK>
 NcIOBlitzInfo<RANK> _alloc1(
@@ -875,37 +864,6 @@ NcIOBlitzInfo<RANK> _alloc1(
         _dims, equal_dim_order, dims_in_nc_order);
 }
 
-template<class TypeT, int RANK>
-netCDF::NcVar ncio_blitz_alloc(
-    NCIO_BLITZ_PARAMS,
-    std::vector<netCDF::NcDim> _dims = {},
-    bool dims_in_nc_order = true,
-    blitz::GeneralArrayStorage<RANK> const &storage = blitz::GeneralArrayStorage<RANK>())
-{
-    using namespace std::placeholders;
-    return ncio_blitz<TypeT,RANK>(NCIO_BLITZ_ARGS,
-        std::bind(&_alloc1<TypeT,RANK>, _1, _2, _3,
-            _dims, dims_in_nc_order, storage));
-}
-// -------------------------------------------------------------------------
-/** Convenience method: reads data from NetCDF, returns as a newly allocate blitz::Array */
-template<class TypeT, int RANK>
-blitz::Array<TypeT,RANK> nc_read_blitz(
-    netCDF::NcGroup *nc,
-    std::string const &vname,
-    blitz::GeneralArrayStorage<RANK> const &storage = blitz::GeneralArrayStorage<RANK>());
-
-template<class TypeT, int RANK>
-blitz::Array<TypeT,RANK> nc_read_blitz(
-    netCDF::NcGroup *nc,
-    std::string const &vname,
-    blitz::GeneralArrayStorage<RANK> const &storage = blitz::GeneralArrayStorage<RANK>())
-{
-    NcIO ncio(nc, 'r');    // Dummy
-    blitz::Array<TypeT,RANK> val;
-    ncio_blitz_alloc(ncio, val, vname, get_nc_type<TypeT>(), {}, true, storage);
-    return val;
-}
 // -------------------------------------------------------------------------
 template<class TypeT, int RANK>
 NcIOBlitzInfo<RANK> _partial(
@@ -952,21 +910,62 @@ NcIOBlitzInfo<RANK> _partial(
 
     return ret;
 }
+}    // namespace _ncio_blitz
+// ==================================================================
 
 template<class TypeT, int RANK>
-netCDF::NcVar ncio_blitz_partial(
+inline netCDF::NcVar ncio_blitz_whole(
+    NCIO_BLITZ_PARAMS,
+    std::vector<netCDF::NcDim> const &dims,
+    bool equal_dim_order=false,
+    bool dims_in_nc_order=true)
+{
+    using namespace std::placeholders;
+    return _ncio_blitz::ncio_blitz<TypeT,RANK>(NCIO_BLITZ_ARGS,
+        std::bind(&_ncio_blitz::_whole1<TypeT,RANK>, _1, _2, _3,
+            dims, equal_dim_order, dims_in_nc_order));
+}
+
+template<class TypeT, int RANK>
+inline netCDF::NcVar ncio_blitz_alloc(
+    NCIO_BLITZ_PARAMS,
+    std::vector<netCDF::NcDim> _dims = {},
+    bool dims_in_nc_order = true,
+    blitz::GeneralArrayStorage<RANK> const &storage = blitz::GeneralArrayStorage<RANK>())
+{
+    using namespace std::placeholders;
+    return _ncio_blitz::ncio_blitz<TypeT,RANK>(NCIO_BLITZ_ARGS,
+        std::bind(&_ncio_blitz::_alloc1<TypeT,RANK>, _1, _2, _3,
+            _dims, dims_in_nc_order, storage));
+}
+
+template<class TypeT, int RANK>
+inline netCDF::NcVar ncio_blitz_partial(
     NCIO_BLITZ_PARAMS,
     std::vector<netCDF::NcDim> const &dims,
     std::vector<int> const &nc_start,    // Where to start each dimension in NetCDF
     std::array<int,RANK> const &b2n)    // Where to slot each Blitz++ dimension
 {
     using namespace std::placeholders;
-    return ncio_blitz<TypeT,RANK>(NCIO_BLITZ_ARGS,
-        std::bind(&_partial<TypeT,RANK>, _1, _2, _3,
+    return _ncio_blitz::ncio_blitz<TypeT,RANK>(NCIO_BLITZ_ARGS,
+        std::bind(&_ncio_blitz::_partial<TypeT,RANK>, _1, _2, _3,
             dims, nc_start, b2n));
 }
-
 #undef NCIO_BLITZ_PARAMS
+
+
+/** Convenience method: reads data from NetCDF, returns as a newly allocate blitz::Array */
+template<class TypeT, int RANK>
+inline blitz::Array<TypeT,RANK> nc_read_blitz(
+    netCDF::NcGroup *nc,
+    std::string const &vname,
+    blitz::GeneralArrayStorage<RANK> const &storage = blitz::GeneralArrayStorage<RANK>())
+{
+    NcIO ncio(nc, 'r');    // Dummy
+    blitz::Array<TypeT,RANK> val;
+    ncio_blitz_alloc(ncio, val, vname, get_nc_type<TypeT>(), {}, true, storage);
+    return val;
+}
 // =================================================
 // Specializations for std::vector instead of blitz::Array
 
