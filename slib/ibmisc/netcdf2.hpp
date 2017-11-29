@@ -108,7 +108,8 @@ void nc_rw_blitz2(
     blitz::Array<TypeT, RANK> *val,
     std::string const &vname,
     std::vector<size_t> const &nc_start,        // Where to the NetCDF variable; could have more than RANK dimensions
-    std::vector<int> const &b2n);    // (Blitz dim i) corresponds to (NetCDF dim b2n[i])
+    std::array<int,RANK> const &b2n)    // (Blitz dim i) corresponds to (NetCDF dim b2n[i])
+;
 
 template<class TypeT, int RANK>
 void nc_rw_blitz2(
@@ -148,50 +149,63 @@ void nc_rw_blitz2(
 /** Parameters passed to ncio_blitz() by helper functions */
 template<int RANK>
 struct NcIOBlitzInfo {
-    std::vector<netCDF::NcDim> const &dims,    // Dimensions of ON-DISK NetCDF Variable
-    std::vector<size_t> nc_start,        // Where to the NetCDF variable; same rank as dims.   If {}, then all 0's.  <0 means "allocate a Blitz var for this dim."
-    std::array<int,RANK> b2n,    // (Blitz dim i) corresponds to (NetCDF dim b2n[i]).  If {}, then {0,1,2,...}; otherise, rank=RANK
+    std::vector<netCDF::NcDim> dims;    // Dimensions of ON-DISK NetCDF Variable
+    std::vector<size_t> nc_start;        // Where to the NetCDF variable; same rank as dims.   If {}, then all 0's.  <0 means "allocate a Blitz var for this dim."
+    std::array<int,RANK> b2n;    // (Blitz dim i) corresponds to (NetCDF dim b2n[i]).  If {}, then {0,1,2,...}; otherise, rank=RANK
 };
 
 // ------------------------------------------------------------------------------
 template<class TypeT, int RANK>
 using ncio_blitz_helper = std::function<NcIOBlitzInfo<RANK> (NcIO &, netCDF::NcVar &, blitz::Array<TypeT,RANK> &)>;
 
+#define NCIO_BLITZ_PARAMS \
+    NcIO &ncio, \
+    blitz::Array<TypeT, RANK> &arr, \
+    std::string const &vname, \
+    std::string const &snc_type
+#define NCIO_BLITZ_ARGS \
+    ncio, arr, vname, snc_type
+
 /** Maps a blitz::Array directly to/from a NetCDF array */
 template<class TypeT, int RANK>
 netCDF::NcVar ncio_blitz(
-    NcIO &ncio,
-    blitz::Array<TypeT, RANK> &arr,
-    std::string const &vname,
-    std::string const &snc_type,            // Only on write
+    NCIO_BLITZ_PARAMS,
+    ncio_blitz_helper<TypeT,RANK> const &info_fn);
+
+/** Maps a blitz::Array directly to/from a NetCDF array */
+template<class TypeT, int RANK>
+netCDF::NcVar ncio_blitz(
+    NCIO_BLITZ_PARAMS,
     ncio_blitz_helper<TypeT,RANK> const &info_fn)
 {
     // nc->getVar() returns a null NcVar if no object of that name is found.
     // That is what we want here.
     netCDF::NcVar ncvar(ncio.nc->getVar(vname));
-    NcIOBlitzInfo info(info_fn(ncio, ncvar, arr));
+    NcIOBlitzInfo<RANK> const info(info_fn(ncio, ncvar, arr));
 
     // Get NetCDF variable
     int const nc_rank = info.dims.size();
     if (ncio.rw == 'w') {
         // Replace possibly null NcVar with one we've checked out and maybe created.
-        ncvar = get_or_add_var(ncio, vname, snc_type, info.dims);
+        ncvar = get_or_add_var(ncio, vname,
+            snc_type == "" ? get_nc_type<TypeT>() : snc_type,
+            info.dims);
     }
 
     // Check RANK vs. info.dims.size()
     if (RANK > info.dims.size()) (*ibmisc_error)(-1,
         "Formal NetCDF RANK=%ld must be AT LEAST Blitz RANK=%d",
-        dims.size(), RANK);
+        info.dims.size(), RANK);
 
     // Check info.dims vs. dimensions on disk
     // NetCDF4-C++ library does not bounds check (as of 2016-01-15)
     if (ncvar.getDimCount() != info.dims.size()) (*ibmisc_error)(-1,
         "Existing NetCDF RANK=%d must equal formal rank=%ld",
-        ncvar.getDimCount(), dims.size());
+        ncvar.getDimCount(), info.dims.size());
 
     for (int k=0; k<info.dims.size(); ++k) {
         // The dimensions must match, not just their extents
-        if (dims[k] != ncvar.getDim(k)) (*ibmisc_error)(-1,
+        if (info.dims[k] != ncvar.getDim(k)) (*ibmisc_error)(-1,
             "User-supplied dimension[%d] does not match netCDF dimension=%s",
             k, ncvar.getDim(k).getName().c_str());
     }
@@ -201,25 +215,19 @@ netCDF::NcVar ncio_blitz(
         int const kn = info.b2n[kb];
         if (arr.extent(kb) > ncvar.getDim(kn).getSize() - info.nc_start[kn]) (*ibmisc_error)(-1,
             "C++ variable extent[%d]=%d does not match NetCDF variable extent[%d]=%d",
-            kb, arr.extent[kb], kn, ncvar.getDim(b2n[k]).getSize(), info.nc_start[kn]);
+            kb, arr.extent(kb), kn, ncvar.getDim(info.b2n[kn]).getSize(), info.nc_start[kn]);
     }
 
     // const_cast allows us to re-use nc_rw_blitz for read and write
     ncio += std::bind(&nc_rw_blitz2<TypeT, RANK>,
-        ncio.nc, ncio.rw, &val, vname, nc_start, b2n);
+        ncio.nc, ncio.rw, &arr, vname, info.nc_start, info.b2n);
 
     return ncvar;
 }
-// ------------------------------------------------------------------------------
-/* @return Permutation such that stride[ret[0]] is largest, and stride[ret[RANK-1]] is smallest. */
-template<int RANK>
-std::array<int,RANK> rowmajor_perm(const TinyVector<int, RANK>& stride)
-{ TODO... }
-
-
+// -----------------------------------------------------------------------------
 
 // ------------------------------------------------------------------------------
-/** Read/write entire NetCDF variable into an existing Blitz array
+/** read/write entire NetCDF variable into an existing Blitz array
 @param blitz_order
     true: dim_names/dim_lens correspond to order of dimensions in arr.
           Order of dimensions in NetCDF var. will be a row-major reordering
@@ -227,177 +235,196 @@ std::array<int,RANK> rowmajor_perm(const TinyVector<int, RANK>& stride)
           on disk as in memory.
     false: dim_names/dim_lens correspond to order of dimensions in NetCDF variable.
           This could result in different ordering of data on disk vs. memory.
+
+@param equal_dim_order
+    true: Dimensions of Blitz++ and NetCDF variable are in the same
+          lexical order, even if strides differ.
+
+    false: Blitz++ and NetCDF variable are laid out the same in
+          memory, even if their lexical dimension ordering differs due
+          to, eg. column-major vs. row-major.
 */
 template<class TypeT, int RANK>
-NcIOBlitzInfo _whole1(
+NcIOBlitzInfo<RANK> _whole1(
     // Leave these unbound
     NcIO &ncio,
-    NcVar &ncvar
+    netCDF::NcVar &ncvar,
     blitz::Array<TypeT, RANK> &arr,
     // Bind these away
-    std::vector<netCDF::NcDim> &&_dims,
-    bool match_memory_layout=true,
-    bool dims_in_blitz_order=true);
+    std::vector<netCDF::NcDim> _dims,
+    bool equal_dim_order,
+    bool dims_in_nc_order);
 
 template<class TypeT, int RANK>
-NcIOBlitzInfo _whole1(
+NcIOBlitzInfo<RANK> _whole1(
     // Leave these unbound
     NcIO &ncio,
-    NcVar &ncvar
+    netCDF::NcVar &ncvar,
     blitz::Array<TypeT, RANK> &arr,
     // Bind these away
-    std::vector<netCDF::NcDim> &&_dims,
-    bool match_memory_layout,
-    bool dims_in_blitz_order)
+    std::vector<netCDF::NcDim> _dims,
+    bool equal_dim_order,
+    bool dims_in_nc_order)
 {
     int const nc_rank = RANK;
 
-    NcIOBlitzInfo ret;
+    NcIOBlitzInfo<RANK> ret;
+
+    // If no dimensions provided, we need to get them from NetCDF array
+    if (_dims.size() == 0) _dims = ncvar.getDims();
 
     // Check ranks
     if (_dims.size() != RANK) (*ibmisc_error)(-1,
         "Rank of NetCDF dims (=%d) must correspond to Blitz rank (=%d)",
         (int)_dims.size(), RANK);
 
-    // If user gave dims in Blitz order, make them correspond to NetCDF order
-    auto perm(rowmajor_perm(arr.stride()));
-
-    // Set ret.dims
-    if (dims_in_blitz_order) {
-        for (int in=0; in<nc_rank; ++in) ret.dims.push_back(-1);
-        for (int ib=0; ib<RANK; ++ib) ret.dims[perm[ib]] = _dims[ib];
+    // Put ret.dims in NetCDF order
+    if (!dims_in_nc_order && !equal_dim_order) {
+        // Re-order user-supplied dimensions to NetCDF order
+        // (that is, decreasing rank)
+        for (int in=0; in<nc_rank; ++in) {
+            int const ib = arr.ordering(RANK-in-1);
+            ret.dims.push_back(_dims[ib]);
+        }
     } else {
+        // Dimensions already in NetCDF order, just copy them.
         ret.dims = std::move(_dims);
     }
 
     // Set ret.b2n
-    if (match_memory_layout) {
-        ret.b2n = perm;
-    } else {
+    if (equal_dim_order) {
         for (int ib=0; ib<RANK; ++ib) ret.b2n[ib] = ib;
+    } else {
+        for (int in=0; in<nc_rank; ++in) {
+            int const ib = arr.ordering(RANK-in-1);
+            ret.b2n[ib] = in;
+        }
     }
 
-    // Zero out start, we're doing whoe array here...
+    // Zero out start, we're doing whole array here...
     for (int i=0; i<nc_rank; ++i) ret.nc_start.push_back(0);
 
     return ret;
 }
 
 template<class TypeT, int RANK>
-ncio_blitz_helper<TypeT,RANK> whole(
-    std::vector<netCDF::NcDim> &&dims,
-    bool match_memory_layout=true,
-    bool dims_in_blitz_order=true)
+netCDF::NcVar ncio_blitz_whole(
+    NCIO_BLITZ_PARAMS,
+    std::vector<netCDF::NcDim> const &dims,
+    bool equal_dim_order=false,
+    bool dims_in_nc_order=true)
 {
     using namespace std::placeholders;
-    return std::bind(&_whole1, _1, _2, _3, std::move(dims), match_memory_layout, dims_in_blitz_order);
+    return ncio_blitz<TypeT,RANK>(NCIO_BLITZ_ARGS,
+        std::bind(&_whole1<TypeT,RANK>, _1, _2, _3,
+            dims, equal_dim_order, dims_in_nc_order));
 }
 // -------------------------------------------------------------------------------
-#if 0
-NcIOBlitzInfo whole(
+template<class TypeT, int RANK>
+NcIOBlitzInfo<RANK> _alloc1(
     // Leave these unbound
     NcIO &ncio,
-    NcVar &ncvar
+    netCDF::NcVar &ncvar,
     blitz::Array<TypeT, RANK> &arr,
     // Bind these away
-    std::vector<std::string> const &dim_names,
-    std::vector<long> const &dim_lens,
-    bool const match_memory_layout=true,
-    bool const dims_in_blitz_order=true)
+    std::vector<netCDF::NcDim> _dims,
+    bool dims_in_nc_order,
+    blitz::GeneralArrayStorage<RANK> const &storage)
 {
-    return whole(ncio, ncvar,
-        arr, get_or_add_dims(ncio, dim_names, dim_lens),
-        match_memory_layout, dims_in_blitz_order);
-}
+    // Array in memory must (will be allocated to) have same
+    // memory layout as on disk.
+    bool const equal_dim_order = false;
 
-
-
-
-/** Requires the array to already exist in NetCDF; good for reading or appending. */
-NcIOBlitzInfo whole(
-    // Leave these unbound
-    NcIO &ncio,
-    NcVar &ncvar
-    blitz::Array<TypeT, RANK> &arr,
-    // Bind these away
-    bool match_memory_layout=true)
-{
-    bool const dims_in_blitz_order=false;
-    return whole(ncio, ncvar,
-        arr, ncvar.getDims(),
-        match_memory_layout, dims_in_blitz_order);
-}
-
-
-
-
-NcIOBlitzInfo whole_alloc(
-    // Leave these unbound
-    NcIO &ncio,
-    NcVar &ncvar
-    blitz::Array<TypeT, RANK> &arr,    // unallocated
-    // Bind these away
-    bool const match_memory_layout=true,
-    blitz::GeneralArrayStorage<RANK> const &storage = blitz::GeneralArrayStorage<RANK>())
-{
-    NcIOBlitzInfo ret;
-
-    // Dimensions are already in NetCDF order
-    bool const dims_in_blitz_order=false;
-    ret.dims = ncvar.getDims();
-
-    // Check that ranks match
-    if (ret.dims.size() != RANK) (*ibmisc_error)(-1, ...);
-
-    // Determine ret.b2n
-    if (match_memory_layout) {
-        for (int in=0; in<RANK; ++in) {
-            // storage.ordering() vector lists the dimensions in increasing order of stride
-            // Get id in order of DECREASING stride
-            int const ib = storage.ordering(RANK-in-1);
-            ret.b2n[ib] = in;
-        }
-    } else {
-        for (int i=0; i<RANK; ++i) {
-            ret.b2n[i] = i;
-        }
+    // Determine dimensions
+    if (_dims.size() == 0) {
+        _dims = ncvar.getDims();
+        dims_in_nc_order = true;
     }
 
-    // Allocate the array
-    blitz::TinyVector<int,RANK> extent;
-    for (int ib=0; ib<RANK; ++ib) extent[ib] = ret.dims[ret.b2n[ib]].getSize();
-    arr.reference(blitz::Array<TypeT,RANK>(extent, storage));
+    // Allocate the Blitz array
+    // This only makes sense for reading
+    if (ncio.rw == 'r') {
 
-    for (int i=0; i<RANK; ++i) ret.nc_start.push_back(0);
+        blitz::TinyVector<int,RANK> extent;
+        for (int in=0; in<RANK; ++in) {
+            int ib = storage.ordering(RANK-in-1);
+            extent[ib] = _dims[in].getSize();
+        }
+        arr.reference(blitz::Array<TypeT,RANK>(extent, storage));
+    }
 
-    return ret;
+    return _whole1(ncio, ncvar, arr,
+        _dims, equal_dim_order, dims_in_nc_order);
 }
 
+template<class TypeT, int RANK>
+netCDF::NcVar ncio_blitz_alloc(
+    NCIO_BLITZ_PARAMS,
+    std::vector<netCDF::NcDim> _dims = {},
+    bool dims_in_nc_order = true,
+    blitz::GeneralArrayStorage<RANK> const &storage = blitz::GeneralArrayStorage<RANK>())
+{
+    using namespace std::placeholders;
+    return ncio_blitz<TypeT,RANK>(NCIO_BLITZ_ARGS,
+        std::bind(&_alloc1<TypeT,RANK>, _1, _2, _3,
+            _dims, dims_in_nc_order, storage));
+}
+// -------------------------------------------------------------------------
+/** Convenience method: reads data from NetCDF, returns as a newly allocate blitz::Array */
+template<class TypeT, int RANK>
+blitz::Array<TypeT,RANK> nc_read_blitz(
+    netCDF::NcGroup *nc,
+    std::string const &vname,
+    blitz::GeneralArrayStorage<RANK> const &storage = blitz::GeneralArrayStorage<RANK>());
 
-
-NcIOBlitzInfo partial(
+template<class TypeT, int RANK>
+blitz::Array<TypeT,RANK> nc_read_blitz(
+    netCDF::NcGroup *nc,
+    std::string const &vname,
+    blitz::GeneralArrayStorage<RANK> const &storage = blitz::GeneralArrayStorage<RANK>())
+{
+    NcIO ncio(nc, 'r');    // Dummy
+    blitz::Array<TypeT,RANK> val;
+    ncio_blitz_alloc(ncio, val, vname, get_nc_type<TypeT>(), {}, true, storage);
+    return val;
+}
+// -------------------------------------------------------------------------
+template<class TypeT, int RANK>
+NcIOBlitzInfo<RANK> _partial(
     // Leave these unbound
     NcIO &ncio,
-    NcVar &ncvar
+    netCDF::NcVar &ncvar,
     blitz::Array<TypeT, RANK> &arr,
     // Bind these away
-    std::vector<netCDF::NcDim> &&dims,
-    std::vector<int> &&nc_start,    // Where to start each dimension in NetCDF
+    std::vector<netCDF::NcDim> dims,
+    std::vector<int> nc_start,    // Where to start each dimension in NetCDF
+    std::array<int,RANK> const &b2n)    // Where to slot each Blitz++ dimension
+;
+
+template<class TypeT, int RANK>
+NcIOBlitzInfo<RANK> _partial(
+    // Leave these unbound
+    NcIO &ncio,
+    netCDF::NcVar &ncvar,
+    blitz::Array<TypeT, RANK> &arr,
+    // Bind these away
+    std::vector<netCDF::NcDim> dims,
+    std::vector<int> nc_start,    // Where to start each dimension in NetCDF
     std::array<int,RANK> const &b2n)    // Where to slot each Blitz++ dimension
 {
     // By necessity, we must list dimensions in NetCDF order, so we know
     // where Blitz++ dimensions slot in
-    bool const dims_in_blitz_order=false;
+    bool const dims_in_nc_order=true;
 
-    int const nc_rank = _dims.size();
-
-    NcIOBlitzInfo ret;
-    ret.dims = std::move(dims);
+    NcIOBlitzInfo<RANK> ret;
 
     // Check ranks
-    if (_dims.size() < RANK) (*ibmisc_error)(-1,
+    if (dims.size() < RANK) (*ibmisc_error)(-1,
         "Rank of NetCDF dims (=%d) must be at least Blitz rank (=%d)",
-        (int)_dims.size(), RANK);
+        (int)dims.size(), RANK);
+
+    // Put ret.dims in NetCDF order
+    ret.dims = std::move(dims);
 
     // Set ret.nc_start
     ret.nc_start = std::move(nc_start);
@@ -408,7 +435,18 @@ NcIOBlitzInfo partial(
     return ret;
 }
 
-#endif
+template<class TypeT, int RANK>
+netCDF::NcVar ncio_blitz_partial(
+    NCIO_BLITZ_PARAMS,
+    std::vector<netCDF::NcDim> const &dims,
+    std::vector<int> const &nc_start,    // Where to start each dimension in NetCDF
+    std::array<int,RANK> const &b2n)    // Where to slot each Blitz++ dimension
+{
+    using namespace std::placeholders;
+    return ncio_blitz<TypeT,RANK>(NCIO_BLITZ_ARGS,
+        std::bind(&_partial<TypeT,RANK>, _1, _2, _3,
+            dims, nc_start, b2n));
+}
 
 
 

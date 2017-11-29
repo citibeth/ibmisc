@@ -697,7 +697,7 @@ netCDF::NcVar ncio_blitz(
     return ncio_blitz(ncio, val, alloc, vname, get_nc_type<TypeT>(), dims, storage);
 }
 
-
+#if 0
 /** Convenience method: reads data from NetCDF, returns as a newly allocate blitz::Array */
 template<class TypeT, int RANK>
 blitz::Array<TypeT,RANK> nc_read_blitz(
@@ -716,7 +716,7 @@ blitz::Array<TypeT,RANK> nc_read_blitz(
     ncio_blitz(ncio, val, true, vname, {}, storage);
     return val;
 }
-
+#endif
 
 // ----------------------------------------------------
 // =================================================
