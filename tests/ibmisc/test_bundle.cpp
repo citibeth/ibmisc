@@ -118,12 +118,7 @@ TEST_F(BundleTest, construct_alloc)
 
     // Write it out
     {NcIO ncio(fname, 'w');
-//        rec_f.bundle.ncio(ncio, {}, false, "", "int");
-//        using namespace std::placeholders;
-//        rec_f.bundle.ncio(ncio, {}, "", "int",
-//            std::bind(&_ncio_blitz::_whole1, _1, _2, _3,
-//            std::vector<netCDF::NcDim>{},false,true));
-        rec_f.bundle.ncio_whole(ncio, {}, "", "int");
+        rec_f.bundle.ncio(ncio, {}, "", "int");
     }
 
 #if 0

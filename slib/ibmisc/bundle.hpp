@@ -147,24 +147,42 @@ private:
         std::vector<std::string> const &vars,
         std::string const &prefix,
         std::string const &snc_type,
-        _ncio_blitz::ncio_blitz_helper<TypeT,RANK> const &info_fn);
+        _ncio_blitz::Helper<TypeT,RANK> &info_fn);
 
 public:
-    void ncio_whole(
+    void ncio(
         NcIO &ncio,
         std::vector<std::string> const &vars,
         std::string const &prefix,
         std::string const &snc_type,
-        std::vector<netCDF::NcDim> const &_dims={},
-        bool equal_dim_order=false,
-        bool dims_in_nc_order=true)
+        bool equal_dim_order=false)
     {
+        bool const dims_in_nc_order=false;
         using namespace std::placeholders;
-        this->ncio(ncio, vars, prefix, snc_type,
-            std::bind(
-                &_ncio_blitz::_whole1<TypeT,RANK>, _1, _2, _3,
-            _dims, equal_dim_order, dims_in_nc_order));
+
+        _ncio_blitz::Helper_whole1<TypeT,RANK> helper(
+            {}, equal_dim_order, dims_in_nc_order);
+        this->ncio(ncio, vars, prefix, snc_type, helper);
     }
+
+    void ncio_alloc(
+        NcIO &ncio,
+        std::vector<std::string> const &vars,
+        std::string const &prefix,
+        std::string const &snc_type,
+        blitz::GeneralArrayStorage<RANK> const &storage = blitz::GeneralArrayStorage<RANK>())
+    {
+        bool const dims_in_nc_order=false;
+        using namespace std::placeholders;
+
+        _ncio_blitz::Helper_alloc1<TypeT,RANK> helper(
+            {}, dims_in_nc_order);
+        this->ncio(ncio, vars, prefix, snc_type, helper);
+    }
+
+
+
+
 };
 // --------------------------------------------------------------------
 template<class TypeT, int RANK>
@@ -361,29 +379,28 @@ void ArrayBundle<TypeT,RANK>::ncio(
         auto &meta(data[i]);
         std::string vname(prefix+meta.meta.name);
 
-        // Set meta.meta.shape, if not already set
-        // This is not used directly by read/write stuff
-        if (meta.meta.shape[0] == 0) {
-            if (ncio.rw == 'r') {
-                // Set shape from existing NetCDF variable
-                auto ncvar(ncio.nc->getVar(vname));
-                meta.meta.set_shape(ncvar, true);
-            } else {
-                // Set shape from Blitz array
-                meta.meta.set_shape(meta.arr, meta.meta.sdims, true);
-            }
+        // ---------------------------------
+        // Get an Info record early
+        // nc->getVar() returns a null NcVar if no object of that name is found.
+        // That is what we want here.
+        _ncio_blitz::Info<RANK> info(info_fn(ncio, vname, meta.arr));
+
+        // Patch dimensions obtained from the Bundle into the read/write request
+        auto bdims(get_or_add_dims(ncio, meta.arr, to_vector(meta.meta.sdims)));
+        for (int ib=0; ib<RANK; ++ib) {
+            int const in = info.b2n[ib];
+            info.dims[in] = bdims[ib];
         }
 
-        // Get NetCDF dimensions
-        info_fn.dims = get_or_add_dims(ncio, meta.arr, to_vector(meta.meta.sdims));
 
 printf("AA1\n");
         // Read/Write the NetCDF variable
-        auto ncvar(_ncio_blitz::ncio_blitz(
-            ncio, meta.arr, vname, snc_type, info_fn));
+        _ncio_blitz::ncio_blitz(
+            ncio, meta.arr, vname, snc_type, info);
 printf("AA2\n");
 
         // Read/write attributes
+        netCDF::NcVar ncvar = ncio.nc->getVar(vname);
         if (ncio.rw == 'w') {
             for (auto &kv : meta.meta.attr) {
                 std::string const &name(std::get<0>(kv));
