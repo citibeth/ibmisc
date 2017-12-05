@@ -40,6 +40,164 @@ void _check_nc_rank(
             "of rank %d", ncvar.getDimCount(), rank);
 }
 
+/** Reconciles dimensions between Blitz and NetCDF.  This subroutine
+    fills in the blanks, it does not check afterwards.  That is for elsewhere. */
+Info::Info(
+    std::vector<NamedDim> &&_blitz,
+    std::vector<int> const &blitz_ordering,    // Ordering of dimensions in increasing stride
+    DimMatch match,
+    std::vector<NamedDim> &&_netcdf,
+    std::vector<int> &&_b2n,
+    std::vector<size_t> &&_nc_start);
+
+: blitz(std::move(_blitz)), netcdf(_netcdf), b2n(std::move(_b2n)), nc_start(std::move(_nc_start))
+{
+    int const the_case =
+        (blitz.size() == 0 ? 0 : 4) +
+        (netcdf.size() == 0 ? 0 : 2) +
+        (b2n.size() == 0 ? 0 : 1);
+    switch(the_case) {
+        case 0:    // NOTHING
+        case 1: {
+                (*ibmisc_error)(-1,
+                    "Unable to reconcile blitz + netcdf when nothing is given");
+        } break;
+        case 2: {    // netcdf (blitz_ordering, match)
+            int const netcdf_rank = netcdf.size();
+            int const blitz_rank = netcdf_rank;
+            for (int ib=0; ib<blitz_rank; ++ib) {
+                b2n.push_back(-1);
+                blitz.push_back();
+            }
+            for (int in=0; in<netcdf_rank; ++in) {
+                int const ib = (match == DimMatch::LEXICAL ? in : blitz_ordering(blitz_rank-in-1));
+                blitz[ib] = netcdf[in];
+                b2n[ib] = in;
+            }
+        } break;
+        case 3: {    // netcdf, b2n
+            int const blitz_rank = b2n.size();
+            for (int ib=0; ib<blitz_rank; ++ib) {
+                int const in = b2n[ib];
+                blitz.push_back(netcdf[in]);
+            }
+        } break;
+        case 4: {    // blitz (blitz_ordering, match)
+            int const blitz_rank = blitz.size();
+            int const netcdf_rank = blitz_rank;
+
+            for (int in=0; netcdf_rank; ++in) netcdf.push_back(NamedDim());
+            for (int in=0; in<netcdf_rank; ++in) {
+                int const ib = (match == DimMatch::LEXICAL ? in : blitz_ordering(blitz_rank-in-1));
+                b2n.push_back(in);
+                netcdf[in] = blitz[ib];
+            }
+        } break;
+        case 5: {    // blitz, b2n
+            for (int in=0; in<blitz.size(); ++in) netcdf.push_back(NamedDim());
+
+            for (int ib=0; ib<blitz.size(); ++ib) {
+                int const in = b2n[ib];
+                netcdf[in] = blitz[ib];
+            }
+        } break;
+        case 6: {    // blitz, netcdf, (blitz_ordering, match)
+            int const blitz_rank = blitz.size();
+            int const netcdf_rank = netcdf.size();
+
+            int nname_blitz = 0;
+            for (int ib=0; ib<blitz_rank; ++ib)
+                if (blitz[ib].name != "") ++nname_blitz;
+            if (nname_blitz != 0 && nname_blitz != blitz_rank)
+                (*ibmisc_error)(-1, "Blitz dimensions must all have names or none have names");
+
+            for (int in=0; in<netcdf_rank; ++in) {
+                if (netcdf[in].name != "") ++nname_netcdf;
+            }
+            if (nname_netcdf != netcdf_rank - blitz_rank && nname_netcdf != netcdf_rank)
+                (*ibmisc_error)(-1, "NetCDF dimensions must all have names or none have names");
+
+            int name_case =
+                (nname_blitz == blitz_rank ? 2 : 0) +
+                (nname_netcdf == netcdf_rank ? 1 : 0);
+            switch(name_case) {
+                case 0: (*ibmisc_error)(-1,
+                    "Names must be specified for at least Blitz or NetCDF variable");
+                break;
+                case 3 : {
+                    // Names are fully specified: match by names, ignore slots
+
+                    // Set up name lookup
+                    std::map<std::string, int> name2n;
+                    for (int in=0; in<netcdf_rank; ++in) {
+                        std::string const &name(netcdf[in].name);
+                        if (name.size() > 0)
+                            name2n.insert(std::make_pair(netcdf[in].name, in));
+                    }
+                    for (int ib=0; ib<blitz_rank; ++ib) {
+                        int const in = name2n.at(blitz[ib].name);
+                        b2n.push_back(in);
+                    }
+                } break;
+                case 1:        // Names only for NetCDF
+                case 2 : {   // Names only for blitz.
+                    // Names only specified for Blitz or NetCDF
+                    // Fill Blitz dimensions into slots in NetCDF
+
+                    for (int ib=0; ib<blitz_rank; ++ib) b2n.push_back(-1);
+                    int in_sub = 0;
+                    for (int in_full=0; in_full<netcdf_rank; ++in_full) {
+                        if (!netcdf[in_full].extent < 0) {
+                            int const ib = (match == DimMatch::LEXICAL ? in_sub
+                                : blitz_ordering(blitz_rank-in_sub-1));
+                            b2n[ib] = in_full;
+                            ++in_sub;
+                        }
+                    }
+                    // Check number of slots (after the fact)
+                    if (in_sub != blitz_rank) (*ibmisc_error)(-1,
+                        "Number of slots must equal Blitz rank");
+
+                } break;
+            }    // switch(name_case)
+        }    // case 6: blitz, netcdf specified
+        case 7: {    // blitz, netcdf, b2n
+            // Fully specified; nothing to do here
+        } break;
+    }    // switch(the_case)
+
+
+    // Fix names and extents, as necessary
+    for (int ib=0; ib<b2n.size(); ++ib) {
+        int const in = b2n[ib];
+
+        if (netcdf[in].name == "") {
+            netcdf[in].name = blitz[ib].name;
+        } else if (blitz[ib].name == "") {
+            blitz[ib].name = netcdf[in].name;
+        } else if (blitz[ib].name != netcdf[in].name) (*ibmisc_error)(-1,
+            "Dimension name mismatch: blitz[%d]=%s, netcdf[%d]=%s",
+            ib, blitz[ib].name.c_str(),
+            in, netcdf[in].name.c_str());
+        }
+
+        if (netcdf[in].extent < 0) {
+            netcdf[in].extent = blitz[ib].extent;
+        } else if (blitz[ib].extent < 0) {
+            blitz[ib].extent = netcdf[in].extent;
+        } else if (blitz[ib].extent != netcdf[in].extent) (*ibmisc_error)(-1,
+            "Dimension extent mismatch: blitz[%d]=%d, netcdf[%d]=%d",
+            ib, blitz[ib].extent,
+            in, netcdf[in].extent);
+        }
+    }
+
+    if (nc_start.size() == 0)
+        for (int i=0; i<netcdf.size(); ++i)
+            nc_start.push_back(0);
+
+}
+
 // ===============================================
 /*
 @param mode Can be (see https://docs.python.org/3/library/functions.html#open)

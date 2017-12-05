@@ -44,6 +44,15 @@ public:
                 "ArrayBundle variable %s already allocated", meta.name.c_str());
             arr.reference(blitz::Array<TypeT,RANK>(ibmisc::to_tiny<int,int,RANK>(meta.shape), storage));
         }
+
+        std::vector<NamedDim> named_dims()
+        {
+            std::vector<NamedDim> ret;
+            for (int i=0; i<RANK; ++i) {
+                ret.push_back(NamedDim(meta.name, meta.shape));
+            }
+            return ret;
+        }
     };
 
     // -------------------------------------------------------------------
@@ -378,6 +387,15 @@ void ArrayBundle<TypeT,RANK>::ncio(
 
         auto &meta(data[i]);
         std::string vname(prefix+meta.meta.name);
+
+
+        // If user didn't specify any dimensions for NetCDF var,
+        // set them up based on Blitz array.
+        if (info_fn.dims.size() == 0) {
+            auto b2n(info_fn.b2n());
+            for (int in=0; in<RANK; ++in) info_fn.dims.push_back(netCDF::NcDim());
+        }
+        for (info_fn
 
         // ---------------------------------
         // Get an Info record early
