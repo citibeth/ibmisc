@@ -102,7 +102,7 @@ TEST_F(NetcdfTest, get_or_add_dim) {
 TEST_F(NetcdfTest, blitz)
 {
     std::string fname("__netcdf_blitz_test.nc");
-//    tmpfiles.push_back(fname);
+    tmpfiles.push_back(fname);
 
     ::remove(fname.c_str());
     
@@ -121,7 +121,6 @@ TEST_F(NetcdfTest, blitz)
 
     std::vector<std::string> strings = {"s1", "s2"};
 
-printf("XX1\n");
     // ---------- Write
     {
     ibmisc::NcIO ncio(fname, 'w');

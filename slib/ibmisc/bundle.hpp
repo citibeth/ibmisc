@@ -151,7 +151,12 @@ private:
         std::string const &snc_type
 #   define NCIO_BUNDLE_ARGS ncio, vars, prefix, snc_type
 
-    typedef std::function<netCDF::NcVar (NCIO_BLITZ_PARAMS, std::vector<std::string> const &)> ncio_blitz_fn;
+    typedef std::function<netCDF::NcVar (
+        NcIO &ncio,
+        blitz::Array<TypeT, RANK> &arr,
+        std::string const &vname,
+        std::string const &snc_type,
+        std::vector<std::string> const &)> ncio_blitz_fn;
 
     void ncio(
         NCIO_BUNDLE_PARAMS,
@@ -381,8 +386,7 @@ void ArrayBundle<TypeT,RANK>::ncio(
         std::string vname(prefix+meta.meta.name);
 
         // Delegate to lower level to read/write this array.
-        auto &arr(meta.arr);    // Used by NCIO_BLITZ_ARGS macro
-        _ncio_blitz_fn(NCIO_BLITZ_ARGS, to_vector(meta.meta.sdims));
+        _ncio_blitz_fn(ncio, meta.arr, vname, snc_type, to_vector(meta.meta.sdims));
 
         // Read/write attributes
         netCDF::NcVar ncvar = ncio.nc->getVar(vname);

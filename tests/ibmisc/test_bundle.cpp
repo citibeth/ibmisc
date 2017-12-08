@@ -114,7 +114,7 @@ TEST_F(BundleTest, construct_alloc)
 
 
     std::string fname("__bundle_construct_alloc.nc");
-//    tmpfiles.push_back(fname);
+    tmpfiles.push_back(fname);
     ::remove(fname.c_str());
 
     rec_f.a1 = 11;

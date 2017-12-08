@@ -984,7 +984,7 @@ netCDF::NcVar ncio_blitz(
     std::vector<netCDF::NcDim> const &ncdims,
     DimOrderMatch match=DimOrderMatch::MEMORY,
     bool ncdims_in_nc_order=true,
-    std::vector<std::string> const &arr_sdims = {})
+    std::vector<std::string> const &arr_sdims = {});
 
 template<class TypeT, int RANK>
 netCDF::NcVar ncio_blitz(

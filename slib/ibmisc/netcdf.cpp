@@ -61,7 +61,7 @@ std::vector<NamedDim> named_dims(
 
     for (int in=0; in<ncdims.size(); ++in) {
         int const ib = (nc_dims_in_nc_order ? in : ordering[ordering.size()-in-1]);
-printf("in=%d, ib=%d\n", in, ib);
+//printf("in=%d, ib=%d\n", in, ib);
         netCDF::NcDim const &ncdim(ncdims[ib]);
 
         if (ncdim.isNull()) {
