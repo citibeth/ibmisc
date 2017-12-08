@@ -10,7 +10,7 @@ include_directories(${GTEST_INCLUDE_DIR} ${PROJECT_SOURCE_DIR}/slib)
 SET(ALL_LIBS ${GTEST_LIBRARY} ${EXTERNAL_LIBS} ibmisc)
 
 
-foreach(TEST netcdf iter blitz indexing memory var_transformer constant_set datetime string filesystem permutation)
+foreach(TEST netcdf bundle iter blitz indexing memory var_transformer constant_set datetime string filesystem permutation)
     add_executable(ibmisc_${TEST} ibmisc/test_${TEST}.cpp)
     target_link_libraries(ibmisc_${TEST} ${ALL_LIBS})
     add_test(AllTests ibmisc_${TEST})

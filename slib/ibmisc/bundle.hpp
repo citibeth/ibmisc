@@ -151,44 +151,46 @@ public:
 
     // -------------------------------------------------------------------
 private:
+#   define NCIO_BUNDLE_PARAMS \
+        NcIO &ncio, \
+        std::vector<std::string> const &vars, \
+        std::string const &prefix, \
+        std::string const &snc_type
+#   define NCIO_BUNDLE_ARGS ncio, vars, prefix, snc_type
+
+    typedef std::function<netCDF::NcVar (NCIO_BLITZ_PARAMS, std::vector<std::string> const &)> ncio_blitz_fn;
+
     void ncio(
-        NcIO &ncio,
-        std::vector<std::string> const &vars,
-        std::string const &prefix,
-        std::string const &snc_type,
-        _ncio_blitz::Helper<TypeT,RANK> &info_fn);
+        NCIO_BUNDLE_PARAMS,
+        ncio_blitz_fn const &_ncio_blitz_fn);
 
 public:
     void ncio(
-        NcIO &ncio,
-        std::vector<std::string> const &vars,
-        std::string const &prefix,
-        std::string const &snc_type,
-        bool equal_dim_order=false)
-    {
-        bool const dims_in_nc_order=false;
-        using namespace std::placeholders;
-
-        _ncio_blitz::Helper_whole1<TypeT,RANK> helper(
-            {}, equal_dim_order, dims_in_nc_order);
-        this->ncio(ncio, vars, prefix, snc_type, helper);
-    }
+        NCIO_BUNDLE_PARAMS,
+        std::vector<netCDF::NcDim> const &ncdims={},
+        DimOrderMatch match=DimOrderMatch::MEMORY,
+        bool ncdims_in_nc_order=true);
 
     void ncio_alloc(
-        NcIO &ncio,
-        std::vector<std::string> const &vars,
-        std::string const &prefix,
-        std::string const &snc_type,
+        NCIO_BUNDLE_PARAMS,
+        std::vector<netCDF::NcDim> const &ncdims = {},
+        DimOrderMatch match=DimOrderMatch::MEMORY,
+        bool ncdims_in_nc_order = true,
+        blitz::GeneralArrayStorage<RANK> const &storage = blitz::GeneralArrayStorage<RANK>());
+
+    void ncio_alloc(
+        NCIO_BUNDLE_PARAMS,
+        DimOrderMatch match=DimOrderMatch::MEMORY,
         blitz::GeneralArrayStorage<RANK> const &storage = blitz::GeneralArrayStorage<RANK>())
     {
-        bool const dims_in_nc_order=false;
-        using namespace std::placeholders;
-
-        _ncio_blitz::Helper_alloc1<TypeT,RANK> helper(
-            {}, dims_in_nc_order);
-        this->ncio(ncio, vars, prefix, snc_type, helper);
+        ncio_alloc(NCIO_BUNDLE_ARGS, {}, match, true, storage);
     }
 
+    void ncio_partial(
+        NCIO_BUNDLE_PARAMS,
+        std::vector<netCDF::NcDim> const &ncdims,
+        std::vector<int> const &nc_start,    // Where to start each dimension in NetCDF
+        std::array<int,RANK> const &b2n);    // Where to slot each Blitz++ dimension
 
 
 
@@ -359,14 +361,11 @@ void ArrayBundle<TypeT,RANK>::allocate(
     }
 }
 // --------------------------------------------------------------------
-
+// --------------------------------------------------------------------
 template<class TypeT, int RANK>
 void ArrayBundle<TypeT,RANK>::ncio(
-    NcIO &ncio,
-    std::vector<std::string> const &vars,
-    std::string const &prefix,
-    std::string const &snc_type,
-    _ncio_blitz::Helper<TypeT,RANK> &info_fn)
+    NCIO_BUNDLE_PARAMS,
+    ncio_blitz_fn const &_ncio_blitz_fn)
 {
     // Determine which variables in the bundle we will operate on
     std::vector<std::string> all_vars;
@@ -388,34 +387,9 @@ void ArrayBundle<TypeT,RANK>::ncio(
         auto &meta(data[i]);
         std::string vname(prefix+meta.meta.name);
 
-
-        // If user didn't specify any dimensions for NetCDF var,
-        // set them up based on Blitz array.
-        if (info_fn.dims.size() == 0) {
-            auto b2n(info_fn.b2n());
-            for (int in=0; in<RANK; ++in) info_fn.dims.push_back(netCDF::NcDim());
-        }
-        for (info_fn
-
-        // ---------------------------------
-        // Get an Info record early
-        // nc->getVar() returns a null NcVar if no object of that name is found.
-        // That is what we want here.
-        _ncio_blitz::Info<RANK> info(info_fn(ncio, vname, meta.arr));
-
-        // Patch dimensions obtained from the Bundle into the read/write request
-        auto bdims(get_or_add_dims(ncio, meta.arr, to_vector(meta.meta.sdims)));
-        for (int ib=0; ib<RANK; ++ib) {
-            int const in = info.b2n[ib];
-            info.dims[in] = bdims[ib];
-        }
-
-
-printf("AA1\n");
-        // Read/Write the NetCDF variable
-        _ncio_blitz::ncio_blitz(
-            ncio, meta.arr, vname, snc_type, info);
-printf("AA2\n");
+        // Delegate to lower level to read/write this array.
+        auto &arr(meta.arr);    // Used by NCIO_BLITZ_ARGS macro
+        _ncio_blitz_fn(NCIO_BLITZ_ARGS, to_vector(meta.meta.sdims));
 
         // Read/write attributes
         netCDF::NcVar ncvar = ncio.nc->getVar(vname);
@@ -439,6 +413,49 @@ printf("AA2\n");
         }
     }
 }
+// --------------------------------------------------------------------
+template<class TypeT, int RANK>
+void ArrayBundle<TypeT,RANK>::ncio(
+    NCIO_BUNDLE_PARAMS,
+    std::vector<netCDF::NcDim> const &ncdims,
+    DimOrderMatch match,
+    bool ncdims_in_nc_order)
+{
+    using namespace std::placeholders;
+    auto fn(std::bind(&ncio_blitz<TypeT,RANK>, _1, _2, _3, _4,
+            ncdims, match, ncdims_in_nc_order, _5));
+    this->ncio(NCIO_BUNDLE_ARGS, fn);
+}
+
+template<class TypeT, int RANK>
+void ArrayBundle<TypeT,RANK>::ncio_alloc(
+    NCIO_BUNDLE_PARAMS,
+    std::vector<netCDF::NcDim> const &ncdims,
+    DimOrderMatch match,
+    bool ncdims_in_nc_order,
+    blitz::GeneralArrayStorage<RANK> const &storage)
+{
+    using namespace std::placeholders;
+    this->ncio(NCIO_BUNDLE_ARGS,
+        std::bind(&ncio_blitz_alloc<TypeT,RANK>, _1, _2, _3, _4,
+            ncdims, match, ncdims_in_nc_order, storage, _5));
+}
+
+
+template<class TypeT, int RANK>
+void ArrayBundle<TypeT,RANK>::ncio_partial(
+    NCIO_BUNDLE_PARAMS,
+    std::vector<netCDF::NcDim> const &ncdims,
+    std::vector<int> const &nc_start,    // Where to start each dimension in NetCDF
+    std::array<int,RANK> const &b2n)    // Where to slot each Blitz++ dimension
+{
+    using namespace std::placeholders;
+    this->ncio(NCIO_BUNDLE_ARGS,
+        std::bind(&ncio_blitz_partial<TypeT,RANK>, _1, _2, _3, _4,
+            ncdims, nc_start, b2n, _5));
+}
+
+
 // -------------------------------------------------------------
 /** Reshapes a bundle of Blitz++ arrays to a bundle of 1-D Blitz++ array */
 template<class TypeT, int RANK>

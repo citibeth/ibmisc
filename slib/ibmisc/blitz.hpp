@@ -196,6 +196,14 @@ std::array<ArrayT, RANK> to_array(blitz::TinyVector<TinyT, RANK> const &tiny)
     return ret;
 }
 
+template<class ArrayT, class VecT, int RANK>
+std::array<ArrayT, RANK> to_array(std::vector<VecT> const &vec)
+{
+    std::array<ArrayT, RANK> ret;
+    for (int k=0; k<RANK; ++k) ret[k] = vec[k];
+    return ret;
+}
+
 template<class ArrayT, class TinyT, int RANK>
 void to_array(std::array<ArrayT, RANK> &ret, blitz::TinyVector<TinyT, RANK> const &tiny)
 {

@@ -99,6 +99,9 @@ TEST_F(BundleTest, construct_alloc)
 
     // Allocate as Fortran (column-major)
     MyClass rec_f;
+#if 0
+    rec_f.bundle.allocate(true);
+#else
     rec_f.bundle.allocate(true, fortranArray);
     EXPECT_EQ(1, rec_f.a1.lbound(0));
     EXPECT_EQ(2, rec_f.a1.ubound(0));
@@ -107,6 +110,7 @@ TEST_F(BundleTest, construct_alloc)
     EXPECT_EQ(6, rec_f.a1.size());
     EXPECT_TRUE(rec_f.a1.stride(1) > rec_f.a1.stride(0));
 
+#endif
 
 
     std::string fname("__bundle_construct_alloc.nc");
@@ -121,13 +125,12 @@ TEST_F(BundleTest, construct_alloc)
         rec_f.bundle.ncio(ncio, {}, "", "int");
     }
 
-#if 0
     // Read it back, allocating as we go (as fortranArray)
     {
         MyClass rec2;
         rec2.a1 = 17;
         {NcIO ncio(fname, 'r');
-            rec2.bundle.ncio(ncio, {}, true, "", "int", fortranArray);
+            rec2.bundle.ncio_alloc(ncio, {}, "", "int", DimOrderMatch::MEMORY, fortranArray);
         }
         EXPECT_EQ(1, rec2.a1.lbound(0));
         EXPECT_EQ(2, rec2.a1.ubound(0));
@@ -137,7 +140,7 @@ TEST_F(BundleTest, construct_alloc)
         EXPECT_EQ(11, rec2.a1(1,1));
         EXPECT_EQ(22, rec2.a2(1,1));
     }
-
+#if 0
     // Read it back, allocating as we go (as C array; indices are reversed)
     {
         MyClass rec2;

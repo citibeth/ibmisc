@@ -102,7 +102,7 @@ TEST_F(NetcdfTest, get_or_add_dim) {
 TEST_F(NetcdfTest, blitz)
 {
     std::string fname("__netcdf_blitz_test.nc");
-    tmpfiles.push_back(fname);
+//    tmpfiles.push_back(fname);
 
     ::remove(fname.c_str());
     
@@ -121,14 +121,15 @@ TEST_F(NetcdfTest, blitz)
 
     std::vector<std::string> strings = {"s1", "s2"};
 
+printf("XX1\n");
     // ---------- Write
     {
     ibmisc::NcIO ncio(fname, 'w');
     auto dims = ibmisc::get_or_add_dims(ncio, A, {"dim4", "dim5"});
-    ncio_blitz_alloc(ncio, A, "A", "double", dims);
+    ncio_blitz_alloc(ncio, A, "A", "double", dims, DimOrderMatch::MEMORY, true);
 
     auto dims_f = ibmisc::get_or_add_dims(ncio, B_f, {"dim5", "dim4"});
-    ncio_blitz_alloc(ncio, B_f, "B", "double", dims_f, false);
+    ncio_blitz_alloc(ncio, B_f, "B", "double", dims_f, DimOrderMatch::MEMORY, false);
 
     auto dimsC = ibmisc::get_or_add_dims(ncio, C, {"dim17"});
     ncio_blitz(ncio, C, "C", "double", dimsC);
@@ -146,13 +147,11 @@ TEST_F(NetcdfTest, blitz)
     blitz::Array<double,1> C2;
     std::vector<std::string> strings2;
     auto dims = ibmisc::get_or_add_dims(ncio, A, {"dim4", "dim5"});
-    ncio_blitz_alloc(ncio, A2, "A", "double", dims, false);
+    ncio_blitz_alloc(ncio, A2, "A", "double", dims, DimOrderMatch::MEMORY, false);
     auto B2(ibmisc::nc_read_blitz<double,2>(ncio.nc, "B"));
 
-
-//    auto dimsC = ibmisc::get_or_add_dims(ncio, C, {"dim17"});
     auto dimsC = ibmisc::get_dims(ncio, {"dim17"});
-    ibmisc::ncio_blitz_alloc(ncio, C2, "C", "double", dimsC);
+    ibmisc::ncio_blitz_alloc(ncio, C2, "C", "double", dimsC, DimOrderMatch::MEMORY);
 
     auto info_v = get_or_add_var(ncio, "info", "int64", {});
     get_or_put_att(info_v, ncio.rw, "strings", "", strings2);
