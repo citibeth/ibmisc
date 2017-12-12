@@ -130,7 +130,7 @@ TEST_F(BundleTest, construct_alloc)
         MyClass rec2;
         rec2.a1 = 17;
         {NcIO ncio(fname, 'r');
-            rec2.bundle.ncio_alloc(ncio, {}, "", "int", DimOrderMatch::MEMORY, fortranArray);
+            rec2.bundle.ncio_alloc(ncio, {}, "", "int", {}, DimOrderMatch::MEMORY, true, fortranArray);
         }
         EXPECT_EQ(1, rec2.a1.lbound(0));
         EXPECT_EQ(2, rec2.a1.ubound(0));

@@ -25,7 +25,7 @@ public:
             blitz::Array<TypeT,RANK> const &_arr,
             std::array<int, RANK> const &_shape,
             std::array<std::string,RANK> _sdims,
-            std::vector<std::tuple<std::string, std::string>> &&_attr)
+            std::vector<std::pair<std::string, std::string>> &&_attr)
         : meta(ArrayMeta<RANK>(_name,_shape, _sdims, std::move(_attr))),
             arr(_arr) {}
 
@@ -68,7 +68,7 @@ public:
 
 private:
 
-    static std::vector<std::tuple<std::string, std::string>> make_attrs(
+    static std::vector<std::pair<std::string, std::string>> make_attrs(
         std::initializer_list<std::string> const &vattr);
 
 public:
@@ -175,7 +175,7 @@ public:
         DimOrderMatch match=DimOrderMatch::MEMORY,
         bool ncdims_in_nc_order = true,
         blitz::GeneralArrayStorage<RANK> const &storage = blitz::GeneralArrayStorage<RANK>());
-
+#if 0
     void ncio_alloc(
         NCIO_BUNDLE_PARAMS,
         DimOrderMatch match=DimOrderMatch::MEMORY,
@@ -183,29 +183,30 @@ public:
     {
         ncio_alloc(NCIO_BUNDLE_ARGS, {}, match, true, storage);
     }
+#endif
 
     void ncio_partial(
         NCIO_BUNDLE_PARAMS,
         std::vector<netCDF::NcDim> const &ncdims,
-        std::vector<int> const &nc_start,    // Where to start each dimension in NetCDF
-        std::array<int,RANK> const &b2n);    // Where to slot each Blitz++ dimension
+        std::vector<size_t> const &nc_start,    // Where to start each dimension in NetCDF
+        std::vector<int> const &b2n);    // Where to slot each Blitz++ dimension
 
 
 
 };
 // --------------------------------------------------------------------
 template<class TypeT, int RANK>
-std::vector<std::tuple<std::string, std::string>> ArrayBundle<TypeT,RANK>::make_attrs(
+std::vector<std::pair<std::string, std::string>> ArrayBundle<TypeT,RANK>::make_attrs(
     std::initializer_list<std::string> const &vattr)
 {
-    std::vector<std::tuple<std::string, std::string>> ret;
+    std::vector<std::pair<std::string, std::string>> ret;
     for (auto ii = vattr.begin(); ii != vattr.end(); ) {
         std::string const &key(*ii++);
         if (ii == vattr.end()) (*ibmisc_error)(-1,
             "Odd number of strings in (key,value) attr list");
         std::string const &value(*ii++);
 
-        ret.push_back(std::make_tuple(key, value));
+        ret.push_back(std::make_pair(key, value));
     }
     return ret;
 }
@@ -405,7 +406,7 @@ void ArrayBundle<TypeT,RANK>::ncio(
                 std::string aval;
                 ii->second.getValues(aval);
 
-                meta.meta.attr.push_back(std::make_tuple(aname, aval));
+                meta.meta.attr.push_back(std::make_pair(aname, aval));
             }
         }
     }
@@ -443,8 +444,8 @@ template<class TypeT, int RANK>
 void ArrayBundle<TypeT,RANK>::ncio_partial(
     NCIO_BUNDLE_PARAMS,
     std::vector<netCDF::NcDim> const &ncdims,
-    std::vector<int> const &nc_start,    // Where to start each dimension in NetCDF
-    std::array<int,RANK> const &b2n)    // Where to slot each Blitz++ dimension
+    std::vector<size_t> const &nc_start,    // Where to start each dimension in NetCDF
+    std::vector<int> const &b2n)    // Where to slot each Blitz++ dimension
 {
     using namespace std::placeholders;
     this->ncio(NCIO_BUNDLE_ARGS,

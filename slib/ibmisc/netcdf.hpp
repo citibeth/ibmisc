@@ -121,7 +121,7 @@ public:
     // 'w' 	open for writing, truncating the file first
     // 'x' 	open for exclusive creation, failing if the file already exists
     // 'a' 	open for writing, appending to the end of the file if it exists
-    NcIO(std::string const &filePath, char mode,
+    NcIO(std::string const &filePath, char mode = 'r',
         std::function<void(netCDF::NcVar)> const &_configure_var =
             std::bind(NcIO::default_configure_var, std::placeholders::_1));
 
@@ -621,14 +621,14 @@ struct ArrayMeta {
     std::string name;
     std::array<int, RANK> shape;
     std::array<std::string,RANK> sdims;
-    std::vector<std::tuple<std::string, std::string>> attr;    // (attr-name, value)
+    std::vector<std::pair<std::string, std::string>> attr;    // (attr-name, value)
 
     /** Users do not use directly; see def() */
     ArrayMeta(
         std::string const &_name,
         std::array<int, RANK> const &_shape,
         std::array<std::string,RANK> _sdims,
-        std::vector<std::tuple<std::string, std::string>> &&_attr)
+        std::vector<std::pair<std::string, std::string>> &&_attr)
     : name(_name), shape(_shape), sdims(_sdims), attr(std::move(_attr)) {}
 
 public:
@@ -670,6 +670,8 @@ public:
             sdims[i] = ncdim.getName();
         }
     }
+    std::map<std::string, std::string> make_attr_map() const
+        { return std::map<std::string, std::string>(attr.begin(), attr.end()); }
 };    // struct Meta
 
 
@@ -1092,16 +1094,16 @@ template<class TypeT, int RANK>
 netCDF::NcVar ncio_blitz_partial(
     NCIO_BLITZ_PARAMS,
     std::vector<netCDF::NcDim> const &ncdims,
-    std::vector<int> const &nc_start,    // Where to start each dimension in NetCDF
-    std::array<int,RANK> const &b2n,    // Where to slot each Blitz++ dimension
+    std::vector<size_t> const &nc_start,    // Where to start each dimension in NetCDF
+    std::vector<int> const &b2n,    // Where to slot each Blitz++ dimension
     std::vector<std::string> const &arr_sdims = {});
 
 template<class TypeT, int RANK>
 netCDF::NcVar ncio_blitz_partial(
     NCIO_BLITZ_PARAMS,
     std::vector<netCDF::NcDim> const &ncdims,
-    std::vector<int> const &nc_start,    // Where to start each dimension in NetCDF
-    std::array<int,RANK> const &b2n,    // Where to slot each Blitz++ dimension
+    std::vector<size_t> const &nc_start,    // Where to start each dimension in NetCDF
+    std::vector<int> const &b2n,    // Where to slot each Blitz++ dimension
     std::vector<std::string> const &arr_sdims = {})
 {
     netCDF::NcVar ncvar = ncio.nc->getVar(vname);
@@ -1109,14 +1111,14 @@ netCDF::NcVar ncio_blitz_partial(
     // where Blitz++ dimensions slot in
     bool const ncdims_in_nc_order=true;
 
-    auto ordering(to_vector(arr.ordering()));
+    auto ordering(tiny_to_vector(arr.ordering()));
     auto ncdims_nd(named_dims(ncdims, ncdims_in_nc_order, ordering, ncvar));
 
     _ncio_blitz::Info info(
-        named_dims(arr, arr_sdims), arr.ordering(),
+        named_dims(arr, arr_sdims), ordering,
         DimOrderMatch::MEMORY,    // Not used
         std::move(ncdims_nd),
-        b2n, nc_start);
+        std::vector<int>(b2n), std::vector<size_t>(nc_start));
 
     return _ncio_blitz::ncio_blitz<TypeT,RANK>(NCIO_BLITZ_ARGS, info);
 }
