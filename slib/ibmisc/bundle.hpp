@@ -271,7 +271,7 @@ void ArrayBundle<TypeT,RANK>::add(
     std::array<std::string,RANK> sdims,
     std::initializer_list<std::string> const &vattr)
 {
-    data.push_back(Data(name, arr, arr.shape(),
+    data.push_back(Data(name, arr, to_array<int,int,RANK>(arr.shape()),
         std::move(sdims), make_attrs(vattr)));
 }
 
@@ -471,12 +471,13 @@ ArrayBundle<TypeT,1> reshape1(
     for (size_t i=0; i<bundle.index.size(); ++i) {
         auto &meta(bundle.data[i]);
         blitz::Array<TypeT,1> meta1_arr(reshape1(meta.arr, lbound));
+        auto attr1(meta.meta.attr);    // copy constructor
         typename ArrayBundle<TypeT,1>::Data meta1(
             meta.meta.name,
             meta1_arr,
-            blitz::shape(meta1_arr.extent(0)),
+            {meta1_arr.extent(0)},
             sdims,
-            meta.meta.attr);
+            std::move(attr1));
         bundle1.index.insert(meta.meta.name);
         bundle1.data.push_back(meta1);
     }
