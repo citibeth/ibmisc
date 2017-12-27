@@ -121,6 +121,8 @@ public:
         bool check = true,
         blitz::GeneralArrayStorage<RANK> const &storage = blitz::GeneralArrayStorage<RANK>());
 
+    void free();    // Reverse of allocate()
+
     // ------------------------------------------------------------------
     // Allocate Some Variables in a Bundle
 
@@ -316,6 +318,15 @@ void ArrayBundle<TypeT,RANK>::allocate(
         }
     }
 }
+
+template<class TypeT, int RANK>
+void ArrayBundle<TypeT,RANK>::free()
+{
+    for (auto &meta : data) {
+        meta.arr.free();
+    }
+}
+
 
 // ------------------------------------------------------------------
 // Allocate Some Variables in a Bundle
