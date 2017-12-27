@@ -21,6 +21,7 @@
 
 #include <typeinfo>
 #include <netcdf>
+#include <ncException.h>
 #include <boost/any.hpp>
 #include <functional>
 #include <tuple>
@@ -100,8 +101,7 @@ struct TaggedThunk {
 class NcIO {
     std::vector<TaggedThunk> _io;
 
-    netCDF::NcFile _mync;  // NcFile lacks proper move constructor
-    bool own_nc;
+    std::unique_ptr<netCDF::NcFile> _mync;  // NcFile lacks proper move constructor
 
     static void default_configure_var(netCDF::NcVar ncvar);
 
@@ -126,7 +126,7 @@ public:
             std::bind(NcIO::default_configure_var, std::placeholders::_1));
 
     /** Create a "dummy" NcIO from an already-opened NetCDF file */
-    NcIO(netCDF::NcGroup *_nc, char _rw) : own_nc(false), nc(_nc), rw(_rw), define(rw=='w') {}
+    NcIO(netCDF::NcGroup *_nc, char _rw) : nc(_nc), rw(_rw), define(rw=='w') {}
 
     ~NcIO() { close(); }
 
@@ -332,6 +332,8 @@ void get_or_put_var(netCDF::NcVar &ncvar, char rw,
 // ========================================================
 // Attribute Wrangling
 
+extern netCDF::NcVarAtt get_att(netCDF::NcVar &ncvar, std::string const &name);
+
 template<class NcVarT, class AttrT>
 void get_or_put_att(
     NcVarT &ncvar, char rw,
@@ -356,7 +358,7 @@ void get_or_put_att(
             }
         } break;
         case 'r': {
-            auto att(ncvar.getAtt(name));
+            netCDF::NcVarAtt att(get_att(ncvar, name));
             if (att.getAttLength() != len) {
                 (*ibmisc_error)(-1,
                     "Trying to read attribute %s of length %ld into C++ "
@@ -414,7 +416,8 @@ void get_or_put_att(
             ncvar.putAtt(name, data);
         break;
         case 'r':
-            auto att(ncvar.getAtt(name));
+            netCDF::NcVarAtt att(get_att(ncvar, name));
+
             if (required || !att.isNull())
                 att.getValues(data);
         break;
@@ -453,7 +456,7 @@ void get_or_put_att(
             ncvar.putAtt(name, type, data.size(), &data[0]);
         break;
         case 'r':
-            auto att(ncvar.getAtt(name));
+            auto att(get_att(ncvar, name));
             data.resize(att.getAttLength());
             att.getValues(&data[0]);
         break;
@@ -487,7 +490,7 @@ void get_or_put_att(
             // String arrays are inexplicably returned as arrays
             // of char * that must be manually freed.  Convert
             // to civilized std::vector<std::string>
-            auto att(ncvar.getAtt(name));
+            auto att(get_att(ncvar, name));
             auto N(att.getAttLength());
             std::vector<char *> cstrs(N);
             att.getValues(&cstrs[0]);
@@ -526,7 +529,7 @@ void get_or_put_att_enum(
             ncvar.putAtt(name, std::string(data.str()));
         break;
         case 'r':
-            auto att(ncvar.getAtt(name));
+            auto att(get_att(ncvar, name));
             std::string sval;
             att.getValues(sval);
             data = parse_enum<EnumT>(sval);

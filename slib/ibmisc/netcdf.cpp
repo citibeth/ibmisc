@@ -19,6 +19,7 @@
 #include <string>
 #include <netcdf>
 #include <sstream>
+#include <boost/filesystem.hpp>
 #include <ibmisc/netcdf.hpp>
 
 
@@ -268,7 +269,7 @@ _ncio_blitz::Info::Info(
             blitz[ib].extent = netcdf[in].extent;
         } else if (blitz[ib].extent != netcdf[in].extent) {
             (*ibmisc_error)(-1,
-                "Dimension extent mismatch: blitz[%d:%s]=%d, netcdf[%d:%s]=%d",
+                "Dimension extent mismatch: blitz[dim=%d:%s]=%d, netcdf[dim=%d:%s]=%d",
                 ib, blitz[ib].name.c_str(), blitz[ib].extent,
                 in, netcdf[in].name.c_str(), netcdf[in].extent);
         }
@@ -324,15 +325,28 @@ void NcIO::default_configure_var(netCDF::NcVar ncvar)
     // ncvar.setChecksum(netCDF::NcVar::nc_FLETCHER32);
 }
 
+inline std::unique_ptr<NcFile> open_netcdf(std::string const &filePath, char mode)
+{
+    NcFile::FileMode fmode(_filemode_to_netcdf(mode));
+    switch(fmode) {
+        case NcFile::FileMode::read:
+        case NcFile::FileMode::write:
+            if (!boost::filesystem::exists(filePath)) (*ibmisc_error)(-1,
+                "Trying to open file %s, which doesn't exist", filePath.c_str());
+        break;
+    }
+    return std::unique_ptr<NcFile>(new NcFile(filePath, fmode, NcFile::FileFormat::nc4));
+}
+
 NcIO::NcIO(std::string const &filePath, char mode,
     std::function<void(NcVar)> const &_configure_var) :
-    _mync(filePath, _filemode_to_netcdf(mode),
-        netCDF::NcFile::FileFormat::nc4),
-    own_nc(true),
-    nc(&_mync),
+    _mync(open_netcdf(filePath, mode)),
+    nc(&*_mync),
     rw(_filemode_to_rw(mode)),
     define(rw == 'w'),
-    configure_var(_configure_var) {}
+    configure_var(_configure_var)
+{
+}
 
 void NcIO::add(std::string const &tag, std::function<void ()> const &fn)
 {
@@ -350,9 +364,9 @@ void NcIO::flush(bool debug) {
 }
 
 void NcIO::close() {
-    if (own_nc) {
+    if (_mync.get()) {
         (*this)();
-        _mync.close();    // NcFile::close() is idempotent
+        _mync.reset();
     }
 }
 
@@ -508,6 +522,17 @@ netCDF::NcVar get_or_add_var(
     return ncvar;
 }
 
+// ---------------------------------------------
+netCDF::NcVarAtt get_att(netCDF::NcVar &ncvar, std::string const &name)
+{
+    try {
+        return ncvar.getAtt(name);
+    } catch(netCDF::exceptions::NcException &e) {
+        (*ibmisc_error)(-1,
+            "Attribute %s:%s does not exist",
+            ncvar.getName().c_str(), name.c_str());
+    }
+}
 // ---------------------------------------------
 /** Do linewrap for strings that are intended to be used as comment attributes in NetCDF files.
        see: http://www.cplusplus.com/forum/beginner/19034/
