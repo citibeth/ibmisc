@@ -93,7 +93,7 @@ public:
         std::vector<std::string> const &_name,
         std::vector<long> const &_base,
         std::vector<long> const &_extent,
-        std::vector<int> &&indices);
+        std::vector<int> const &indices);
 
 
     /** Number of dimensions in this indexing */

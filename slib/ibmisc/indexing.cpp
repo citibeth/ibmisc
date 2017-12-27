@@ -49,8 +49,8 @@ Indexing::Indexing(
     std::vector<std::string> const &_name,
     std::vector<long> const &_base,
     std::vector<long> const &_extent,
-    std::vector<int> &&indices) :
-_indices(std::move(indices))
+    std::vector<int> const &indices) :
+_indices(indices)
 {
     std::vector<IndexingData> _data;
     for (size_t i=0; i<_base.size(); ++i)
