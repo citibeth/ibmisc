@@ -45,6 +45,7 @@ public:
     void ncio(ibmisc::NcIO &ncio, std::string const &vname);
 
     SparseSet() : _sparse_extent(-1) {}
+    SparseSet(SparseT const &sparse_extent) : _sparse_extent(sparse_extent) {}
 
     void clear();
 
@@ -207,6 +208,36 @@ SparseSetAccum<SparseSetT, ValueT, RANK> sparse_set(std::array<SparseSetT *, RAN
     { return SparseSetAccum<SparseSetT,ValueT,RANK>(_dims); }
 
 // -----------------------------------------------------------
+/** Given user-input transforms, converts to a "normalized" version
+required by the Sparsify class:
+  1. If transforms.size()==1, then the same transform applies for all ranks.
+  2. If sparse_sets==nullptr for any rank, then that rank's transform
+     set to ID (nop)
+*/
+template<class SparseSetT, size_t RANK>
+std::array<SparsifyTransform, RANK> sparsify_normalize_transforms(
+    std::vector<SparsifyTransform> const &transforms,
+    std::array<SparseSetT *, RANK> const &sparse_sets);
+
+template<class SparseSetT, size_t RANK>
+std::array<SparsifyTransform, RANK> sparsify_normalize_transforms(
+    std::vector<SparsifyTransform> const &transforms,
+    std::array<SparseSetT *, RANK> const &sparse_sets)
+{
+    std::array<SparsifyTransform, RANK> normalized;
+
+    if ((transforms.size() < 1) || (transforms.size() > 1 && transforms.size() != RANK))
+        (*ibmisc::ibmisc_error)(-1, "Must give 1 transform type per dimension, or 1 for all dimensions");
+
+    // Tell what to do with each rank
+    for (int i=0; i<RANK; ++i) {
+        SparsifyTransform transform = (i >= transforms.size() ? transforms[0] : transforms[i]);
+        normalized[i] = (sparse_sets[i] ? transform : SparsifyTransform::ID);
+    }
+
+    return normalized;
+}
+
 #define SPARSIFY_TPARAMS class AccumT, class SparseSetT, class InIndexT
 #define SparsifyT Sparsify<AccumT,SparseSetT,InIndexT>
 
@@ -218,29 +249,10 @@ class Sparsify : public Filter<AccumT>
 public:
     typedef InIndexT index_type;    // Override super
 public:
-    struct Data {
-        SparseSetT * const sparse_set;
-        SparsifyTransform transform;
+    std::array<SparsifyTransform, (size_t)super::rank> transforms;
+    std::array<SparseSetT *, (size_t)super::rank> sparse_sets;
 
-        Data(SparseSetT *_sparse_set, SparsifyTransform _transform) :
-            sparse_set(_sparse_set), transform(_transform) {}
-
-        long extent() const {
-            switch(transform) {
-                case SparsifyTransform::ID :
-                    return -1;    // sparse_set == NULL
-                case SparsifyTransform::ADD_DENSE :
-                case SparsifyTransform::TO_DENSE_IGNORE_MISSING :
-                case SparsifyTransform::TO_DENSE :
-                    return sparse_set->dense_extent();
-                case SparsifyTransform::TO_SPARSE :
-                    return sparse_set->sparse_extent();
-            }
-        }
-    };
 private:
-
-    std::vector<Data> data;
 
     // The order in which we will process dimensions.
     // This way, we can process dimensions that don't change
@@ -249,44 +261,10 @@ private:
     std::array<int, (size_t)super::rank> process_order;
 
 public:
-    Data &dim(int ix)
-        { return data[ix]; }
-
-    /** @param _transform.  Either a single item (used for all dimensions), or one per dimension.
-        SparsifyTransform::TO_DENSE
-        SparsifyTransform::TO_SPARSE
-    @param sparse_sets
-        0 if that dimension is not to be transformed
-    */
     Sparsify(
-        std::vector<SparsifyTransform> const &_transform,
-        std::array<SparseSetT *, (size_t)super::rank> const sparse_sets,
+        std::array<SparsifyTransform, (size_t)super::rank> const &_normalized_transforms,
+        std::array<SparseSetT *, (size_t)super::rank> const _sparse_sets,
         AccumT &&_sub);
-
-    /** Merge shape we're given with shape from transforms. */
-    void set_shape(std::array<long, super::rank> shape)
-    {
-        for (int i=0; i<super::rank; ++i) {
-            // Use the shape we were given, if no transform for this dimension
-            if (!data[i].sparse_set) continue;
-
-            switch(data[i].transform) {
-                case SparsifyTransform::ADD_DENSE:
-                    // set_shape() is not very useful with ADD_DENSE;
-                    // you will have to call it again after all
-                    // items have been added.
-                    // (fall through)
-                case SparsifyTransform::TO_DENSE_IGNORE_MISSING:
-                case SparsifyTransform::TO_DENSE:
-                    shape[i] = data[i].sparse_set->dense_extent();
-                    break;
-                case SparsifyTransform::TO_SPARSE:
-                    shape[i] = data[i].sparse_set->sparse_extent();
-                    break;
-            }
-        }
-        super::sub.set_shape(shape);
-    }
 
     void add(std::array<index_type,super::rank> index, typename super::val_type const &val)
     {
@@ -298,26 +276,25 @@ public:
         // grid cells that are needed.
         for (int ix=0; ix<super::rank; ++ix) {
             int const i = process_order[ix];
-
-            switch(data[i].transform) {
+            switch(transforms[i]) {
                 case SparsifyTransform::ID:
                     // Use the index given, no transform
                     index2[i] = index[i];
                     break;
                 case SparsifyTransform::ADD_DENSE:
-                    index2[i] = data[i].sparse_set->add_dense(index[i]);
+                    index2[i] = sparse_sets[i]->add_dense(index[i]);
                     break;
                 case SparsifyTransform::TO_DENSE_IGNORE_MISSING: {
-                    auto &sset(*data[i].sparse_set);
+                    auto &sset(*sparse_sets[i]);
                     auto ii(sset._s2d.find(index[i]));
                     if (ii == sset._s2d.end()) return;    // An index was missing; ignore this element in the sparse matrix
                     index2[i] = ii->second;
                 } break;
                 case SparsifyTransform::TO_DENSE:
-                    index2[i] = data[i].sparse_set->to_dense(index[i]);
+                    index2[i] = sparse_sets[i]->to_dense(index[i]);
                     break;
                 case SparsifyTransform::TO_SPARSE:
-                    index2[i] = data[i].sparse_set->to_sparse(index[i]);
+                    index2[i] = sparse_sets[i]->to_sparse(index[i]);
                     break;
             }
         }
@@ -328,30 +305,22 @@ public:
 // ----------------------------------------------------------------
 template<SPARSIFY_TPARAMS>
 SparsifyT::Sparsify(
-    std::vector<SparsifyTransform> const &transforms,
-    std::array<SparseSetT *, (size_t)super::rank> const sparse_sets,    // 0 if we don't want to densify/sparsify that dimension
+    std::array<SparsifyTransform, (size_t)super::rank> const &_normalized_transforms,
+    std::array<SparseSetT *, (size_t)super::rank> const _sparse_sets,    // 0 if we don't want to densify/sparsify that dimension
     AccumT &&_sub)
-    : super(std::move(_sub))
+    : super(std::move(_sub)),
+    transforms(_normalized_transforms),
+    sparse_sets(_sparse_sets)
 {
-    if ((transforms.size() < 1) || (transforms.size() > 1 && transforms.size() != super::rank))
-        (*ibmisc::ibmisc_error)(-1, "Must give 1 transform type per dimension, or 1 for all dimensions");
-
-    // Tell what to do with each rank
-    for (int i=0; i<super::rank; ++i) {
-        SparsifyTransform transform = (i >= transforms.size() ? transforms[0] : transforms[i]);
-        data.push_back(Data(sparse_sets[i],
-            sparse_sets[i] ? transform : SparsifyTransform::ID));
-    }
-
     // Determine processing order of the ranks
     // Iterate in reverse order to accommodate the common case of
     // {ADD_DENSE, TO_DENSE_IGNORE_MISSING}.  This allows one to create
     // a matrix based on a subset of the input, adding only the output
     // grid cells that are needed.
     std::vector<int> _process_order;
-    ibmisc::sorted_permutation(data.begin(), data.end(), _process_order,
-        [&](Data const &a, Data const &b)
-            { return a.transform < b.transform; }
+    ibmisc::sorted_permutation(transforms.begin(), transforms.end(), _process_order,
+        [&](SparsifyTransform const a, SparsifyTransform const b)
+            { return a < b; }
     );
     std::copy_n(_process_order.begin(), super::rank, process_order.begin());
 }
@@ -363,12 +332,12 @@ struct in_index_type {
 
 template<SPARSIFY_TPARAMS>
 inline SparsifyT sparsify(
-        std::vector<SparsifyTransform> const &transforms,
+        std::array<SparsifyTransform, AccumT::rank> const &normalized_transforms,
         in_index_type<InIndexT> const dummy,
         std::array<SparseSetT *, AccumT::rank> const &sparse_sets,
         AccumT &&sub)
 {
-    return SparsifyT(transforms, sparse_sets, std::move(sub));
+    return SparsifyT(normalized_transforms, sparse_sets, std::move(sub));
 }
 #undef SparsifyT
 #undef SPARSIFY_TPARAMS
@@ -382,25 +351,41 @@ template<SPARSIFY_TPARAMS>
 inline ToDenseT to_dense(
         std::array<SparseSetT *, AccumT::rank> const &dims,
         AccumT &&sub)
-{ return ToDenseT({SparsifyTransform::TO_DENSE}, dims, std::move(sub)); }
+{
+    return ToDenseT(
+        sparsify_normalize_transforms({SparsifyTransform::TO_DENSE}, dims),
+        dims, std::move(sub));
+    }
 
 template<SPARSIFY_TPARAMS>
 inline ToDenseT to_dense_ignore_missing(
         std::array<SparseSetT *, AccumT::rank> const &dims,
         AccumT &&sub)
-{ return ToDenseT({SparsifyTransform::TO_DENSE_IGNORE_MISSING}, dims, std::move(sub)); }
+{
+    return ToDenseT(
+        sparsify_normalize_transforms({SparsifyTransform::TO_DENSE_IGNORE_MISSING}, dims),
+        dims, std::move(sub));
+}
 
 template<SPARSIFY_TPARAMS>
 inline ToDenseT add_dense(
         std::array<SparseSetT *, AccumT::rank> const &dims,
         AccumT &&sub)
-{ return ToDenseT({SparsifyTransform::ADD_DENSE}, dims, std::move(sub)); }
+{
+    return ToDenseT(
+        sparsify_normalize_transforms({SparsifyTransform::ADD_DENSE}, dims),
+        dims, std::move(sub));
+}
 
 template<SPARSIFY_TPARAMS>
 inline ToSparseT to_sparse(
         std::array<SparseSetT *, AccumT::rank> const &dims,
         AccumT &&sub)
-{ return ToSparseT({SparsifyTransform::TO_SPARSE}, dims, std::move(sub)); }
+{
+    return ToSparseT(
+        sparsify_normalize_transforms({SparsifyTransform::TO_SPARSE}, dims),
+        dims, std::move(sub));
+}
 
 #undef ToSparseT
 #undef ToDenseT

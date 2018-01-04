@@ -485,27 +485,54 @@ public:
     typedef Eigen::SparseMatrix<_Scalar,_Options,_StorageIndex> EigenSparseMatrixT;
 
     TupleListT<2> M;
+    std::array<SparsifyTransform,2> const normalized_transform;
     std::array<SparseSetT *,2> const dims;
     std::array<int,2> const permute;    // {1,0} for transpse=='T'
-    AccumT accum;    // References M
+
+    /** Constructs and returns the accumulator appropriate for this
+        matrix generator. */
+    AccumT accum()
+    {
+        return
+            accum::sparsify(normalized_transform,
+                accum::in_index_type<typename SparseSetT::sparse_type>(),
+                dims,
+            accum::permute(accum::in_rank<2>(), permute,
+            accum::ref(M)));
+    }
 
     /** @param transpose Use '.' for regular, 'T' for transpose.  If transposing
         in the final TupleList output, the SparseSets to which indices
         are added are NOT transposed.
     */
     MakeDenseEigen(
-        std::vector<SparsifyTransform> const &sparsify_transform,
+        std::vector<SparsifyTransform> const &_sparsify_transform,
         std::array<SparseSetT *,2> const &_dims,
         char transpose = '.');    // '.' or 'T
 
     MakeDenseEigen(
-        std::function<void (AccumT &)> const &fn,
-        std::vector<SparsifyTransform> const &sparsify_transform,
+        std::function<void (AccumT &&)> const &fn,
+        std::vector<SparsifyTransform> const &_sparsify_transform,
         std::array<SparseSetT *,2> const &_dims,
         char transpose = '.')    // '.' or 'T
-    : MakeDenseEigen(sparsify_transform, _dims, transpose)
+    : MakeDenseEigen(_sparsify_transform, _dims, transpose)
     {
-        fn(accum);
+        fn(accum());
+    }
+
+
+    long extent(int i)
+    {
+        switch(normalized_transform[i]) {
+            case SparsifyTransform::ID :
+                return -1;    // sparse_set == NULL
+            case SparsifyTransform::ADD_DENSE :
+            case SparsifyTransform::TO_DENSE_IGNORE_MISSING :
+            case SparsifyTransform::TO_DENSE :
+                return dims[i]->dense_extent();
+            case SparsifyTransform::TO_SPARSE :
+                return dims[i]->sparse_extent();
+        }
     }
 
     EigenSparseMatrixT to_eigen();
@@ -514,17 +541,12 @@ public:
 
 template<class SparseIndexT, class _Scalar, int _Options, class _StorageIndex>
 MakeDenseEigen<SparseIndexT,_Scalar,_Options,_StorageIndex>::MakeDenseEigen(
-    std::vector<SparsifyTransform> const &sparsify_transform,
+    std::vector<SparsifyTransform> const &_sparsify_transform,
     std::array<SparseSetT *,2> const &_dims,
     char transpose)    // '.' or 'T
-: dims(_dims),
-    permute((transpose == 'T') ? ibmisc::make_array(1,0) : ibmisc::make_array(0,1)),
-    accum(
-        accum::sparsify(sparsify_transform,
-            accum::in_index_type<typename SparseSetT::sparse_type>(),
-            dims,
-        accum::permute(accum::in_rank<2>(), permute,
-        accum::ref(M))))
+: normalized_transform(spsparse::accum::sparsify_normalize_transforms(_sparsify_transform, _dims)),
+    dims(_dims),
+    permute((transpose == 'T') ? ibmisc::make_array(1,0) : ibmisc::make_array(0,1))
 {}
 
 #define ARGS SparseIndexT,_Scalar,_Options,_StorageIndex
@@ -532,18 +554,18 @@ template<class SparseIndexT, class _Scalar, int _Options, class _StorageIndex>
 typename MakeDenseEigen<ARGS>::EigenSparseMatrixT MakeDenseEigen<ARGS>::to_eigen()
 {
     for (int i=0; i<2; ++i) {
-        if (accum.dim(i).extent() < 0) {
+        if (extent(i) < 0) {
             (*ibmisc::ibmisc_error)(-1, "MakeDenseEigen requires dimensions to have a computed extent.  It is not compatible with SparsifyTransform::ID");
         }
     }
 
-    Eigen::SparseMatrix<typename AccumT::val_type,0,typename AccumT::index_type> M(
-        accum.dim(permute[0]).extent(),
-        accum.dim(permute[1]).extent());
+    Eigen::SparseMatrix<typename AccumT::val_type,0,typename AccumT::index_type> Matrix(
+        extent(permute[0]),
+        extent(permute[1]));
 
     // This segfaults if indices are out of bounds
-    M.setFromTriplets(accum.base().begin(), accum.base().end());
-    return M;
+    Matrix.setFromTriplets(M.begin(), M.end());
+    return Matrix;
 }
 #undef ARGS
 

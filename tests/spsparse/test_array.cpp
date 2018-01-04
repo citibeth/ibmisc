@@ -77,10 +77,10 @@ TEST_F(SpSparseTest, TupleList) {
     // Test bounds checking
     try {
         arr1.add({17}, 4.);
-        FAIL() << "Excpected spsparse::Exception";
+        FAIL() << "Expected spsparse::Exception";
     } catch(ibmisc::Exception const &err) {
     } catch(...) {
-        FAIL() << "Excpected spsparse::Exception";
+        FAIL() << "Expected spsparse::Exception";
     }
 
     // Test Move Constructor
@@ -176,11 +176,12 @@ TEST_F(SpSparseTest, sparse_set)
 
     // Test to_dense
     TupleListT arr2d;
+    std::array<SparseSet<int,int> *, 2> dims({&dim0, nullptr});
     spcopy(
         accum::sparsify(
-            {SparsifyTransform::TO_DENSE},
+            accum::sparsify_normalize_transforms({SparsifyTransform::TO_DENSE}, dims),
             accum::in_index_type<int>(),
-            ibmisc::make_array(&dim0, nullptr),
+            dims,
         accum::ref(arr2d)),
         arr2);
 
@@ -347,7 +348,7 @@ TEST_F(SpSparseTest, sparse_set_accum)
 // -----------------------------------------------
 typedef MakeDenseEigen<long,double,0,int> MakeDenseEigenT;
 
-void sample_makedense(MakeDenseEigenT::AccumT &accum)
+void sample_makedense(MakeDenseEigenT::AccumT &&accum)
 {
     accum.add({6L,2L}, 8.);
     accum.add({1L,0L}, 16.);
@@ -361,7 +362,7 @@ TEST_F(SpSparseTest, make_dense_eigen)
         {SparsifyTransform::ADD_DENSE},
         {&dims[0], &dims[1]}, '.');
 
-    auto ii(M_m.accum.base().begin());
+    auto ii(M_m.M.begin());
     EXPECT_EQ(0, ii->index(0));
     EXPECT_EQ(0, ii->index(1));
     EXPECT_EQ(8., ii->value());
@@ -374,8 +375,8 @@ TEST_F(SpSparseTest, make_dense_eigen)
     EXPECT_EQ(1, ii->index(1));
     EXPECT_EQ(17., ii->value());
 
-    EXPECT_EQ(-1, M_m.accum.base().shape(0));
-    EXPECT_EQ(-1, M_m.accum.base().shape(1));
+    EXPECT_EQ(-1, M_m.M.shape(0));
+    EXPECT_EQ(-1, M_m.M.shape(1));
 
     auto M(M_m.to_eigen());
 
