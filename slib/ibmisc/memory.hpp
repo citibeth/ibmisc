@@ -291,6 +291,33 @@ public:
 };
 
 
+// -----------------------------------------------------
+/** A unique_ptr class with operator=() and copy constructors.
+A clonable_unique_ptr<TypeT>() is copied by calling
+TypeT::clone(), which must have the signature of:
+     std::unique_ptr<TypeT> TypeT::clone();
+*/
+template<class TypeT>
+class clonable_unique_ptr : public std::unique_ptr<TypeT>
+{
+public:
+    clonable_unique_ptr() {}
+
+    clonable_unique_ptr(clonable_unique_ptr<TypeT> const &specp)
+        : std::unique_ptr<TypeT>(specp->clone())
+    {}
+
+    clonable_unique_ptr(clonable_unique_ptr<TypeT> &&specp)
+        : std::unique_ptr<TypeT>(std::move(specp))
+    {}
+
+    clonable_unique_ptr(std::unique_ptr<TypeT> &&specp)
+        : std::unique_ptr<TypeT>(std::move(specp))
+    {}
+
+    void operator=(clonable_unique_ptr<TypeT> const &specp)
+        { this->reset(specp->clone().release()); }
+};
 // ====================================================
 
 
@@ -339,3 +366,4 @@ bool dynamic_pointer_move(std::unique_ptr<T_DEST> & dest,
 }
 #endif
 
+// -------------------------------------------------------------------
