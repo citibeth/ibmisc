@@ -99,6 +99,81 @@ TEST_F(NetcdfTest, get_or_add_dim) {
 
 }
 
+#if 0
+// Why is this test here?  Is it redundant?  Is it a speed test, rather than functionality?
+TEST_F(NetcdfTest, netcdf_imap)
+{
+    std::string fname("__netcdf_imap.nc");
+    tmpfiles.push_back(fname);
+    ::remove(fname.c_str());
+
+    {
+#if 1
+        int const JM2=5400;
+        int const IM2=10800;
+#else
+        int const JM2=3;
+        int const IM2=5;
+#endif
+        ibmisc::NcIO ncio(fname, 'w');
+        blitz::Array<double,2> sample(JM2, IM2);
+        auto dims(ibmisc::get_or_add_dims(ncio, sample, {"jm2", "im2"}));
+
+        NcVar var_nc = get_or_add_var(ncio, "sample", "double", dims);
+
+        blitz::Array<double,2> vals(JM2,IM2);
+        vals = 18;
+        std::vector<size_t> start {0,0};
+        std::vector<size_t> count {JM2,IM2};
+        std::vector<ptrdiff_t> stride{1,1};
+        std::vector<ptrdiff_t> imap{IM2,1};
+
+//        var_nc.putVar(start,count,stride,imap, vals.data());
+        var_nc.putVar(start,count, vals.data());
+
+        ncio();    // Vars are destroyed in reverse order of construction
+    }
+
+}
+#endif
+
+
+TEST_F(NetcdfTest, blitz_large)
+{
+    std::string fname("__netcdf_blitz_large_test.nc");
+    tmpfiles.push_back(fname);
+    ::remove(fname.c_str());
+
+    // ---------- Write
+#if 1
+    int const IM2 = 10800;
+    int const JM2 = 5400;
+#else
+    int const IM2 = 3;
+    int const JM2 = 2;
+#endif
+    {
+        ibmisc::NcIO ncio(fname, 'w');
+//        blitz::Array<double,2> sample(IM2, JM2, blitz::fortranArray);
+        blitz::Array<double,2> sample(JM2, IM2);
+        for (int j=0; j<JM2; ++j) {
+        for (int i=0; i<IM2; ++i) {
+            sample(j,i) = 17;
+        }}
+
+        auto dims = ibmisc::get_or_add_dims(ncio, sample, {"jm2", "im2"});
+
+        ncio_blitz(ncio, sample, "sample", "double",
+            get_dims(ncio, {"jm2", "im2"}));    // ncdims in nc order
+
+
+        ncio();    // Vars are destroyed in reverse order of construction
+    }
+
+
+
+}
+
 TEST_F(NetcdfTest, blitz)
 {
     std::string fname("__netcdf_blitz_test.nc");

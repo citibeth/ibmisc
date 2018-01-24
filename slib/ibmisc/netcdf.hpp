@@ -275,12 +275,17 @@ count Vector specifying the edge lengths along each dimension of the
     element of count corresponds to a count of the number of records
     to read. Note: setting any element of the count array to zero
     causes the function to exit without error, and without doing
-    anything.  stride Vector specifying the interval between selected
-    indices. The elements of the stride vector correspond, in order,
-    to the variable's dimensions. A value of 1 accesses adjacent
-    values of the netCDF variable in the corresponding dimension; a
-    value of 2 accesses every other value of the netCDF variable in
-    the corresponding dimension; and so on. A NULL stride argument is
+    anything.
+
+stridep A vector of ptrdiff_t integers that specifies the sampling
+    interval along each dimension of the netCDF variable. The elements
+    of the stride vector correspond, in order, to the netCDF
+    variable's dimensions (stride[0] gives the sampling interval along
+    the most slowly varying dimension of the netCDF
+    variable). Sampling intervals are specified in type-independent
+    units of elements (a value of 1 selects consecutive elements of
+    the netCDF variable along the corresponding dimension, a value of
+    2 selects every other element, etc.). A NULL stride argument is
     treated as (1, 1, ... , 1).
 
 imap Vector of integers that specifies the mapping between the
@@ -320,12 +325,32 @@ void get_or_put_var(netCDF::NcVar &ncvar, char rw,
     std::vector<ptrdiff_t> const &imap,
     TypeT *dataValues)
 {
+    // NetCDF library is really slow if stride or count is used.
+    // See if we can do without...
+    ptrdiff_t cur_imap = 1;
+    for (int i=imap.size()-1; i >= 0; --i) {
+        if (imap[i] != cur_imap) {
+            // Non-contiguous array; must do with full imap
+            switch(rw) {
+                case 'r' :
+                    ncvar.getVar(start, count, stride, imap, dataValues);
+                break;
+                case 'w' :
+                    ncvar.putVar(start, count, stride, imap, dataValues);
+                break;
+            }
+            return;
+        }
+        cur_imap *= count[i];
+    }
+
+    // Contiguous array; can omit stride and imap
     switch(rw) {
         case 'r' :
-            ncvar.getVar(start, count, stride, imap, dataValues);
+            ncvar.getVar(start, count, dataValues);
         break;
         case 'w' :
-            ncvar.putVar(start, count, stride, imap, dataValues);
+            ncvar.putVar(start, count, dataValues);
         break;
     }
 }
@@ -806,10 +831,16 @@ void nc_rw_blitz2(
     }
 
     for (int i=0; i<RANK; ++i) {
+        int i_n = b2n[i];
+        if (i_n < 0 || i_n >= imap.size()) (*ibmisc_error)(-1,
+            "b2n[%d]=%d is out of range (0--%ld)",
+            i, b2n[i], imap.size());
+
         imap[b2n[i]] = val->stride(i);
         count[b2n[i]] = val->extent(i);
         // Allow nc_dim[b2n[i]] > val->extent(i)
     }
+
 
     get_or_put_var(ncvar, rw, start, count, stride, imap, val->data());
 }

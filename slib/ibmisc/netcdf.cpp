@@ -364,6 +364,7 @@ void NcIO::flush(bool debug) {
 }
 
 void NcIO::close() {
+printf("BEGIN close() %p\n", _mync.get());
     if (_mync.get()) {
         (*this)();
         _mync.reset();
