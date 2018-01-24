@@ -24,7 +24,7 @@ public:
             std::string const &_name,
             blitz::Array<TypeT,RANK> const &_arr,
             std::array<int, RANK> const &_shape,
-            std::array<std::string,RANK> _sdims,
+            std::array<std::string,RANK> const &_sdims,
             std::vector<std::pair<std::string, std::string>> &&_attr)
         : meta(ArrayMeta<RANK>(_name,_shape, _sdims, std::move(_attr))),
             arr(_arr) {}
@@ -79,7 +79,7 @@ public:
     static Data def(
         std::string const &name,
         std::array<int, RANK> const &shape,
-        std::array<std::string,RANK> sdims,
+        std::array<std::string,RANK> const &sdims,
         std::initializer_list<std::string> const &vattr);
 
     ArrayBundle() {}
@@ -87,20 +87,20 @@ public:
     ArrayBundle(std::vector<Data> _data);
 
 
-    void add(
+    blitz::Array<TypeT,RANK> &add(
         std::string const &name,
         std::initializer_list<std::string> const &vattr);
 
-    void add(
+    blitz::Array<TypeT,RANK> &add(
         std::string const &name,
         std::array<int, RANK> const &shape,
-        std::array<std::string,RANK> sdims,
+        std::array<std::string,RANK> const &sdims,
         std::initializer_list<std::string> const &vattr);
 
-    void add(
+    blitz::Array<TypeT,RANK> &add(
         std::string const &name,
         blitz::Array<TypeT, RANK> &arr,
-        std::array<std::string,RANK> sdims,
+        std::array<std::string,RANK> const &sdims,
         std::initializer_list<std::string> const &vattr);
 
 
@@ -109,7 +109,7 @@ public:
 
     void set_shape(
         std::array<int, RANK> const &shape,
-        std::array<std::string,RANK> sdims,
+        std::array<std::string,RANK> const &sdims,
         bool check = true);
 
     void allocate(bool check = true,
@@ -117,7 +117,7 @@ public:
 
     void allocate(
         std::array<int, RANK> const &_shape,
-        std::array<std::string,RANK> sdims,
+        std::array<std::string,RANK> const &sdims,
         bool check = true,
         blitz::GeneralArrayStorage<RANK> const &storage = blitz::GeneralArrayStorage<RANK>());
 
@@ -129,18 +129,18 @@ public:
     void set_shape(
         std::vector<std::string> const &vnames,
         std::array<int, RANK> const &shape,
-        std::array<std::string,RANK> sdims,
+        std::array<std::string,RANK> const &sdims,
         bool check = true);
 
-    void allocate(
+    void allocate_some(
         std::vector<std::string> const &vnames,
         bool check = true,
         blitz::GeneralArrayStorage<RANK> const &storage = blitz::GeneralArrayStorage<RANK>());
 
-    void allocate(
+    void allocate_some(
         std::vector<std::string> const &vnames,
         std::array<int, RANK> const &_shape,
-        std::array<std::string,RANK> sdims,
+        std::array<std::string,RANK> const &sdims,
         bool check = true,
         blitz::GeneralArrayStorage<RANK> const &storage = blitz::GeneralArrayStorage<RANK>());
 
@@ -219,17 +219,16 @@ typename ArrayBundle<TypeT,RANK>::Data ArrayBundle<TypeT,RANK>::def(
     std::initializer_list<std::string> const &vattr)
 {
     std::array<int,RANK> shape;
-    std::array<std::string,RANK> sdims;
     for (int i=0; i<RANK; ++i) shape[i] = -1;
     return Data(name, blitz::Array<TypeT,RANK>(), shape,
-        std::move(sdims), make_attrs(vattr));
+        std::array<std::string,RANK>(), make_attrs(vattr));
 }
 
 template<class TypeT, int RANK>
 typename ArrayBundle<TypeT,RANK>::Data ArrayBundle<TypeT,RANK>::def(
     std::string const &name,
     std::array<int, RANK> const &shape,
-    std::array<std::string,RANK> sdims,
+    std::array<std::string,RANK> const &sdims,
     std::initializer_list<std::string> const &vattr)
 {
     return Data(name, blitz::Array<TypeT,RANK>(), shape,
@@ -248,34 +247,37 @@ ArrayBundle<TypeT,RANK>::ArrayBundle(std::vector<Data> _data) : data(std::move(_
 
 
 template<class TypeT, int RANK>
-void ArrayBundle<TypeT,RANK>::add(
+blitz::Array<TypeT,RANK> &ArrayBundle<TypeT,RANK>::add(
     std::string const &name,
     std::initializer_list<std::string> const &vattr)
 {
     data.push_back(def(name, vattr));
     index.insert(data.back().meta.name);
+    return data.back().arr;
 }
 
 template<class TypeT, int RANK>
-void ArrayBundle<TypeT,RANK>::add(
+blitz::Array<TypeT,RANK> &ArrayBundle<TypeT,RANK>::add(
     std::string const &name,
     std::array<int, RANK> const &shape,
-    std::array<std::string,RANK> sdims,
+    std::array<std::string,RANK> const &sdims,
     std::initializer_list<std::string> const &vattr)
 {
     data.push_back(def(name, shape, std::move(sdims), vattr));
     index.insert(data.back().meta.name);
+    return data.back().arr;
 }
 
 template<class TypeT, int RANK>
-void ArrayBundle<TypeT,RANK>::add(
+blitz::Array<TypeT,RANK> &ArrayBundle<TypeT,RANK>::add(
     std::string const &name,
     blitz::Array<TypeT,RANK> &arr,
-    std::array<std::string,RANK> sdims,
+    std::array<std::string,RANK> const &sdims,
     std::initializer_list<std::string> const &vattr)
 {
     data.push_back(Data(name, arr, to_array<int,int,RANK>(arr.shape()),
         std::move(sdims), make_attrs(vattr)));
+    return data.back().arr;
 }
 
 
@@ -285,7 +287,7 @@ void ArrayBundle<TypeT,RANK>::add(
 template<class TypeT, int RANK>
 void ArrayBundle<TypeT,RANK>::set_shape(
     std::array<int, RANK> const &shape,
-    std::array<std::string,RANK> sdims,
+    std::array<std::string,RANK> const &sdims,
     bool check)
 {
     for (auto &meta : data) {
@@ -307,7 +309,7 @@ void ArrayBundle<TypeT,RANK>::allocate(bool check,
 template<class TypeT, int RANK>
 void ArrayBundle<TypeT,RANK>::allocate(
     std::array<int, RANK> const &_shape,
-    std::array<std::string,RANK> sdims,
+    std::array<std::string,RANK> const &sdims,
     bool check,
     blitz::GeneralArrayStorage<RANK> const &storage)
 {
@@ -335,7 +337,7 @@ template<class TypeT, int RANK>
 void ArrayBundle<TypeT,RANK>::set_shape(
     std::vector<std::string> const &vnames,
     std::array<int, RANK> const &shape,
-    std::array<std::string,RANK> sdims,
+    std::array<std::string,RANK> const &sdims,
     bool check)
 {
     for (auto &vname : vnames) {
@@ -345,7 +347,7 @@ void ArrayBundle<TypeT,RANK>::set_shape(
 }
 
 template<class TypeT, int RANK>
-void ArrayBundle<TypeT,RANK>::allocate(
+void ArrayBundle<TypeT,RANK>::allocate_some(
     std::vector<std::string> const &vnames,
     bool check,
     blitz::GeneralArrayStorage<RANK> const &storage)
@@ -357,10 +359,10 @@ void ArrayBundle<TypeT,RANK>::allocate(
 }
 
 template<class TypeT, int RANK>
-void ArrayBundle<TypeT,RANK>::allocate(
+void ArrayBundle<TypeT,RANK>::allocate_some(
     std::vector<std::string> const &vnames,
     std::array<int, RANK> const &_shape,
-    std::array<std::string,RANK> sdims,
+    std::array<std::string,RANK> const &sdims,
     bool check,
     blitz::GeneralArrayStorage<RANK> const &storage)
 {
