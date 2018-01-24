@@ -133,13 +133,15 @@ void SparseSet<SparseT, DenseT>::ncio(ibmisc::NcIO &ncio, std::string const &vna
     if (ncio.rw == 'r') (*ibmisc::ibmisc_error)(-1,
         "SparseSet::ncio() currently does not support reading.");
 
-    get_or_add_dim(ncio, vname + ".sparse_extent", _sparse_extent);
     // Set up dimensions
     auto dims(ibmisc::get_or_add_dims(ncio,
         {vname + ".dense_extent"},
         {dense_extent()}));
 
-    ibmisc::ncio_vector(ncio, _d2s, false, vname, ibmisc::get_nc_type<SparseT>(), dims);
+    netCDF::NcVar ncvar = ibmisc::ncio_vector(
+        ncio, _d2s, false, vname, ibmisc::get_nc_type<SparseT>(), dims);
+
+    ibmisc::get_or_put_att(ncvar, ncio.rw, "sparse_extent", &_sparse_extent, 1);
 }
 
 template<class SparseT, class DenseT>
