@@ -96,6 +96,15 @@ TEST_F(SpSparseTest, TupleList) {
     }
 }
 
+TEST_F(SpSparseTest, sort_tuple_list) {
+    // Make a simple TupleList
+    TupleList<int, double, 1> arr1({4});
+    arr1.add({1}, 2.);
+    arr1.add({3}, 6.);
+
+    std::sort(arr1.tuples.begin(), arr1.tuples.end());
+}
+
 TEST_F(SpSparseTest, dense)
 {
     typedef TupleList<int, double, 2> TupleListT;

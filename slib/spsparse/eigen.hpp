@@ -156,15 +156,18 @@ public:
 
 /** Serves as accumulator and iterable storage */
 template<class IndexT, class ValT, int RANK>
-class TupleList : public std::vector<Tuple<IndexT,ValT,RANK>>
+class TupleList
 {
 public:
-    typedef std::vector<Tuple<IndexT,ValT,RANK>> super;
+    // https://stackoverflow.com/questions/4353203/thou-shalt-not-inherit-from-stdvector
+    typedef std::vector<Tuple<IndexT,ValT,RANK>> VectorT;
+    VectorT tuples;
+
+    // Stuff to make it an accumulator
     static const int rank = RANK;
     typedef IndexT index_type;
     typedef ValT val_type;
     typedef TupleList base_array_type;
-
     
     std::array<long, rank> _shape;
 
@@ -172,7 +175,7 @@ public:
     template<class ArchiveT>
     void serialize(ArchiveT &ar, const unsigned int file_version)
     {
-        ar & *static_cast<super *>(this);
+        ar & tuples;
         ar & _shape;
     }
 
@@ -181,32 +184,40 @@ public:
     base_array_type const &base() const
         { return *this; }
 
-    struct iterator : public super::iterator {
+
+    // -----------------------------------------------------
+    // https://stackoverflow.com/questions/7758580/writing-your-own-stl-container/7759622#7759622
+
+    // These iterators work for Spsparse accumulators; but not for all STL stuff (eg std::sort).
+    // For those, use TupleList.tuples.begin(), etc.
+    struct iterator : public VectorT::iterator {
         static const int rank = RANK;
         typedef IndexT index_type;
         typedef ValT val_type;
 
-        iterator(typename super::iterator &&ii) : super::iterator(std::move(ii)) {}
+        iterator() {}
+        iterator(typename VectorT::iterator &&ii) : VectorT::iterator(std::move(ii)) {}
+        iterator(const typename VectorT::iterator &ii) : VectorT::iterator(ii) {}
+
     };
     iterator begin()
-        { return iterator(super::begin()); }
+        { return iterator(tuples.begin()); }
     iterator end()
-        { return iterator(super::end()); }
+        { return iterator(tuples.end()); }
     // -------------------------------------------------
-    struct const_iterator : public super::const_iterator {
+    struct const_iterator : public VectorT::const_iterator {
         static const int rank = RANK;
         typedef IndexT index_type;
         typedef ValT val_type;
 
-        const_iterator(typename super::const_iterator &&ii) : super::const_iterator(std::move(ii)) {}
+        const_iterator(typename VectorT::const_iterator &&ii) : VectorT::const_iterator(std::move(ii)) {}
     };
     const_iterator begin() const
-        { return const_iterator(super::begin()); }
+        { return const_iterator(tuples.begin()); }
     const_iterator end() const
-        { return const_iterator(super::end()); }
+        { return const_iterator(tuples.end()); }
 
     // -------------------------------------------------
-
 
     TupleList()
         { _shape.fill(-1); }    // -1 means unlimited dimension
@@ -223,6 +234,13 @@ public:
         { return _shape[i]; }
 
     void add(std::array<index_type,rank> const &index, ValT const &value);
+
+    // Forward methods to std::vector
+    size_t size() const { return tuples.size(); }
+    void clear() { tuples.clear(); }
+    void reserve(size_t n) { tuples.reserve(n); }
+    Tuple<IndexT,ValT,RANK> &operator[](int ix) { return tuples[ix]; }
+    Tuple<IndexT,ValT,RANK> const &operator[](int ix) const { return tuples[ix]; }
 };
 
 template<class IndexT, class ValT, int RANK>
@@ -247,7 +265,7 @@ void TupleList<IndexT,ValT,RANK>::add(std::array<index_type,rank> const &index, 
         }
     }
 
-    super::push_back(Tuple<IndexT,ValT,RANK>(index, value));
+    tuples.push_back(Tuple<IndexT,ValT,RANK>(index, value));
 }
 
 // --------------------------------------------------------
