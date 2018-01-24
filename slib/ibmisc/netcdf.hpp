@@ -86,8 +86,7 @@ template<> inline std::string get_nc_type<std::string>()
     { return "string"; }
 // ---------------------------------------------------
 /** Converts a string to a NetCDF type */
-inline netCDF::NcType nc_type(netCDF::NcVar ncvar, std::string sntype)
-    { return ncvar.getParentGroup().getType(sntype, netCDF::NcGroup::ParentsAndCurrent); }
+netCDF::NcType nc_type(netCDF::NcVar ncvar, std::string sntype);
 // ---------------------------------------------------
 
 struct TaggedThunk {
@@ -637,8 +636,8 @@ void _check_vector_dims(
 
     if (ncdim.getSize() != val.size()) {
         (*ibmisc_error)(-1,
-            "Size (%ld) of std::vector must match %s:%s (%ld) in NetCDF",
-            val.size(), ncvar.getName().c_str(),
+            "Size (%ld; var=%p base=%p) of std::vector must match %s:%s (%ld) in NetCDF",
+            val.size(), &val, &val[0], ncvar.getName().c_str(),
             ncdim.getName().c_str(), ncdim.getSize());
     }
 }
@@ -1195,7 +1194,7 @@ template<class TypeT>
 void nc_rw_vector(
     netCDF::NcGroup *nc,
     char rw,
-    blitz::vector<TypeT> *val,
+    std::vector<TypeT> *val,
     bool alloc,
     std::string const &vname)
 {
@@ -1236,7 +1235,7 @@ std::vector<TypeT> nc_read_vector(
 
 /** Define and write a std::vector. */
 template<class TypeT>
-void ncio_vector(
+netCDF::NcVar ncio_vector(
     NcIO &ncio,
     std::vector<TypeT> &val,
     bool alloc,         // Should we allocate val?
@@ -1244,9 +1243,10 @@ void ncio_vector(
     std::string const &snc_type,
     std::vector<netCDF::NcDim> const &dims)
 {
-    get_or_add_var(ncio, vname, snc_type, dims);
+    netCDF::NcVar ncvar = get_or_add_var(ncio, vname, snc_type, dims);
 
     ncio += std::bind(&nc_rw_vector<TypeT>, ncio.nc, ncio.rw, &val, alloc, vname);
+    return ncvar;
 }
 // ----------------------------------------------------
 

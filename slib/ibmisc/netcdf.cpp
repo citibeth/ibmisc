@@ -29,6 +29,18 @@ namespace ibmisc {
 
 bool netcdf_debug = false;
 
+netCDF::NcType nc_type(netCDF::NcVar ncvar, std::string sntype)
+{
+    netCDF::NcType ret(ncvar.getParentGroup().getType(sntype, netCDF::NcGroup::ParentsAndCurrent));
+
+    // See legal data types:
+    //     https://www.unidata.ucar.edu/software/netcdf/docs/data_type.html
+    if (ret.isNull()) (*ibmisc_error)(-1,
+        "Illegal NetCDF type \"%s\".  Valid types are probably byte, ubyte, char, short, ushort, int, uint, int64, uint64, float, double, string", sntype.c_str());
+    return ret;
+}
+
+
 
 void _check_nc_rank(
     netCDF::NcVar const &ncvar,
@@ -393,8 +405,8 @@ netCDF::NcDim get_or_add_dim(NcIO &ncio, std::string const &dim_name)
     // Make sure existing dimension is unlimited
     if (!dim.isUnlimited()) {
         (*ibmisc_error)(-1, 
-            "Attempt in get_or_add_dim() to change size from %d to unlimited",
-            dim.getSize());
+            "Attempt in get_or_add_dim(%s) to change size from %d to unlimited",
+            dim_name.c_str(), dim.getSize());
     }
 
     return dim;
@@ -419,8 +431,8 @@ netCDF::NcDim get_or_add_dim(NcIO &ncio, std::string const &dim_name, size_t dim
 
     if (ncio.rw == 'w' && dim.getSize() != dim_size) {
         (*ibmisc_error)(-1, 
-            "Attempt in get_or_add_dim() to change size from %ld to %ld",
-            dim.getSize(), dim_size);
+            "Attempt in get_or_add_dim(%s) to change size from %ld to %ld",
+            dim_name.c_str(), dim.getSize(), dim_size);
     }
 
     return dim;
@@ -519,6 +531,14 @@ netCDF::NcVar get_or_add_var(
             (*ibmisc_error)(-1,
                 "Variable %s required but not found", vname.c_str());
         }
+
+        // Check that types match
+        NcType spec_type(nc_type(ncvar, snc_type));
+        NcType real_type(ncvar.getType());
+        if (spec_type != real_type) (*ibmisc_error)(-1,
+            "On-disk type of variable %s = %s does not match specified type %s (%s)",
+            vname.c_str(), real_type.getName().c_str(),
+            snc_type.c_str(), spec_type.getName().c_str());
     }
     return ncvar;
 }
