@@ -315,6 +315,10 @@ public:
         : std::unique_ptr<TypeT>(std::move(specp))
     {}
 
+    clonable_unique_ptr(std::unique_ptr<TypeT> const &specp)
+        : std::unique_ptr<TypeT>(specp->clone())
+    {}
+
     void operator=(clonable_unique_ptr<TypeT> const &specp)
         { this->reset(specp->clone().release()); }
 };
