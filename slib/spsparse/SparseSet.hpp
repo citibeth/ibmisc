@@ -26,6 +26,8 @@
 #include <spsparse/accum.hpp>
 #include <spsparse/blitz.hpp>
 
+using namespace netCDF;
+
 namespace spsparse {
 
 /** Translates between a sparse set (say, the set of indices used in a
@@ -124,24 +126,36 @@ public:
         return _d2s[dval];
     }
 
+    bool operator==(SparseSet<SparseT, DenseT> const &other) const
+    {
+        if (_sparse_extent != other._sparse_extent) return false;
+        return _d2s == other._d2s;
+    }
 
 };
 
 template<class SparseT, class DenseT>
 void SparseSet<SparseT, DenseT>::ncio(ibmisc::NcIO &ncio, std::string const &vname)
 {
-    if (ncio.rw == 'r') (*ibmisc::ibmisc_error)(-1,
-        "SparseSet::ncio() currently does not support reading.");
-
     // Set up dimensions
     auto dims(ibmisc::get_or_add_dims(ncio,
         {vname + ".dense_extent"},
-        {dense_extent()}));
+        {dense_extent()}));    // dense_extent() ignored on read
 
+    bool const alloc = true;
     netCDF::NcVar ncvar = ibmisc::ncio_vector(
-        ncio, _d2s, false, vname, ibmisc::get_nc_type<SparseT>(), dims);
+        ncio, _d2s, alloc, vname, ibmisc::get_nc_type<SparseT>(), dims);
 
     ibmisc::get_or_put_att(ncvar, ncio.rw, "sparse_extent", &_sparse_extent, 1);
+
+    // Set up redundant data structure _s2d
+    if (ncio.rw == 'r') {
+        for (size_t ix=0; ix<_d2s.size(); ++ix) {
+            DenseT const id = ix;
+            SparseT const is = _d2s[ix];
+            _s2d.insert(std::make_pair(is,id));
+        }
+    }
 }
 
 template<class SparseT, class DenseT>

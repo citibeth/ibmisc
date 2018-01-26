@@ -37,12 +37,18 @@ using namespace std::placeholders;
 // The fixture for testing class Foo.
 class SpSparseTest : public ::testing::Test {
 protected:
+    std::vector<std::string> tmpfiles;
 
     // You can do set-up work for each test here.
     SpSparseTest() {}
 
     // You can do clean-up work that doesn't throw exceptions here.
-    virtual ~SpSparseTest() {}
+    virtual ~SpSparseTest()
+    {
+        for (auto ii(tmpfiles.begin()); ii != tmpfiles.end(); ++ii) {
+            ::remove(ii->c_str());
+        }
+    }
 
     // If the constructor and destructor are not enough for setting up
     // and cleaning up each test, you can define the following methods:
@@ -155,6 +161,30 @@ TEST_F(SpSparseTest, dense_to_blitz)
         EXPECT_EQ(d1, d2);
         EXPECT_EQ(d1, d3);
     }}
+}
+
+TEST_F(SpSparseTest, sparse_set_ncio)
+{
+    // If the constructor and destructor are not enough for setting up
+    std::string fname("__sparse_set_test.nc");
+    tmpfiles.push_back(fname);
+    ::remove(fname.c_str());
+
+    SparseSet<long,int> dim0;
+    dim0.add_dense(17);
+    dim0.add_dense(3);
+    dim0.add_dense(5000);
+
+    {ibmisc::NcIO ncio(fname, NcFile::replace);
+        dim0.ncio(ncio, "dim0");
+    }
+
+    SparseSet<long,int> dim1;
+    {ibmisc::NcIO ncio(fname, NcFile::read);
+        dim1.ncio(ncio, "dim0");
+    }
+
+    EXPECT_EQ(dim0, dim1);
 }
 
 TEST_F(SpSparseTest, sparse_set)
