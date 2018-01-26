@@ -480,8 +480,10 @@ std::vector<netCDF::NcDim> get_or_add_dims(
     std::vector<netCDF::NcDim> ret(RANK);
     for (int k=0; k<RANK; ++k) {
         if (dim_sizes[k] < 0) {
+            // Unlimited
             ret[k] = get_or_add_dim(ncio, dim_names[k]);
         } else {
+            // Regular
             ret[k] = get_or_add_dim(ncio, dim_names[k], dim_sizes[k]);
         }
     }

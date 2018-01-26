@@ -152,7 +152,9 @@ public:
 that the existing dimension has the requested size.
 @param nc The NcGroup or NcFile to create the dimension in.
 @param dim_name Name of dimension to create.
-@param dim_size Size to create or check for.
+@param dim_size Size to create or check for.  NOTES:
+       1. If <0, assume user is requesting an unlimited dimension.
+       2. Otherwise, this is checked when writing, ignored when reading.
 @return The created/retrieved dimension.
 */
 netCDF::NcDim get_or_add_dim(NcIO &ncio, std::string const &dim_name, size_t dim_size);
@@ -171,6 +173,15 @@ extern std::vector<netCDF::NcDim> get_dims(
     NcIO &ncio,
     std::vector<std::string> const &dim_names);
 
+/** Runs get_or_add_dim() on a number of dimensions
+@param ncio The NetCDF file to read/write
+@param dim_names Names of dimension to create.
+@param dim_sizes Sizes to create or check for.  NOTES:
+       1. If <0, assume user is requesting an unlimited dimension.
+       2. Otherwise, this is checked when writing, ignored when reading.
+       3. Must be same length as dim_names.
+@return The created/retrieved dimensions.
+*/
 extern std::vector<netCDF::NcDim> get_or_add_dims(
     NcIO &ncio,
     std::vector<std::string> const &dim_names,
