@@ -1043,7 +1043,7 @@ netCDF::NcVar ncio_blitz(
     netCDF::NcVar ncvar = ncio.nc->getVar(vname);
 
     if (!arr.data()) (*ibmisc_error)(-1,
-        "Blitz array must be pre-allocated for Helper_whole1; try using Helper_alloc");
+        "Blitz array must be pre-allocated for ncio_blitz(); try using ncio_blitz_alloc() instead");
 
     auto ordering(tiny_to_vector(arr.ordering()));
     auto ncdims_nd(named_dims(ncdims, ncdims_in_nc_order, ordering, ncvar));    // Output must be in nc order
