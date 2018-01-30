@@ -34,7 +34,6 @@ namespace spsparse {
 SparseVector) and a dense set numbered [0...n) */
 template<class SparseT, class DenseT>
 class SparseSet {
-public:
     SparseT _sparse_extent;
     std::unordered_map<SparseT, DenseT> _s2d;
     std::vector<SparseT> _d2s;
@@ -64,6 +63,16 @@ public:
 
     DenseT dense_extent() const
         { return _d2s.size(); }
+
+    /** Helper function used by Sparsify to maintain encapsulation */
+    DenseT to_dense_ignore_missing(SparseT const &sparse_ix, DenseT &dense_ix)
+    {
+        auto ii(_s2d.find(sparse_ix));
+        if (ii == _s2d.end()) return false;    // An index was missing; ignore this element in the sparse matrix
+        dense_ix = ii->second;
+        return true;
+
+    }
 
 private:
     void add(SparseT sparse_index)
@@ -282,6 +291,33 @@ public:
         std::array<SparseSetT *, (size_t)super::rank> const _sparse_sets,
         AccumT &&_sub);
 
+    void set_shape(std::array<long, super::rank> const &shape)
+    {
+        std::array<long, super::rank> shape2;
+
+        for (int ix=0; ix<super::rank; ++ix) {
+            int const i = process_order[ix];
+            switch(transforms[i]) {
+                case SparsifyTransform::ID:
+                    // Use the shape given, no transform
+                    shape2[i] = shape[i];
+                    break;
+                case SparsifyTransform::ADD_DENSE:
+                    // Not really useful because the shape could change later
+                    shape2[i] = -1; // sparse_sets[i]->dense_extent();
+                    break;
+                case SparsifyTransform::TO_DENSE_IGNORE_MISSING:
+                case SparsifyTransform::TO_DENSE:
+                    shape2[i] = sparse_sets[i]->dense_extent();
+                    break;
+                case SparsifyTransform::TO_SPARSE:
+                    shape2[i] = sparse_sets[i]->sparse_extent();
+                    break;
+            }
+        }
+        super::sub.set_shape(shape2);
+    }
+
     void add(std::array<index_type,super::rank> index, typename super::val_type const &val)
     {
         std::array<out_index_type, super::rank> index2;
@@ -301,10 +337,14 @@ public:
                     index2[i] = sparse_sets[i]->add_dense(index[i]);
                     break;
                 case SparsifyTransform::TO_DENSE_IGNORE_MISSING: {
-                    auto &sset(*sparse_sets[i]);
-                    auto ii(sset._s2d.find(index[i]));
-                    if (ii == sset._s2d.end()) return;    // An index was missing; ignore this element in the sparse matrix
-                    index2[i] = ii->second;
+                    typename SparseSetT::dense_type dense_ix;
+                    if (sparse_sets[i]->to_dense_ignore_missing(
+                        index[i], dense_ix))
+                    {
+                        index2[i] = dense_ix;
+                    } else {
+                        return;
+                    }
                 } break;
                 case SparsifyTransform::TO_DENSE:
                     index2[i] = sparse_sets[i]->to_dense(index[i]);
