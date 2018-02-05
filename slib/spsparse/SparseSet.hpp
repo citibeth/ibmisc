@@ -25,6 +25,7 @@
 #include <ibmisc/permutation.hpp>
 #include <spsparse/accum.hpp>
 #include <spsparse/blitz.hpp>
+#include <ibmisc/bundle.hpp>
 
 using namespace netCDF;
 
@@ -46,7 +47,9 @@ public:
     void ncio(ibmisc::NcIO &ncio, std::string const &vname);
 
     SparseSet() : _sparse_extent(-1) {}
-    SparseSet(SparseT const &sparse_extent) : _sparse_extent(sparse_extent) {}
+    SparseSet(SparseT sparse_extent) : _sparse_extent(sparse_extent) {}
+
+    SparseSet(SparseT sparse_extent, std::vector<SparseT> &&d2s);
 
     void clear();
 
@@ -142,6 +145,20 @@ public:
     }
 
 };
+
+
+template<class SparseT, class DenseT>
+SparseSet::SparseSet(SparseT sparse_extent, std::vector<SparseT> &&d2s)
+    : _sparse_extent(sparse_extent), _d2s(std::move(d2s))
+{
+    // Setup 2ds
+    for (size_t ix=0; ix<_d2s.size(); ++ix) {
+        DenseT const id = ix;
+        SparseT const is = _d2s[ix];
+        _s2d.insert(std::make_pair(is,id));
+    }
+}
+
 
 template<class SparseT, class DenseT>
 void SparseSet<SparseT, DenseT>::ncio(ibmisc::NcIO &ncio, std::string const &vname)
@@ -447,7 +464,18 @@ inline ToSparseT to_sparse(
 #undef ToDenseT
 #undef SPARSIFY_TPARAMS
 
+// ----------------------------------------------------------------
 
+template<class SparseT, class DenseT, class BundleT, int RANK>
+struct SparseBundle {
+    spsparse::SparseSet<SparseT, DenseT> dim;
+    ibmisc::ArrayBundle<BundleT,RANK> bundle;
+
+    SparseBundle(spsparse::SparseSet<SparseT, DenseT> &&_dim) : dim(std::move(_dim)) {}
+
+
+
+};
 
 // ----------------------------------------------------------------
 
