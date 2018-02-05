@@ -177,15 +177,6 @@ public:
         DimOrderMatch match=DimOrderMatch::MEMORY,
         bool ncdims_in_nc_order = true,
         blitz::GeneralArrayStorage<RANK> const &storage = blitz::GeneralArrayStorage<RANK>());
-#if 0
-    void ncio_alloc(
-        NCIO_BUNDLE_PARAMS,
-        DimOrderMatch match=DimOrderMatch::MEMORY,
-        blitz::GeneralArrayStorage<RANK> const &storage = blitz::GeneralArrayStorage<RANK>())
-    {
-        ncio_alloc(NCIO_BUNDLE_ARGS, {}, match, true, storage);
-    }
-#endif
 
     void ncio_partial(
         NCIO_BUNDLE_PARAMS,
