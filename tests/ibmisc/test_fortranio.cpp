@@ -126,7 +126,7 @@ void test_shape_cast(std::string const &fname, ibmisc::Endian endian)
         blitz::Array<int,2> data;
         fortran::read(fin)
             >> str0
-            >> fortran::star<int,2>(data, stdshapes)
+            >> fortran::allocate<int,2>(data, stdshapes)
             >> str1
             >> fortran::endr;
         EXPECT_EQ(1, data.lbound(0));
@@ -145,10 +145,10 @@ void test_shape_cast(std::string const &fname, ibmisc::Endian endian)
 
         // Read record [4] using wildcard
         blitz::Array<int,2> data;
-        Shape<2> const *data_shape;
+        Shape<2> const *data_shape;   // Tell us what it did
         fortran::read(fin)
             >> str0
-            >> fortran::star<int,2>(data, data_shape, stdshapes)
+            >> fortran::allocate<int,2>(data, data_shape, stdshapes)
             >> str1
             >> fortran::endr;
 

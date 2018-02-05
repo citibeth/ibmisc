@@ -204,7 +204,7 @@ BufSpecPtr::BufSpecPtr(blitz::Array<TypeT,RANK> &buf)
 
 /** Wildcard: will allocate the array */
 template<class TypeT, int RANK>
-BufSpecPtr star(
+BufSpecPtr allocate(
     blitz::Array<TypeT,RANK> &_buf,
     Shape<RANK> const *&_buf_shape,
     blitz::vector<Shape<RANK>> const &_stdshapes,
@@ -212,7 +212,7 @@ BufSpecPtr star(
 { return BufSpecPtr(new ArrayBuf<TypeT,RANK>(&_buf, &_buf_shape, &_stdshapes, _storage)); }
 
 template<class TypeT, int RANK>
-BufSpecPtr star(
+BufSpecPtr allocate(
     blitz::Array<TypeT,RANK> &_buf,
     blitz::vector<Shape<RANK>> const &_stdshapes,
     blitz::GeneralArrayStorage<RANK> const &_storage = blitz::fortranArray)
