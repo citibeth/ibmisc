@@ -148,7 +148,7 @@ public:
 
 
 template<class SparseT, class DenseT>
-SparseSet::SparseSet(SparseT sparse_extent, std::vector<SparseT> &&d2s)
+SparseSet<SparseT, DenseT>::SparseSet(SparseT sparse_extent, std::vector<SparseT> &&d2s)
     : _sparse_extent(sparse_extent), _d2s(std::move(d2s))
 {
     // Setup 2ds
