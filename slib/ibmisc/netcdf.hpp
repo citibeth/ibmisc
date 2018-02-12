@@ -86,7 +86,8 @@ template<> inline std::string get_nc_type<std::string>()
     { return "string"; }
 // ---------------------------------------------------
 /** Converts a string to a NetCDF type */
-netCDF::NcType nc_type(netCDF::NcVar ncvar, std::string sntype);
+netCDF::NcType nc_type(netCDF::NcVar const &ncvar, std::string sntype);
+netCDF::NcType nc_type(netCDF::NcGroup const &ncgroup, std::string sntype);
 // ---------------------------------------------------
 
 struct TaggedThunk {
@@ -1194,9 +1195,9 @@ std::vector<netCDF::NcDim> get_or_add_dims(
     std::vector<TypeT> &val,
     std::array<std::string, 1> const &dim_names)
 {
-    std::array<size_t, 1> dim_sizes;
-    dim_sizes[0] = val.size();
-    return get_or_add_dims(ncio, val, dim_names, dim_sizes);
+
+    return std::vector<netCDF::NcDim>
+        { get_or_add_dim(ncio, dim_names[0], val.size()) };
 }
 
 

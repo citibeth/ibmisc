@@ -29,9 +29,20 @@ namespace ibmisc {
 
 bool netcdf_debug = false;
 
-netCDF::NcType nc_type(netCDF::NcVar ncvar, std::string sntype)
+netCDF::NcType nc_type(netCDF::NcVar const &ncvar, std::string sntype)
 {
     netCDF::NcType ret(ncvar.getParentGroup().getType(sntype, netCDF::NcGroup::ParentsAndCurrent));
+
+    // See legal data types:
+    //     https://www.unidata.ucar.edu/software/netcdf/docs/data_type.html
+    if (ret.isNull()) (*ibmisc_error)(-1,
+        "Illegal NetCDF type \"%s\".  Valid types are probably byte, ubyte, char, short, ushort, int, uint, int64, uint64, float, double, string", sntype.c_str());
+    return ret;
+}
+
+netCDF::NcType nc_type(netCDF::NcGroup const &ncgroup, std::string sntype)
+{
+    netCDF::NcType ret(ncgroup.getType(sntype, netCDF::NcGroup::ParentsAndCurrent));
 
     // See legal data types:
     //     https://www.unidata.ucar.edu/software/netcdf/docs/data_type.html
@@ -500,12 +511,10 @@ netCDF::NcVar get_or_add_var(
     netCDF::NcVar ncvar;
     if (ncio.define) {
         ncvar = ncio.nc->getVar(vname);
-        std::vector<std::string> sdims;
-        for (auto dim=dims.begin(); dim != dims.end(); ++dim)
-            sdims.push_back(dim->getName());
 
         if (ncvar.isNull()) {
-            ncvar = ncio.nc->addVar(vname, snc_type, sdims);
+            NcType nctype(nc_type(*ncio.nc, snc_type));
+            ncvar = ncio.nc->addVar(vname, nctype, dims);
             ncio.configure_var(ncvar);
         } else {
             // Check dimensions match
