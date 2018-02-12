@@ -309,7 +309,6 @@ _ncio_blitz::Info::Info(
     if (nc_start.size() == 0)
         for (int i=0; i<netcdf.size(); ++i)
             nc_start.push_back(0);
-printf("END BEGIN Info()\n");
 }
 
 // ===============================================
