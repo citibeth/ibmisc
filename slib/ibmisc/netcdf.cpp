@@ -103,7 +103,15 @@ std::vector<NamedDim> named_dims(
     netCDF::NcVar &ncvar)
 {
     if (ncdims.size() == 0) {
-        return named_dims(ncvar);
+        auto ret(named_dims(ncvar));
+#if 0
+        // This is just not true.  See Info::Info(), named_dims result can have zero size.
+        // This check maybe improves error messages in some places. But it also breaks other stuff.
+        // Figure out a better way to do it.
+        if (ret.size() == 0) (*ibmisc_error)(-1,
+            "named_dims() found nothing.  NOTE: ncio_blitz() writes require dimensions to be supplied.");
+#endif
+        return ret;
     } else {
         return named_dims(ncdims, ordering);
     }
@@ -301,6 +309,7 @@ _ncio_blitz::Info::Info(
     if (nc_start.size() == 0)
         for (int i=0; i<netcdf.size(); ++i)
             nc_start.push_back(0);
+printf("END BEGIN Info()\n");
 }
 
 // ===============================================

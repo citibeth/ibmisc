@@ -58,17 +58,17 @@ protected:
 
 
 struct MyClass_Bundle : public ArrayBundle<int,2> {
-    MyClass_Bundle() : ArrayBundle<int,2>({
-        def("a1", {2,3}, {"two", "three"}, {
+    MyClass_Bundle()
+    {
+        add("a1", {2,3}, {"two", "three"}, {
             "longname", "Aye one",
             "units", "m"
-        }),
-        def("a2", {2,3}, {"two", "three"}, {
+        });
+        add("a2", {2,3}, {"two", "three"}, {
             "longname", "Aye two",
             "units", "m"
-        }),
-
-    }) {}
+        });
+    };
 };
 
 struct MyClass {

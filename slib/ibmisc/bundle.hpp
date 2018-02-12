@@ -18,7 +18,7 @@ class ArrayBundle {
 public:
     struct Data {
         ArrayMeta<RANK> meta;
-        blitz::Array<TypeT,RANK> arr;
+        std::unique_ptr<blitz::Array<TypeT,RANK>> arr;
 
         Data(
             std::string const &_name,
@@ -27,15 +27,21 @@ public:
             std::array<std::string,RANK> const &_sdims,
             std::vector<std::pair<std::string, std::string>> &&_attr)
         : meta(ArrayMeta<RANK>(_name,_shape, _sdims, std::move(_attr))),
-            arr(_arr) {}
+            arr(new blitz::Array<TypeT,RANK>(_arr)) {}
 
+#if 0
+        Data(Data const &other) = delete;
+
+        // http://www.codingstandard.com/rule/12-5-4-declare-noexcept-the-move-constructor-and-move-assignment-operator/
+        Data(Data &&other) noexcept : meta(std::move(other.meta)), arr(std::move(other.arr)) {}
+#endif
 
         void allocate(bool check,
             blitz::GeneralArrayStorage<RANK> const &storage)
         {
-            if (check && arr.data()) (*ibmisc_error)(-1,
+            if (check && arr->data()) (*ibmisc_error)(-1,
                 "ArrayBundle variable %s already allocated", meta.name.c_str());
-            arr.reference(blitz::Array<TypeT,RANK>(ibmisc::to_tiny<int,int,RANK>(meta.shape), storage));
+            arr->reference(blitz::Array<TypeT,RANK>(ibmisc::to_tiny<int,int,RANK>(meta.shape), storage));
         }
 
         std::vector<NamedDim> named_dims()
@@ -54,10 +60,10 @@ public:
     std::vector<Data> data;
 
     blitz::Array<TypeT, RANK> const &array(std::string const &name) const
-        { return data[index.at(name)].arr; }
+        { return *data[index.at(name)].arr; }
 
     blitz::Array<TypeT, RANK> &array(std::string const &name)
-        { return data[index.at(name)].arr; }
+        { return *data[index.at(name)].arr; }
 
 
     Data const &at(std::string const &name) const
@@ -84,7 +90,10 @@ public:
 
     ArrayBundle() {}
 
-    ArrayBundle(std::vector<Data> _data);
+    ArrayBundle(std::vector<Data> &&_data);
+
+    ArrayBundle(std::vector<Data> const &_data) = delete;
+    ArrayBundle(std::vector<Data> &_data) = delete;
 
 
     blitz::Array<TypeT,RANK> &add(
@@ -227,7 +236,7 @@ typename ArrayBundle<TypeT,RANK>::Data ArrayBundle<TypeT,RANK>::def(
 }
 
 template<class TypeT, int RANK>
-ArrayBundle<TypeT,RANK>::ArrayBundle(std::vector<Data> _data) : data(std::move(_data))
+ArrayBundle<TypeT,RANK>::ArrayBundle(std::vector<Data> &&_data) : data(std::move(_data))
 {
     for (Data &meta : data) {
         index.insert(meta.meta.name);
@@ -244,7 +253,7 @@ blitz::Array<TypeT,RANK> &ArrayBundle<TypeT,RANK>::add(
 {
     data.push_back(def(name, vattr));
     index.insert(data.back().meta.name);
-    return data.back().arr;
+    return *data.back().arr;
 }
 
 template<class TypeT, int RANK>
@@ -256,7 +265,7 @@ blitz::Array<TypeT,RANK> &ArrayBundle<TypeT,RANK>::add(
 {
     data.push_back(def(name, shape, std::move(sdims), vattr));
     index.insert(data.back().meta.name);
-    return data.back().arr;
+    return *data.back().arr;
 }
 
 template<class TypeT, int RANK>
@@ -268,7 +277,7 @@ blitz::Array<TypeT,RANK> &ArrayBundle<TypeT,RANK>::add(
 {
     data.push_back(Data(name, arr, to_array<int,int,RANK>(arr.shape()),
         std::move(sdims), make_attrs(vattr)));
-    return data.back().arr;
+    return *data.back().arr;
 }
 
 
@@ -292,7 +301,7 @@ void ArrayBundle<TypeT,RANK>::allocate(bool check,
     blitz::GeneralArrayStorage<RANK> const &storage)
 {
     for (auto &meta : data) {
-        if (!meta.arr.data())
+        if (!meta.arr->data())
             meta.allocate(check, storage);
     }
 }
@@ -305,7 +314,7 @@ void ArrayBundle<TypeT,RANK>::allocate(
     blitz::GeneralArrayStorage<RANK> const &storage)
 {
     for (auto &meta : data) {
-        if (meta.meta.shape[0] < 0 || !meta.arr.data()) {
+        if (meta.meta.shape[0] < 0 || !meta.arr->data()) {
             meta.meta.set_shape(_shape, sdims, check);
             meta.allocate(check, storage);
         }
@@ -316,7 +325,7 @@ template<class TypeT, int RANK>
 void ArrayBundle<TypeT,RANK>::free()
 {
     for (auto &meta : data) {
-        meta.arr.free();
+        meta.arr->free();
     }
 }
 
@@ -391,7 +400,7 @@ void ArrayBundle<TypeT,RANK>::ncio(
         std::string vname(prefix+meta.meta.name);
 
         // Delegate to lower level to read/write this array.
-        _ncio_blitz_fn(ncio, meta.arr, vname, snc_type, to_vector(meta.meta.sdims));
+        _ncio_blitz_fn(ncio, *meta.arr, vname, snc_type, to_vector(meta.meta.sdims));
 
         // Read/write attributes
         netCDF::NcVar ncvar = ncio.nc->getVar(vname);
@@ -475,7 +484,7 @@ ArrayBundle<TypeT,1> reshape1(
     ArrayBundle<TypeT,1> bundle1;
     for (size_t i=0; i<bundle.index.size(); ++i) {
         auto &meta(bundle.data[i]);
-        blitz::Array<TypeT,1> meta1_arr(reshape1(meta.arr, lbound));
+        blitz::Array<TypeT,1> meta1_arr(reshape1(*meta.arr, lbound));
         auto attr1(meta.meta.attr);    // copy constructor
         typename ArrayBundle<TypeT,1>::Data meta1(
             meta.meta.name,

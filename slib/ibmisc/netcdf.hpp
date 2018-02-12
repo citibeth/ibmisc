@@ -1043,6 +1043,9 @@ netCDF::NcVar ncio_blitz(
 {
     netCDF::NcVar ncvar = ncio.nc->getVar(vname);
 
+    if (ncio.rw == 'r' && ncvar.isNull()) (*ibmisc_error)(-1,
+        "Trying to read from non-existant NetCDF variable %s", vname.c_str());
+
     if (!arr.data()) (*ibmisc_error)(-1,
         "Blitz array must be pre-allocated for ncio_blitz(); try using ncio_blitz_alloc() instead");
 
