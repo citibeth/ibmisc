@@ -1,4 +1,8 @@
+#ifndef IBMISC_FILESYSTEM_HPP
+#define IBMISC_FILESYSTEM_HPP
+
 #include <vector>
+#include <string>
 
 namespace ibmisc {
 
@@ -20,4 +24,5 @@ public:
     std::string locate(std::string const &file_name) const;
 };
 
-}
+}    // namespace ibmisc
+#endif    // IBMISC_FILESYSTEM_HPP

@@ -12,7 +12,8 @@ set(IBMISC_SOURCE
     ibmisc/endian.cpp
     ibmisc/fortranio.cpp
     ibmisc/memory.cpp
-    ibmisc/stdio.cpp)
+    ibmisc/stdio.cpp
+    ibmisc/ncbulk.cpp)
 
 
 if (USE_PROJ4)
