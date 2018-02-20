@@ -140,7 +140,7 @@ public:
     void operator+=(std::function<void ()> const &fn)
         { add("", fn); }
 
-    void flush(bool debug);
+    void flush(bool debug=false);
     void operator()()
         { flush(false); }
 

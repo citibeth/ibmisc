@@ -163,6 +163,9 @@ SparseSet<SparseT, DenseT>::SparseSet(SparseT sparse_extent, std::vector<SparseT
 template<class SparseT, class DenseT>
 void SparseSet<SparseT, DenseT>::ncio(ibmisc::NcIO &ncio, std::string const &vname)
 {
+
+printf("ncio %s: dense_extent=%d\n", vname.c_str(), dense_extent());
+
     // Set up dimensions
     auto dims(ibmisc::get_or_add_dims(ncio,
         {vname + ".dense_extent"},
