@@ -1273,5 +1273,35 @@ netCDF::NcVar ncio_vector(
 extern std::string ncwrap( std::string const &str, size_t width = 55 );
 
 
+// ===========================================================
+/** Stores the value of any NetCDF attribute, of any type.
+This is useful for copying attributes from one variable to another.
+We don't yet have a way to extract regular values from these. */
+class NcAttValue {
+    std::unique_ptr<netCDF::NcType> nctype;
+    std::vector<char> data;
+public:
+    size_t getAttLength() const
+        { return data.size() / nctype->getSize(); }
+    size_t getTypeSize() const
+        { return nctype->getSize(); }
+
+    static NcAttValue get(netCDF::NcAtt const &ncatt);
+    void put(netCDF::NcVar const &ncvar, std::string const &name) const;
+};
+
+
+extern void get_or_put_att(
+    netCDF::NcVar &ncvar, char rw,
+    const std::string &name,
+    NcAttValue &aval);
+
+
+extern netCDF::NcVar get_or_put_all_atts(
+    netCDF::NcVar &ncvar, char rw,
+    std::vector<std::pair<std::string, NcAttValue>> &avals);
+
+extern std::vector<std::pair<std::string, NcAttValue>> get_all_atts(netCDF::NcVar const &ncvar);
+
 }   // Namespace
 #endif  // Guard

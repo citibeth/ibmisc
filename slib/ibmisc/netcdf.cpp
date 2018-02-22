@@ -281,7 +281,7 @@ _ncio_blitz::Info::Info(
         int const in = b2n[ib];
 
         if (in < 0 || in >= netcdf.size()) (*ibmisc_error)(-1,
-            "At ib=%d, in=%d is out of range [0,%ld)", ib, in, netcdf.size());
+            "At Blitz index=%d, NetCDF inex=%d is out of range [0,%ld)", ib, in, netcdf.size());
 
         if (netcdf[in].name == "") {
             netcdf[in].name = blitz[ib].name;
@@ -395,7 +395,6 @@ void NcIO::flush(bool debug) {
 }
 
 void NcIO::close() {
-printf("BEGIN close() %p\n", _mync.get());
     if (_mync.get()) {
         (*this)();
         _mync.reset();
@@ -592,6 +591,69 @@ std::string ncwrap( std::string const &str2, size_t width) {
 
     return str;
 }
+
+// ==============================================
+
+NcAttValue NcAttValue::get(NcAtt const &ncatt)
+{
+    NcAttValue aval;
+    aval.nctype.reset(new NcType(ncatt.getType()));
+    size_t const nbytes = ncatt.getAttLength() * aval.nctype->getSize();
+    aval.data.resize(nbytes);
+    ncatt.getValues((void *)&aval.data[0]);
+    return aval;
+}
+void NcAttValue::put(NcVar const &ncvar, std::string const &name) const
+{
+    ncvar.putAtt(name, *nctype, getAttLength(), &data[0]);
+}
+
+
+void get_or_put_att(
+    NcVar &ncvar, char rw,
+    const std::string &name,
+    NcAttValue &aval)
+{
+    if (rw == 'r') {
+        NcVarAtt ncatt(ncvar.getAtt(name));
+        aval = NcAttValue::get(ncatt);
+    } else {
+        aval.put(ncvar, name);
+    }
+}
+
+
+NcVar get_or_put_all_atts(
+    NcVar &ncvar, char rw,
+    std::vector<std::pair<std::string, NcAttValue>> &avals)
+{
+    if (rw == 'r') {
+        avals.clear();
+        auto atts(ncvar.getAtts());
+        for (auto ii=atts.begin(); ii != atts.end(); ++ii) {
+            avals.push_back(std::make_pair(
+                ii->first, NcAttValue::get(ii->second)));
+
+        }
+    } else {
+        for (auto ii=avals.begin(); ii != avals.end(); ++ii) {
+            std::string const &name(ii->first);
+            NcAttValue const &aval(ii->second);
+
+            aval.put(ncvar, name);
+        }
+    }
+    return ncvar;
+}
+
+std::vector<std::pair<std::string, NcAttValue>> get_all_atts(NcVar const &ncvar)
+{
+    std::vector<std::pair<std::string, NcAttValue>> ret;
+    get_or_put_all_atts(*const_cast<NcVar *>(&ncvar), 'r', ret);
+    return ret;
+}
+
+
 
 }   // Namespace
 

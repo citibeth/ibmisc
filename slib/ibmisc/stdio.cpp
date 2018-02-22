@@ -14,6 +14,7 @@ std::string vstrprintf(const char* format, std::va_list args)
     if (std::vsnprintf(&buf[0], buf.size(), format, args) < 0) {
         (*ibmisc_error)(-1, "vstrprintf encoding error");
     }
+    buf.pop_back();    // Remove trailing '\0'
     return buf;
 }
 

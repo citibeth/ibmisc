@@ -44,7 +44,7 @@ public:
     typedef DenseT dense_type;
 
 
-    void ncio(ibmisc::NcIO &ncio, std::string const &vname);
+    NcVar ncio(ibmisc::NcIO &ncio, std::string const &vname);
 
     SparseSet() : _sparse_extent(-1) {}
     SparseSet(SparseT sparse_extent) : _sparse_extent(sparse_extent) {}
@@ -161,7 +161,7 @@ SparseSet<SparseT, DenseT>::SparseSet(SparseT sparse_extent, std::vector<SparseT
 
 
 template<class SparseT, class DenseT>
-void SparseSet<SparseT, DenseT>::ncio(ibmisc::NcIO &ncio, std::string const &vname)
+NcVar SparseSet<SparseT, DenseT>::ncio(ibmisc::NcIO &ncio, std::string const &vname)
 {
 
 printf("ncio %s: dense_extent=%d\n", vname.c_str(), dense_extent());
@@ -185,6 +185,8 @@ printf("ncio %s: dense_extent=%d\n", vname.c_str(), dense_extent());
             _s2d.insert(std::make_pair(is,id));
         }
     }
+
+    return ncvar;
 }
 
 template<class SparseT, class DenseT>
