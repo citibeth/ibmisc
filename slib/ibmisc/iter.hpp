@@ -123,7 +123,7 @@ public:
     ValueT const *operator->() const
         { return &derived()->operator*(); }
 
-    DerivedT operator++(int)
+    DerivedT operator++(int)    // Dummy int arg = post-increment
     {
         DerivedT clone(derived());
         derived()->operator+=(1);
