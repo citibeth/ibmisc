@@ -7,19 +7,39 @@
 
 namespace spsparse {
 
-BOOST_ENUM_VALUES(RLAlgo
+BOOST_ENUM_VALUES(RLAlgo, int,
     (PLAIN) (0)
     (DIFFS) (1)
 )
 
 // -----------------------------------------------------------------
-/** Use std::equal_to<TypeT> instead, if you don't like this. */
+/** Equality tester takes NaN into account for double and float.
+Use std::equal_to<TypeT> instead, if you don't like this. */
 template<class TypeT>
-struct DefaultRLEqual : public std::equal_to<TypeT>
-{}
+struct DefaultRLEqual {
+    bool operator()(TypeT const &a, TypeT const &b) const
+        { return (a == b); }
+};
 
 template<>
-void DefaultRLEqual<double>::operator()(double const &a, double const &b) const
+bool DefaultRLEqual<double>::operator()(double const &a, double const &b) const
+{
+    switch(
+        (std::isnan(a) ? 2 : 0) +
+        (std::isnan(b) ? 1 : 0))
+    {
+        case 3:
+            return true;
+        case 1:
+        case 2:
+            return false;
+        case 0:
+            return (a == b);
+    }
+}
+
+template<>
+bool DefaultRLEqual<float>::operator()(float const &a, float const &b) const
 {
     switch(
         (std::isnan(a) ? 2 : 0) +
@@ -77,11 +97,11 @@ public:
             value_type val;
             switch(algo.index()) {
                 case RLAlgo::PLAIN :
-                    val = raw - last_raw;
-                    last_raw = raw;
+                    val = raw;
                 break;
                 case RLAlgo::DIFFS :
-                    val = raw;
+                    val = raw - last_raw;
+                    last_raw = raw;
                 break;
             }
 
@@ -112,7 +132,7 @@ rl_encode(
     CountsVAccumT &&counts_vaccum,
     ValuesVAccumT &&values_vaccum,
     RLAlgo algo = RLAlgo::PLAIN,
-    EqualT const &&eq=std::equal_to<typename ValuesVAccumT::val_type>())
+    EqualT const &&eq=DefaultRLEqual<typename ValuesVAccumT::val_type>())
 {
     return RLEncode<CountsVAccumT, ValuesVAccumT, EqualT>(
         std::move(counts_vaccum),
@@ -135,8 +155,8 @@ class RLDecode
     typedef typename ValuesIterT::value_type value_type;
     RLAlgo const algo;
 
-    value_type cur_raw = 0;
-    value_type cur_val;
+    value_type cur_raw = 0;        // RAW = value user originally supplied
+    value_type cur_val;            // val = value obtained from file
     typename CountsIterT::value_type cur_count;
 
     CountsIterT counts_iter, counts_end;
@@ -158,7 +178,7 @@ public:
         for (;;) {
             if (cur_count > 0) {
                 --cur_count;
-                switch(algo) {
+                switch(algo.index()) {
                     case RLAlgo::DIFFS :
                         cur_raw += cur_val;
                     break;
@@ -176,9 +196,9 @@ public:
 
     value_type const &operator*() const
     {
-        switch(algo) {
+        switch(algo.index()) {
             case RLAlgo::PLAIN :
-                return cur_plain;
+                return cur_val;
             case RLAlgo::DIFFS:
                 return cur_raw;
         }
