@@ -34,13 +34,40 @@ using namespace std;
 
 static double const NaN = std::numeric_limits<double>::quiet_NaN();
 
+
 // The fixture for testing class Foo.
-class RunlengthTest : public ibmisc::Test {
-protected:
+class RunlengthTest : public ::testing::Test {
+public:
+
+    std::vector<std::string> tmpfiles;
 
     // You can do set-up work for each test here.
-    RunlengthTest() : ibmisc::Test(false) {}    // keep=true
+    RunlengthTest() {}
+
+    // You can do clean-up work that doesn't throw exceptions here.
+    virtual ~RunlengthTest()
+    {
+        for (auto ii(tmpfiles.begin()); ii != tmpfiles.end(); ++ii) {
+//          ::remove(ii->c_str());
+        }
+    }
+
+    // If the constructor and destructor are not enough for setting up
+    // and cleaning up each test, you can define the following methods:
+
+    // Code here will be called immediately after the constructor (right
+    // before each test).
+    virtual void SetUp() {}
+
+    // Code here will be called immediately after each test (right
+    // before the destructor).
+    virtual void TearDown() {}
+
+//    // The mock bar library shaed by all tests
+//    MockBar m_bar;
 };
+
+
 
 bool eq_double(double a, double b)
 {
@@ -183,6 +210,51 @@ void _test_rl_vector_double(std::vector<double> const &vals)
 }
 
 
+template<class TypeT>
+void _test_rl_vector_netcdf(std::string const &fnm, RunlengthTest &self, std::vector<TypeT> const &vals, RLAlgo algo)
+{
+    DefaultRLEqual<TypeT> eq;
+
+    RLVector<int,TypeT> rlv(algo);
+
+    // Encode
+    {auto vaccum(rlv.vaccum());
+        for (auto val : vals) vaccum.add(val);
+    }
+
+    // Store
+    std::string fname("__runlength_" + fnm + ".nc");
+    self.tmpfiles.push_back(fname);
+    ::remove(fname.c_str());
+    {NcIO ncio(fname, 'w');
+        rlv.ncio(ncio, "vals");
+    }
+
+    // Load
+    RLVector<int,TypeT> rlv2;
+    {NcIO ncio(fname, 'r');
+        rlv2.ncio(ncio, "vals");
+    }
+
+    // Decode
+    std::vector<TypeT> vals2;
+    for (auto gen(rlv2.generator()); ++gen; ) {
+        vals2.push_back(*gen);
+    }
+
+    // Compare
+    EXPECT_EQ(vals2.size(), vals.size());
+    for (int i=0; i<vals2.size(); ++i) {
+        bool x = eq(vals[i], vals2[i]);
+        EXPECT_TRUE(eq(vals[i], vals2[i]));
+    }
+
+#if 0
+    cout << "test_rl_vector_netcdf " << vals << endl;
+    cout << "test_rl_vector_netcdf " << vals2 << endl;
+#endif
+}
+
 
 TEST_F(RunlengthTest, double)
 {
@@ -192,6 +264,7 @@ TEST_F(RunlengthTest, double)
     for (auto &vals : dvalss) {
         _test_online_double(vals);
         _test_rl_vector_double(vals);
+        _test_rl_vector_netcdf<double>("double", *this, vals, RLAlgo::PLAIN);
     }
 }
 
@@ -203,6 +276,7 @@ TEST_F(RunlengthTest, int)
     for (auto &vals : ivalss) {
         _test_online_int(vals);
         _test_rl_vector_int(vals);
+        _test_rl_vector_netcdf<int>("int", *this, vals, RLAlgo::DIFFS);
     }
 }
 

@@ -21,10 +21,14 @@ struct RLVector {
     spsparse::RLAlgo algo;    // Which variant of runlength encoding this is...
     EqualT eq;        // Compare when encoding
 
+    RLVector(EqualT const &&_eq=EqualT()) : eq(std::move(_eq)) {}
+
     RLVector(spsparse::RLAlgo _algo, EqualT const &&_eq=EqualT()) //DefaultRLEqual<typename ValueT>())
         : algo(_algo), eq(std::move(_eq)) {}
 
-    void ncio(NcIO &ncio, std::string const &vname, std::string const &count_snc_type, std::string const &value_snc_type);
+    void ncio(NcIO &ncio, std::string const &vname,
+        std::string const &count_snc_type=get_nc_type<CountT>(),
+        std::string const &value_snc_type=get_nc_type<ValueT>());
 
     typedef spsparse::vaccum::RLEncode<
         spsparse::vaccum::Vector<CountT>,
@@ -115,9 +119,9 @@ public:
     int nnz() { return _nnz; }
 
     void ncio(NcIO &ncio, std::string const &vname,
-        std::string const &count_snc_type,
-        std::string const &index_snc_type,
-        std::string const &value_snc_type);
+        std::string const &count_snc_type=get_nc_type<CountT>(),
+        std::string const &index_snc_type=get_nc_type<IndexT>(),
+        std::string const &value_snc_type=get_nc_type<ValueT>());
 
     typedef spsparse::accum::SparseArrayAgg<
         typename RLVector<CountT,IndexT>::vaccum_type,
@@ -146,17 +150,20 @@ public:
 // ==================================================================
 template<class CountT, class ValueT, class EqualT>
 void RLVector<CountT,ValueT,EqualT>::
-    ncio(NcIO &ncio, std::string const &vname, std::string const &count_snc_type, std::string const &value_snc_type)
+    ncio(NcIO &ncio, std::string const &vname,
+        std::string const &count_snc_type,
+        std::string const &value_snc_type)
     {
-        auto dims(get_or_add_dims(ncio, {vname + ".rlsize"}, {count.size()}));    // size ignored on read
+        auto dims(get_or_add_dims(ncio, count, {vname + ".rlsize"}));    // size ignored on read
 
-#if 0    // No need to track and record nnz; but if we do, this is how
+        // No need to track and record nnz; but if we do, this is how
         auto info_v = get_or_add_var(ncio, vname + ".info", "int", {});
-        get_or_put_att(info_v, ncio.rw, "nnz", &_nnz, 1);
-#endif
+        get_or_put_att_enum(info_v, ncio.rw, "algo", algo);
 
+        netCDF::NcVar ncv;
         ncio_vector(ncio, count, true, vname+".count", count_snc_type, dims);
-        ncio_vector(ncio, value, true, vname+".value", value_snc_type, dims);
+
+        netCDF::NcVar value_v(ncio_vector(ncio, value, true, vname+".value", value_snc_type, dims));
     }
 
 
