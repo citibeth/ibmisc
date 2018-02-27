@@ -1,5 +1,5 @@
-#ifndef IBMISC_RUNLENGTH_HPP
-#define IBMISC_RUNLENGTH_HPP
+#ifndef SPSPARSE_RUNLENGTH_HPP
+#define SPSPARSE_RUNLENGTH_HPP
 
 #include <cmath>
 #include <blitz/array.h>

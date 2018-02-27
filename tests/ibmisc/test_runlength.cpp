@@ -24,6 +24,7 @@
 #include <prettyprint.hpp>
 #include <iostream>
 #include <ibmisc/blitz.hpp>
+#include <ibmisc/rlarray.hpp>
 #include <spsparse/vector.hpp>
 #include <spsparse/runlength.hpp>
 
@@ -127,6 +128,62 @@ void _test_online_int(std::vector<int> const &vals)
 }
 
 
+void _test_rl_vector_int(std::vector<int> const &vals)
+{
+    RLVector<int,int> rlv(RLAlgo::DIFFS);
+
+    // Encode
+    {auto vaccum(rlv.vaccum());
+        for (auto val : vals) vaccum.add(val);
+    }
+
+    // Decode
+    std::vector<int> vals2;
+    for (auto gen(rlv.generator()); ++gen; ) {
+        vals2.push_back(*gen);
+    }
+
+    // Compare
+    EXPECT_EQ(vals2.size(), vals.size());
+    for (int i=0; i<vals2.size(); ++i) {
+        EXPECT_EQ(vals[i], vals2[i]);
+    }
+
+#if 0
+    cout << "test_rl_vector_int " << vals << endl;
+    cout << "test_rl_vector_int " << vals2 << endl;
+#endif
+}
+
+void _test_rl_vector_double(std::vector<double> const &vals)
+{
+    RLVector<int,double> rlv(RLAlgo::PLAIN);
+
+    // Encode
+    {auto vaccum(rlv.vaccum());
+        for (auto val : vals) vaccum.add(val);
+    }
+
+    // Decode
+    std::vector<double> vals2;
+    for (auto gen(rlv.generator()); ++gen; ) {
+        vals2.push_back(*gen);
+    }
+
+    // Compare
+    EXPECT_EQ(vals2.size(), vals.size());
+    for (int i=0; i<vals2.size(); ++i) {
+        EXPECT_TRUE(eq_double(vals[i], vals2[i]));
+    }
+
+#if 0
+    cout << "test_rl_vector_double " << vals << endl;
+    cout << "test_rl_vector_double " << vals2 << endl;
+#endif
+}
+
+
+
 TEST_F(RunlengthTest, double)
 {
     std::vector<std::vector<double>> dvalss {
@@ -134,6 +191,7 @@ TEST_F(RunlengthTest, double)
     };
     for (auto &vals : dvalss) {
         _test_online_double(vals);
+        _test_rl_vector_double(vals);
     }
 }
 
@@ -144,6 +202,7 @@ TEST_F(RunlengthTest, int)
     };
     for (auto &vals : ivalss) {
         _test_online_int(vals);
+        _test_rl_vector_int(vals);
     }
 }
 
