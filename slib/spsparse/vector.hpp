@@ -4,7 +4,7 @@
 #include <vector>
 
 namespace spsparse {
-namespace accum {
+namespace vaccum {
 
 template<class ValueT>
 class Vector {
