@@ -27,6 +27,7 @@
 #include <ibmisc/rlarray.hpp>
 #include <spsparse/vector.hpp>
 #include <spsparse/runlength.hpp>
+#include <spsparse/eigen.hpp>
 
 using namespace ibmisc;
 using namespace spsparse;
@@ -280,6 +281,54 @@ TEST_F(RunlengthTest, int)
     }
 }
 
+
+TEST_F(RunlengthTest, RLSparseArray1)
+{
+    // Set up a TupleList
+    TupleList<int, double, 2> arr1({400,400});
+    arr1.add({0,1}, 1.);
+    arr1.add({0,2}, 1.);
+    arr1.add({0,3}, 1.);
+    arr1.add({0,4}, .5);
+    arr1.add({1,9}, .6);
+    arr1.add({1,10}, 1.1);
+    arr1.add({1,11}, 1.1);
+    arr1.add({1,12}, 1.1);
+    arr1.add({1,13}, 1.0);
+    arr1.add({2,25}, 1.9);
+    arr1.add({2,26}, 1.9);
+    arr1.add({2,27}, 1.9);
+
+    // Runlength-Compress it
+    RLSparseArray<int,int,double,2> rl1(arr1.shape());
+    {auto accum(rl1.accum());
+        for (auto &tup : arr1) accum.add(tup.index(), tup.value());
+    }
+
+    // Store it
+    std::string fname("__runlength_sparsearray1.nc");
+    tmpfiles.push_back(fname);
+    ::remove(fname.c_str());
+    {NcIO ncio(fname, 'w');
+        rl1.ncio(ncio, "vals");
+    }
+
+
+    // Uncompress it
+    TupleList<int,double,2> arr2(rl1.shape());
+    for (auto ii(rl1.generator()); ++ii; ) {
+        arr2.add(ii.index(), ii.value());
+    }
+
+    // Compare
+    EXPECT_EQ(arr1.shape(), arr2.shape());
+    for (size_t i=0; i<arr1.size(); ++i) {
+        Tuple<int,double,2> const &tup1(arr1.tuples[i]);
+        Tuple<int,double,2> const &tup2(arr2.tuples[i]);
+        bool const eq = (tup1 == tup2);
+        EXPECT_TRUE(eq);
+    }
+}
 
 
 

@@ -10,7 +10,7 @@ namespace accum {
 template<class IndexVAccumT, class ValueVAccumT, int RANK>
 class SparseArrayAgg {
 
-    std::array<IndexVAccumT, RANK> vaccum_index;
+    std::vector<IndexVAccumT> vaccum_index;
     ValueVAccumT vaccum_value;
     int &nnz;    // Used to count number of elements added
 
@@ -19,7 +19,7 @@ public:
     typedef typename ValueVAccumT::val_type value_type;
 
     SparseArrayAgg(
-        std::array<IndexVAccumT, RANK> &&_vaccum_index,
+        std::vector<IndexVAccumT> &&_vaccum_index,
         ValueVAccumT &&_vaccum_value,
         int &_nnz)
     : vaccum_index(std::move(_vaccum_index)),

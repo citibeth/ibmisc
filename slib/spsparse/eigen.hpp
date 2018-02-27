@@ -152,6 +152,12 @@ public:
     bool operator<(Tuple<IndexT,ValT,RANK> const &other) const
         { return _index < other._index; }
 
+    bool operator==(Tuple<IndexT,ValT,RANK> const &other) const
+    {
+        for (int i=0; i<RANK; ++i) if (_index[i] != other._index[i]) return false;
+        return (_value == other._value);
+    }
+
 };
 
 /** Serves as accumulator and iterable storage */

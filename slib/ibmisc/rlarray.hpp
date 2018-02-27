@@ -45,15 +45,15 @@ struct RLVector {
     }
 
     typedef spsparse::RLDecode<
-        typename std::vector<CountT>::iterator,
-        typename std::vector<ValueT>::iterator>
+        typename std::vector<CountT>::const_iterator,
+        typename std::vector<ValueT>::const_iterator>
         generator_type;
 
-    generator_type generator()
+    generator_type generator() const
     {
-        return rl_decode(
-            count.begin(), count.end(),
-            value.begin(), value.end(),
+        return generator_type(
+            count.cbegin(), count.cend(),
+            value.cbegin(), value.cend(),
             algo);
     }
 
@@ -64,15 +64,13 @@ class RLSparseArray;
 
 template<class CountT, class IndexT, class ValueT, int RANK>
 class RLSparseArray_Generator {
-    std::array<typename RLVector<CountT,IndexT>::generator_type, RANK> indices_ii;
+    std::vector<typename RLVector<CountT,IndexT>::generator_type> indices_ii;
     typename RLVector<CountT,ValueT>::generator_type value_ii;
 
-    static std::array<typename RLVector<CountT,IndexT>::generator_type, RANK> make_indices_ii(RLSparseArray<CountT,IndexT,ValueT,RANK> const &arr)
+    static std::vector<typename RLVector<CountT,IndexT>::generator_type> make_indices_ii(RLSparseArray<CountT,IndexT,ValueT,RANK> const &arr)
     {
-        std::array<typename RLVector<CountT,IndexT>::generator_type, RANK> ret;
-        for (int i=0; i<RANK; ++i) {
-            ret[i] = arr.indices[i].generator();
-        }
+        std::vector<typename RLVector<CountT,IndexT>::generator_type> ret;
+        for (int i=0; i<RANK; ++i) ret.push_back(arr.indices[i].generator());
         return ret;
     }
 
@@ -97,26 +95,32 @@ public:
 TODO: Add a ValueEqualT template parameter, to allow the user to change it if needed (it's not needed). */
 template<class CountT, class IndexT, class ValueT, int RANK>
 class RLSparseArray {
-    std::array<RLVector<CountT,IndexT>,RANK> indices;
+
+    friend class RLSparseArray_Generator<CountT,IndexT,ValueT,RANK>;
+
+    std::vector<RLVector<CountT,IndexT>> indices;
     RLVector<CountT,ValueT> values;
-    int _nnz = 0;    // Number of elements added to this RLSparseArray
+    int _nnz;    // Number of elements added to this RLSparseArray
+    std::array<long, RANK> _shape;
 
 
-    static std::array<RLVector<CountT,IndexT>,RANK> make_indices()
+    static std::vector<RLVector<CountT,IndexT>> make_indices()
     {
-        std::array<RLVector<CountT,IndexT>,RANK> ret;
-        for (int i=0; i<RANK; ++i) ret[i] = std::move(RLVector<CountT,IndexT>(spsparse::RLAlgo::DIFFS));
+        std::vector<RLVector<CountT,IndexT>> ret;
+        for (int i=0; i<RANK; ++i) ret.push_back(RLVector<CountT,IndexT>(spsparse::RLAlgo::DIFFS));
         return ret;
     }
 
 public:
-    RLSparseArray() :
+    RLSparseArray(std::array<long, RANK> shape) :
         indices(make_indices()),
-        values(RLVector<CountT,ValueT>(spsparse::RLAlgo::PLAIN))
+        values(RLVector<CountT,ValueT>(spsparse::RLAlgo::PLAIN)),
+        _nnz(0), _shape(shape)
     {}
 
 
-    int nnz() { return _nnz; }
+    int nnz() const { return _nnz; }
+    std::array<long,RANK> const &shape() const { return _shape; }
 
     void ncio(NcIO &ncio, std::string const &vname,
         std::string const &count_snc_type=get_nc_type<CountT>(),
@@ -174,7 +178,8 @@ template<class CountT, class IndexT, class ValueT, int RANK>
 RLSparseArray_Generator<CountT,IndexT,ValueT,RANK>::
     RLSparseArray_Generator(RLSparseArray<CountT,IndexT,ValueT,RANK> const &arr) :
         indices_ii(make_indices_ii(arr)),
-        value_ii(typename RLVector<CountT,ValueT>::generator_type())
+        value_ii(arr.values.generator())
+//        value_ii(typename RLVector<CountT,ValueT>::generator_type())
     {}
 
 
@@ -209,6 +214,10 @@ void RLSparseArray<CountT,IndexT,ValueT,RANK>::
         std::string const &index_snc_type,
         std::string const &value_snc_type)
     {
+        auto info_v = get_or_add_var(ncio, vname + ".info", "int", {});
+        get_or_put_att(info_v, ncio.rw, "nnz", "int64", &_nnz, 1);
+        get_or_put_att(info_v, ncio.rw, "shape", "int64", &_shape[0], RANK);
+
         for (int i=0; i<RANK; ++i) {
             indices[i].ncio(ncio,
                 ibmisc::strprintf("%s.indices_%d", vname.c_str(), i),
@@ -224,9 +233,9 @@ typename RLSparseArray<CountT,IndexT,ValueT,RANK>::accum_type
 RLSparseArray<CountT,IndexT,ValueT,RANK>::
     accum()
     {
-        std::array<typename RLVector<CountT,IndexT>::vaccum_type, RANK> vaccum_indices;
+        std::vector<typename RLVector<CountT,IndexT>::vaccum_type> vaccum_indices;
         for (int i=0; i<RANK; ++i) {
-            vaccum_indices[i] = indices[i].vaccum();
+            vaccum_indices.push_back(indices[i].vaccum());
         }
 
         return accum_type(std::move(vaccum_indices),

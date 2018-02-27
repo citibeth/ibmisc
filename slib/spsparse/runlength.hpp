@@ -64,6 +64,7 @@ class RLEncode
     typedef typename CountsVAccumT::val_type count_type;
     typedef typename ValuesVAccumT::val_type value_type;
 public:
+    typedef typename ValuesVAccumT::val_type val_type;
     CountsVAccumT counts_vaccum;
     ValuesVAccumT values_vaccum;
 
@@ -75,11 +76,19 @@ public:
     bool first = true;
     count_type count;
 
+
+#if 0
+    RLEncode(
+        RLAlgo _algo=RLAlgo::PLAIN,
+        EqualT const &&_eq=EqualT())
+    : algo(_algo), eq(std::move(_eq)) {}
+#endif
+
     RLEncode(
         CountsVAccumT &&_counts_vaccum,
         ValuesVAccumT &&_values_vaccum,
         RLAlgo _algo,
-        EqualT const &&_eq)
+        EqualT const &&_eq=EqualT())
     : counts_vaccum(std::move(_counts_vaccum)),
       values_vaccum(std::move(_values_vaccum)),
       algo(_algo), eq(std::move(_eq)) {}
@@ -162,6 +171,8 @@ class RLDecode
     CountsIterT counts_iter, counts_end;
     ValuesIterT values_iter, values_end;
 public:
+
+    
     RLDecode(
         CountsIterT &&_counts_begin, CountsIterT &&_counts_end,
         ValuesIterT &&_values_begin, ValuesIterT &&_values_end,
