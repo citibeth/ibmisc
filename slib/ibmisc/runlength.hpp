@@ -157,13 +157,13 @@ public:
 
 };
 
-template <class CountsAccumT, class ValuesAccumT, class EqualT=std::equal_to<typename ValuesAccumT::value_type>>
+template <class CountsAccumT, class ValuesAccumT, class EqualT=std::equal_to<typename ValuesAccumT::val_type>>
 RLEncoder<CountsAccumT, ValuesAccumT, EqualT>
 inline rl_encoder(
     CountsAccumT &&counts_accum,
     ValuesAccumT &&values_accum,
     bool diff_encode = false,
-    EqualT const &&eq=std::equal_to<typename ValuesAccumT::value_type>())
+    EqualT const &&eq=std::equal_to<typename ValuesAccumT::val_type>())
 {
     return RLEncoder<CountsAccumT, ValuesAccumT, EqualT>(
         std::move(counts_accum),
@@ -175,10 +175,10 @@ inline rl_encoder(
 
 // =============================================================
 /** Usage:
-       for (RLGenerator rl(...); ++rl; ) print(*rl);
+       for (RLDecoder rl(...); ++rl; ) print(*rl);
 */
 template<class CountsIterT, class ValuesIterT>
-class RLGenerator
+class RLDecoder
 {
     typedef typename ValuesIterT::value_type value_type;
     bool const diff_encode;
@@ -190,7 +190,7 @@ class RLGenerator
     CountsIterT counts_iter, counts_end;
     ValuesIterT values_iter, values_end;
 public:
-    RLGenerator(
+    RLDecoder(
         CountsIterT &&_counts_begin, CountsIterT &&_counts_end,
         ValuesIterT &&_values_begin, ValuesIterT &&_values_end,
         bool _diff_encode)
@@ -227,12 +227,12 @@ public:
 
 template<class ValuesIterT, class CountsIterT>
 
-RLGenerator<CountsIterT, ValuesIterT> rl_decoder(
+RLDecoder<CountsIterT, ValuesIterT> rl_decoder(
     CountsIterT &&counts_begin, CountsIterT &&counts_end,
     ValuesIterT &&values_begin, ValuesIterT &&values_end,
     bool diff_encode = false)
 {
-    return RLGenerator<CountsIterT, ValuesIterT>(
+    return RLDecoder<CountsIterT, ValuesIterT>(
         std::move(counts_begin), std::move(counts_end),
         std::move(values_begin), std::move(values_end),
         diff_encode);

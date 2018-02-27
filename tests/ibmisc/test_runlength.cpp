@@ -49,8 +49,6 @@ bool eq_double(double a, double b)
 }
 
 
-
-
 void _test_sample_double(std::vector<double> const &vals)
 {
     // std::vector<double> vals {1.1, 4.0, NaN, NaN, 3.0, 3.0, 3.0};
@@ -64,16 +62,15 @@ void _test_sample_double(std::vector<double> const &vals)
     }
 }
 
-TEST_F(RunlengthTest, sample_double)
-TEST_F(RunlengthTest, sample_diffencode)
-
-void _test_sample_diff(std::vecotr<int> const &vals)
+void _test_sample_int(std::vector<int> const &vals)
 {
     // std::vector<int> vals {1, 2, 3, 6, 7, 9, 10, 11, 17};
     auto enc(rlencode(to_blitz(vals), true));
 
+#if 0
     cout << enc.ends << endl;
     cout << enc.values << endl;
+#endif
 
     auto vals2(rldecode(to_blitz(enc.ends), to_blitz(enc.values), true));
 
@@ -83,10 +80,9 @@ void _test_sample_diff(std::vecotr<int> const &vals)
     }
 }
 
-TEST_F(RunlengthTest, online_double)
-void test_online_double()
+void _test_online_double(std::vector<double> const &vals)
 {
-    std::vector<double> vals {1.1, 4.0, NaN, NaN, 3.0, 3.0, 3.0};
+    //std::vector<double> vals {1.1, 4.0, NaN, NaN, 3.0, 3.0, 3.0};
     EqualUsingNaN eq;
 
     // Online
@@ -98,13 +94,13 @@ void test_online_double()
         for (auto v : vals) rle.add(v);
     }
 
-    auto _rlg(rl_decoder(
+    auto _rld(rl_decoder(
         enc_counts.begin(), enc_counts.end(),
         enc_values.begin(), enc_values.end()));
 
     std::vector<double> vals2;
-    for (auto rlg(std::move(_rlg)); ++rlg; ) {
-        vals2.push_back(*rlg);
+    for (auto rld(std::move(_rld)); ++rld; ) {
+        vals2.push_back(*rld);
     }
 
 
@@ -114,9 +110,71 @@ void test_online_double()
         EXPECT_TRUE(eq_double(vals[i], vals2[i]));
     }
 
+#if 0
     cout << vals << endl;
     cout << vals2 << endl;
+#endif
+
 }
+
+void _test_online_int(std::vector<int> const &vals)
+{
+    // Online
+    std::vector<int> enc_counts;
+    std::vector<int> enc_values;
+    {auto rle(rl_encoder(
+        accum::vector(enc_counts), accum::vector(enc_values), true));
+
+        for (auto v : vals) rle.add(v);
+    }
+
+    auto _rld(rl_decoder(
+        enc_counts.begin(), enc_counts.end(),
+        enc_values.begin(), enc_values.end(),
+        true));
+
+    std::vector<int> vals2;
+    for (auto rld(std::move(_rld)); ++rld; ) {
+        vals2.push_back(*rld);
+    }
+
+
+
+    EXPECT_EQ(vals2.size(), vals.size());
+    for (int i=0; i<vals2.size(); ++i) {
+        EXPECT_EQ(vals[i], vals2[i]);
+    }
+
+#if 0
+    cout << vals << endl;
+    cout << vals2 << endl;
+#endif
+}
+
+
+TEST_F(RunlengthTest, double)
+{
+    std::vector<std::vector<double>> dvalss {
+        {1.1, 4.0, NaN, NaN, 3.0, 3.0, 3.0}
+    };
+    for (auto &vals : dvalss) {
+        _test_sample_double(vals);
+        _test_online_double(vals);
+    }
+}
+
+TEST_F(RunlengthTest, int)
+{
+    std::vector<std::vector<int>> ivalss {
+        {1, 2, 3, 6, 7, 9, 10, 11, 17}
+    };
+    for (auto &vals : ivalss) {
+        _test_sample_int(vals);
+        _test_online_int(vals);
+    }
+}
+
+
 
 
 // -----------------------------------------------------------
