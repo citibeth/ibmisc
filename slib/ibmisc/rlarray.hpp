@@ -15,12 +15,7 @@ struct RLVector {
     std::vector<ValueT> value;
     RLAlgo algo;    // Which variant of runlength encoding this is...
 
-    void ncio(NcIO &ncio, std::string const &vname, std::string const &count_snc_type, std::string const &value_snc_type)
-    {
-        auto dims(get_or_add_dims(ncio, {vname + ".size"}, {count.size()}));
-        ncio_vector(ncio, count, true, vname+".count", snc_type, dims);
-        ncio_vector(ncio, value, true, vname+".value", snc_type, dims);
-    }
+    void ncio(NcIO &ncio, std::string const &vname, std::string const &count_snc_type, std::string const &value_snc_type);
 
     typedef vaccum::RLEncode<vaccum::Vector<CountsT>, vaccum::Vector<ValueT>, EqualT> vaccum_type;
 
@@ -52,20 +47,125 @@ struct RLVector {
 
 };
 // --------------------------------------------------------------------------
+template<class CountT, class IndexT, class ValueT, int RANK>
+class RLSparseArray;
+
+template<class CountT, class IndexT, class ValueT, int RANK>
+class RLSparseArray_Generator {
+    std::vector<typename indices_rlvector_type::generator_type> indices_ii;
+    typename values_rlvector_type::generator_type value_ii;
+
+    RLSparseArray_Generator(RLSparseArray const &arr);
+
+    bool operator++()
+
+    IndexT index(int ix) const
+        { return *indices_ii[ix]; }
+
+    std::array<IndexT,RANK> index() const;
+
+    ValueT value() const
+        { return *values_ii; }
+
+};
+
 
 /** NOTE: Singular used for template parameters, plural used for
     vectors holding plural things (or accumulators). */
 template<class CountT, class IndexT, class ValueT, int RANK>
-struct RLSparseArray {
+class RLSparseArray {
 
     typedef RLVector<CountT,IndexT> indices_rlvector_type;
     typedef RLVector<CountT,ValueT> values_rlvector_type;
 
-    typedef  accum_type;
-
     std::array<indices_rlvector_type,RANK> indices;
+    int _nnz = 0;    // Number of elements added to this RLSparseArray
+
+public:
+    int nnz() { return _nnz; }
 
     void ncio(NcIO &ncio, std::string const &vname,
+        std::string const &count_snc_type,
+        std::string const &index_snc_type,
+        std::string const &value_snc_type);
+
+    typedef accum::SparseArrayAgg<
+        typename indices_rlvector_type::vaccum_type,
+        typename values_rlvector_type::vaccum_type,
+        RANK> accum_type;
+
+    /** Creates an encoder */
+    template<class ValueEqualT>
+    accum_type accum(ValueEqualT &&value_eq);
+
+    RLSparseArray_Generator generator() const
+        { return Generator(*this); }
+
+
+    template<class AccumT>
+    void spcopy(AccumT &&ret) const
+    {
+        for (auto gen(Generator); ++gen;) {
+            ret.add(gen.index(), gen.value());
+        }
+    }
+
+};
+
+// ==================================================================
+template<class CountT, class ValueT, int RANK>
+void RLVector<CountT,ValueT,RANK>::
+    ncio(NcIO &ncio, std::string const &vname, std::string const &count_snc_type, std::string const &value_snc_type)
+    {
+        auto dims(get_or_add_dims(ncio, {vname + ".size"}, {count.size()}));
+
+        auto info_v = get_or_add_var(ncio, vname + ".info", "int", {});
+        get_or_put_att(info_v, ncio.rw, "nnz", &_nnz, 1);
+
+        ncio_vector(ncio, count, true, vname+".count", snc_type, dims);
+        ncio_vector(ncio, value, true, vname+".value", snc_type, dims);
+    }
+
+
+// ==================================================================
+
+
+template<class CountT, class IndexT, class ValueT, int RANK>
+RLSparseArray_Generator<CountT,IndexT,ValueT,RANK>::
+    RLSparseArray_Generator(RLSparseArray const &arr) :
+        value_ii(values_generator())
+    {
+        for (int i=0; i<RANK; ++i) indices_ii.push_back(indices[i].generator());
+    }
+
+
+template<class CountT, class IndexT, class ValueT, int RANK>
+bool RLSparseArray_Generator<CountT,IndexT,ValueT,RANK>::
+    operator++()
+    {
+        // Increment the iterators
+        bool good = ++value_ii;
+        for (int i=0; i<RANK; ++i) {
+            bool this_good = ++indices_ii[i];
+            if (this_good != good) (*ibmisc_error)(-1,
+                "All iterators should be of same length (more debugging needed here)");
+        }
+        return good;
+    }
+
+template<class CountT, class IndexT, class ValueT, int RANK>
+std::array<IndexT,RANK> RLSparseArray_Generator<CountT,IndexT,ValueT,RANK>::
+    index() const
+    {
+        std::array<IndexT,RANK> ret;
+        for (int i=0; i<RANK; ++i) ret[i] = index(i);
+        return ret;
+    }
+
+// ===================================================================
+template<class CountT, class IndexT, class ValueT, int RANK>
+void RLSparseArray<CountT,IndexT,ValueT,RANK>::
+    ncio(NcIO &ncio, std::string const &vname,
         std::string const &count_snc_type,
         std::string const &index_snc_type,
         std::string const &value_snc_type)
@@ -75,134 +175,29 @@ struct RLSparseArray {
                 strprintf("%s.indices_%d", vname.c_str(), i),
                 count_snc_type, index_snc_type);
         }
-        values.ncio(ncio, vname+".indices",
+        values.ncio(ncio, vname+".values",
             count_snc_type, value_snc_type);
     }
 
-    /** Creates an encoder */
-    template<class ValueEqualT>
-    accum::SparseArrayAgg<
-        typename indices_rlvector_type::vaccum_type,
-        typename values_rlvector_type::vaccum_type,
-        RANK>
-    accum(ValueEqualT &&value_eq) const
+
+template<class CountT, class IndexT, class ValueT, int RANK>
+typename RLSparseArray<CountT,IndexT,ValueT,RANK>::accum_type
+RLSparseArray<CountT,IndexT,ValueT,RANK>::
+    accum(ValueEqualT &&value_eq)
     {
         std::vector<vaccum_IndexT> vaccum_indices;
         for (int i=0; i<RANK; ++i) {
             vaccum_indices.push_back(indices[i].vaccum(RLAlgo::DIFFS));
         }
 
-        return AccumT(std::move(vaccum_indices),
-            values.vaccum(RLAlgo::PLAIN, std::move(value_eq)));
+        return accum_type(std::move(vaccum_indices),
+            values.vaccum(RLAlgo::PLAIN, std::move(value_eq)),
+            _nnz);
     }
 
-    class Generator {
-        std::vector<typename indices_rlvector_type::generator_type> indices_ii;
-        typename values_rlvector_type::generator_type value_ii;
-
-        Generator(RLSparseArray const &arr) :
-            value_ii(values_generator())
-        {
-            for (int i=0; i<RANK; ++i) indices_ii.push_back(indices[i].generator());
-        }
+// ==================================================================
 
 
-        bool operator++()
-        {
-            // Increment the iterators
-            bool good = ++value_ii;
-            for (int i=0; i<RANK; ++i) {
-                bool this_good = ++indices_ii[i];
-                if (this_good != good) (*ibmisc_error)(-1,
-                    "All iterators should be of same length (more debugging needed here)");
-            }
-            return good;
-        }
-
-        IndexT index(int ix) const
-            { return *indices_ii[ix]; }
-        std::array<IndexT,RANK> index() const
-        {
-            std::array<IndexT,RANK> ret;
-            for (int i=0; i<RANK; ++i) ret[i] = index(i);
-            return ret;
-        }
-
-        double value() const
-            { return *values_ii; }
-
-    };
-
-    Generator generator() const
-        { return Generator(*this); }
-
-
-    template<class AccumT>
-    void spcopy(AccumT &&ret)
-    {
-        for (auto gen(Generator); ++gen;) {
-            ret.add(gen.index(), gen.value());
-        }
-    }
-
-
-};
-
-
-TODO: This goes into IceBin
-
-template<class CountT, class int, class ValueT>
-void weighted_sparse_apply(
-    blitz::Array<double,1> &B,
-    blitz::Array<double,1> const &wM,            // ==0 in M's nullspace
-    RLSparseArray<int,int,double,2> const &M,    // BvA
-    blitz::Array<double,1> const &Mw,            // ==0 in M's nullspace
-    blitz::Array<double,1> const &A,
-    bool clear,
-    double fill_value,
-    bool check_for_fill,
-    bool force_conservation)
-{
-    // Clear the output
-    if (clear) B = fill_value;
-
-    // Multiply
-    for (auto gen(M.generator()); ++gen; ) {
-        auto const iB(gen.index(0));
-        auto const iA(gen.index(1));
-        double const val = A(iA) * gen.value();
-        if (check_for_fill) {
-            if (B(iB) == fill_value) B(iB) = val;
-            else B(iB) += val;
-        } else {
-            B(iB) += val;
-        }
-    }
-
-    // Adjust for conservation
-    if (force_conservation && !M_is_conservative) {
-        // Determine original mass
-        double mass_A = 0;
-        for (int i=0; i<A.extent(0); ++i) {
-            if (Mw(i) != 0) mass_A += Mw(i) * A(i);
-        }
-
-        // Determine final mas
-        double mass_B = 0;
-        for (int i=0; i<B.extent(0); ++i) {
-            if (wM(i) != 0) mass_B += Mw(i) * B(i);
-        }
-
-        // Determine adjustment factor for B
-        double const factor = mass_A / mass_B;
-
-        // Multiply by the adjustment factor
-        for (int i=0; i<B.extent(0); ++i) {
-            if (wM(i) != 0) B(i) *= factor;
-        }
-    }
-
-}
 
 
 

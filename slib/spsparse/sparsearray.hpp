@@ -10,16 +10,21 @@ class SparseArrayAgg {
 
     std::vector<IndexVAccumT> vaccum_index;
     ValueVAccumT vaccum_value;
+    int &nnz;    // Used to count number of elements added
 
     SparseArrayAgg(
         std::vector<IndexVAccumT> &&_vaccum_index,
-        ValueVAccumT &&_vaccum_value)
-    : vaccum_index(std::move(_vaccum_index)), vaccum_value(std::move(_vaccum_value)) {}
+        ValueVAccumT &&_vaccum_value,
+        int &_nnz)
+    : vaccum_index(std::move(_vaccum_index)),
+      vaccum_value(std::move(_vaccum_value)),
+      nnz(_nnz) {}
 
     inline void add(std::array<index_type,RANK> const &index, val_type const &val)
     {
         for (int i=0; i<RANK; ++i) vaccum_index[i].add(index[i]);
         vaccum_value.add(val);
+        ++nnz;
     }
 }
 

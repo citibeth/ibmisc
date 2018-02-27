@@ -46,6 +46,7 @@ class RLEncode
 public:
     CountsVAccumT counts_vaccum;
     ValuesVAccumT values_vaccum;
+
     RLAlgo algo;
     EqualT eq;
 
