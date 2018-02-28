@@ -11,52 +11,137 @@
 
 namespace ibmisc {
 
+// ---------------------------------------------------------
+// Yields an integer type, of the same size as the template type
+
+template<class TypeT>
+struct ToIntType {
+    typedef TypeT int_type;
+};
+
+template<>
+struct ToIntType<float>
+{
+    typedef uint32_t int_type;
+};
+
+template<>
+struct ToIntType<double>
+{
+    typedef uint64_t int_type;
+};
+// ---------------------------------------------------------
+
+
+
+template<class ValueT, int RANK>
+class ZVector_Vaccum_Int {
+public:
+    typedef ValueT val_type;
+
+private:
+    typedef ToIntType<ValueT> int_type;
+
+    std::vector<char> &zbuf;
+    RLAlgo algo;
+    std::array<ValueT,RANK> last_raws;
+
+    basic_ovectorstream<std::vector<char>> os;
+    zstr::ostream zos;
+
+public:
+    ZVector_Accum((std::vector<char> &_zbuf, RLAlgo _algo)
+        : zbuf(_zbuf),
+        algo(_algo),
+        os(std::ios_base::out | std::ios_base::binary),
+        zos(os)
+    {
+        // Write the algo to the stream!
+        int ialgo = boost::endian::native_to_big(algo.index());
+        zos.write(&ialgo, sizeof(ialgo);
+
+        for (int i=0; i<RANK; ++i) last_raws[i] = 0;
+    }
+
+    void add(std::array<ValueT,RANK> const &raws)
+    {
+        std::array<ValueT,RANK> vals;
+        int_type * const ivals((int_type *)&vals[0]);    // Alternative view into vals
+
+        switch(algo.index()) {
+            case RLAlgo::PLAIN :
+                for (int i=0; i<RANK; ++i) {
+                    ivals[i] = boost::endian::native_to_big(*(int_type *)&raws[i]);
+                }
+            break;
+            case RLAlgo::DIFFS :
+                for (int i=0; i<RANK; ++i) {
+                    vals[i] = raws[i] - last_raws[i];
+                    boost::endian::native_to_big_inplace(ivals[i]);
+                    last_raws[i] = raws[i]
+                }
+            break;
+        }
+        zos.write(ivals, sizeof(int_type)*RANK);
+    }
+
+    ~ZVector_Accum()
+    {
+        // Make output available to the user
+        os.swap_vector(zbuf);
+    }
+};
+
 // --------------------------------------------------------------------------
-/** Data structure for the storage of ONE runlength-encoded vector
-NOTE: Count and Value here are singluar because this is the inner-most data structure. */
-template<class CountT, class ValueT, class EqualT=spsparse::DefaultRLEqual<ValueT>>
-struct RLVector {
-    std::vector<CountT> count;
-    std::vector<ValueT> value;
-    spsparse::RLAlgo algo;    // Which variant of runlength encoding this is...
-    EqualT eq;        // Compare when encoding
+template<class ValueT, int RANK>
+class ZVector_Generator {
+    typedef ValueT val_type;
 
-    RLVector(EqualT const &&_eq=EqualT()) : eq(std::move(_eq)) {}
+private:
+    typedef ToIntType<ValueT> int_type;
 
-    RLVector(spsparse::RLAlgo _algo, EqualT const &&_eq=EqualT()) //DefaultRLEqual<typename ValueT>())
-        : algo(_algo), eq(std::move(_eq)) {}
+    std::vector<char> &zbuf;
 
-    void ncio(NcIO &ncio, std::string const &vname,
-        std::string const &count_snc_type=get_nc_type<CountT>(),
-        std::string const &value_snc_type=get_nc_type<ValueT>());
+    // Read buffer
+    std::array<ValueT,RANK> vals;
+    int_type * const ivals((int_type *)&vals[0]);    // Alternative view into vals
 
-    typedef spsparse::vaccum::RLEncode<
-        spsparse::vaccum::Vector<CountT>,
-        spsparse::vaccum::Vector<ValueT>,
-        EqualT> vaccum_type;
+    std::array<ValueT,RANK> cur_raws;
+    RLAlgo algo;
 
-    /** Returns a VAccum that runlength encodes into this RLVector. */
-    inline vaccum_type vaccum()
+    basic_ivectorstream<std::vector<char>> is;
+    zstr::istream zis;
+
+    ZVector_Generator()
     {
-        return spsparse::vaccum::rl_encode(
-            spsparse::vaccum::vector(count),
-            spsparse::vaccum::vector(value),
-            algo, EqualT(eq));
+        for (int i=0; i<RANK; ++i) cur_raws[i] = 0;
     }
 
-    typedef spsparse::RLDecode<
-        typename std::vector<CountT>::const_iterator,
-        typename std::vector<ValueT>::const_iterator>
-        generator_type;
 
-    generator_type generator() const
+    bool operator++()
     {
-        return generator_type(
-            count.cbegin(), count.cend(),
-            value.cbegin(), value.cend(),
-            algo);
+        // Read a value
+        zos.read(ivals, sizeof(int_type)*RANK);
+        for (int i=0; i<RANK; ++i)
+            boost::endian::native_to_big_inplace(ivals[i]);
+
+        // Do difference encoding
+        switch(algo.index()) {
+            case RLAlgo::DIFFS :
+                for (int i=0; i<RANK; ++i) cur_raw[i] += vals[i];
+            break;
+        }
     }
 
+    std::array<VaulT,RANK> const &operator*() const
+    {
+        switch(algo.index()) {
+            case RLAlgo::PLAIN :
+                return cur_vals;
+            case RLAlgo::DIFFS:
+                return cur_raws;
+        }
+    }
 };
 // --------------------------------------------------------------------------
 template<class CountT, class IndexT, class ValueT, int RANK>

@@ -10,6 +10,10 @@ include_directories(${PROJECT_SOURCE_DIR}/slib)
 find_package(Eigen3 REQUIRED)
 include_directories(${EIGEN3_INCLUDE_DIR})
 
+find_package(ZLIB REQUIRED)
+include_directories(${ZLIB_INCLUDE_DIRS})
+list(APPEND EXTERNAL_LIBS ${ZLIB_LIBRARIES})
+
 # -----------------------------------------
 find_package(Everytrace REQUIRED)
 include_directories(${EVERYTRACE_INCLUDE_DIR})
