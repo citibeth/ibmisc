@@ -366,6 +366,7 @@ void get_or_put_var(netCDF::NcVar &ncvar, char rw,
     }
 }
 // ========================================================
+
 // Attribute Wrangling
 
 extern netCDF::NcVarAtt get_att(netCDF::NcVar &ncvar, std::string const &name);
@@ -1205,7 +1206,7 @@ std::vector<netCDF::NcDim> get_or_add_dims(
 
 
 
-template<class TypeT>
+template<class TypeT, class CastT>
 void nc_rw_vector(
     netCDF::NcGroup *nc,
     char rw,
@@ -1229,15 +1230,15 @@ void nc_rw_vector(
     std::vector<size_t> countp = {ncsize};
     switch(rw) {
         case 'r' :
-            ncvar.getVar(startp, countp, &(*val)[0]);
+            ncvar.getVar(startp, countp, (CastT *)&(*val)[0]);
         break;
         case 'w' :
-            ncvar.putVar(startp, countp, &(*val)[0]);
+            ncvar.putVar(startp, countp, (CastT *)&(*val)[0]);
         break;
     }
 }
 
-template<class TypeT>
+template<class TypeT, class CastT=TypeT>
 std::vector<TypeT> nc_read_vector(
     netCDF::NcGroup *nc,
     std::string const &vname)
@@ -1249,7 +1250,7 @@ std::vector<TypeT> nc_read_vector(
 
 
 /** Define and write a std::vector. */
-template<class TypeT>
+template<class TypeT, class CastT=TypeT>
 netCDF::NcVar ncio_vector(
     NcIO &ncio,
     std::vector<TypeT> &val,
@@ -1260,7 +1261,7 @@ netCDF::NcVar ncio_vector(
 {
     netCDF::NcVar ncvar = get_or_add_var(ncio, vname, snc_type, dims);
 
-    ncio += std::bind(&nc_rw_vector<TypeT>, ncio.nc, ncio.rw, &val, alloc, vname);
+    ncio += std::bind(&nc_rw_vector<TypeT,CastT>, ncio.nc, ncio.rw, &val, alloc, vname);
     return ncvar;
 }
 // ----------------------------------------------------
