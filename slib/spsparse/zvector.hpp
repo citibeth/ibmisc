@@ -62,7 +62,7 @@ ZVector<ValueT,RANK>::
         : zbuf(_zbuf),
         algo(_algo),
         os(std::ios_base::out | std::ios_base::binary),
-        zos(os)
+        zos(os, zstr::ostreambuf::default_buff_size, Z_DEFAULT_COMPRESSION)
     {
         // Write the algo to the stream!
         int ialgo = boost::endian::native_to_big((int)algo);

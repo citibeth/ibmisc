@@ -314,7 +314,7 @@ private:
     char * out_buff;
     detail::z_stream_wrapper * zstrm_p;
     std::size_t buff_size;
-
+public:
     static const std::size_t default_buff_size = (std::size_t)1 << 20;
 }; // class ostreambuf
 
@@ -342,8 +342,9 @@ class ostream
     : public std::ostream
 {
 public:
-    ostream(std::ostream & os)
-        : std::ostream(new ostreambuf(os.rdbuf()))
+    ostream(std::ostream & os,
+        std::size_t _buff_size = ostreambuf::default_buff_size, int _level = Z_DEFAULT_COMPRESSION)
+        : std::ostream(new ostreambuf(os.rdbuf(), _buff_size, _level))
     {
         exceptions(std::ios_base::badbit);
     }

@@ -159,10 +159,16 @@ printf("BEGIN ncio(%c)\n", ncio.rw);
         get_or_put_att(info_v, ncio.rw, "nnz", "int64", &_nnz, 1);
         get_or_put_att(info_v, ncio.rw, "shape", "int64", &_shape[0], RANK);
 
-        ncio_vector<char,uint8_t>(ncio, indices, true, vname+".indices", "ubyte",
+        netCDF::NcVar ncvar;
+        ncvar = ncio_vector<char,uint8_t>(
+            ncio, indices, true, vname+".indices", "ubyte",
             get_or_add_dims(ncio, indices, {vname + ".indices.zsize"}));
-        ncio_vector<char,uint8_t>(ncio, values, true, vname+".values", "ubyte",
+        ncvar.setCompression(false, false, 0);    // We're already compressing, NetCDF should not also compress
+
+        ncvar = ncio_vector<char,uint8_t>(
+            ncio, values, true, vname+".values", "ubyte",
             get_or_add_dims(ncio, values, {vname + ".values.zsize"}));
+        ncvar.setCompression(false, false, 0);    // We're already compressing, NetCDF should not also compress
 
 printf("END ncio(%c)\n", ncio.rw);
     }
