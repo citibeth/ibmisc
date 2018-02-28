@@ -60,8 +60,8 @@ void _check_nc_rank(
     // Check rank of NetCDF variable
     if (ncvar.getDimCount() != rank)
         (*ibmisc_error)(-1,
-            "NetCDF variable of rank %ld does not match blitz::Array "
-            "of rank %d", ncvar.getDimCount(), rank);
+            "NetCDF variable (%s) of rank %ld does not match blitz::Array "
+            "of rank %d", ncvar.getName().c_str(), ncvar.getDimCount(), rank);
 }
 
 std::vector<NamedDim> named_dims(netCDF::NcVar &ncvar)

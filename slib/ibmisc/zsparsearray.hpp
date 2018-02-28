@@ -20,9 +20,10 @@ public:
     typedef ValueT val_type;
 
 private:
-    spsparse::accum::ZVector<IndexT,RANK> indices;
-    spsparse::accum::ZVector<ValueT,1> values;
+    spsparse::vaccum::ZVector<IndexT,RANK> indices;
+    spsparse::vaccum::ZVector<ValueT,1> values;
     std::array<long,RANK> &shape;
+    long &nnz;
 
 public:
     ZSparseArray_Accum(
@@ -35,10 +36,10 @@ public:
     {
         ++nnz;
         indices.add(index);
-        values.add(value);
+        values.add({value});
     }
 
-    void set_shape(std::array<long,RANK> const &_shape);
+    void set_shape(std::array<long,RANK> const &_shape)
         { shape = _shape; }
 };
 
@@ -50,7 +51,10 @@ ZSparseArray_Accum<IndexT,ValueT,RANK>::
         std::vector<char> &_values,     // Holds std::array<ValueT,1>
         std::array<long,RANK> &_shape,
         long &_nnz)
-    : indices(_indices, ZVAlgo::DIFFS), values(_values, ZVAlgo::PLAIN), shape(_shape), nnz(_nnz) {}
+    : indices(_indices, spsparse::ZVAlgo::DIFFS),
+        values(_values, spsparse::ZVAlgo::PLAIN),
+        shape(_shape), nnz(_nnz)
+    {}
 
 
 // ======================================================================================
@@ -58,7 +62,7 @@ ZSparseArray_Accum<IndexT,ValueT,RANK>::
 template<class IndexT, class ValueT, int RANK>
 class ZSparseArray_Generator {
     spsparse::vgen::ZVector<IndexT,RANK> indices;
-    spsparse::vgen::ZVector<ValueT,RANK> Values;
+    spsparse::vgen::ZVector<ValueT,1> values;
 
 public:
     ZSparseArray_Generator(
@@ -75,7 +79,7 @@ public:
         { return *indices; }
 
     ValueT value() const
-        { return *values; }
+        { return (*values)[0]; }
 
 };
 
@@ -110,7 +114,7 @@ class ZSparseArray {
     std::array<long, RANK> _shape;
 
 public:
-    ZSparseArray(std::array<long, RANK> shape) :
+    ZSparseArray(std::array<long, RANK> const &shape) :
         _nnz(0), _shape(shape)
     {}
 
@@ -119,12 +123,20 @@ public:
 
     void ncio(NcIO &ncio, std::string const &vname);
 
+    typedef ZSparseArray_Accum<IndexT,ValueT,RANK> accum_type;
     /** Creates an encoder */
-    ZSparseArray_Accum<IndexT,ValueT,RANK> accum()
-        { return ZSparseArray_Accum<IndexT,ValueT,RANK>(*this); }
+    std::unique_ptr<accum_type> accum()
+        { return std::unique_ptr<accum_type>(new accum_type(indices, values, _shape, _nnz)); }
 
-    ZSparseArray_Gen<IndexT,ValueT,RANK> generator() const
-        { return generator_type(*this); }
+
+    typedef ZSparseArray_Generator<IndexT,ValueT,RANK> generator_type;
+    std::unique_ptr<generator_type> generator() const
+    {
+        return std::unique_ptr<generator_type>(new generator_type(
+            *const_cast<std::vector<char> *>(&indices),
+            *const_cast<std::vector<char> *>(&values)));
+
+    }
 
 
     template<class AccumT>
@@ -139,15 +151,19 @@ public:
 
 
 template<class IndexT, class ValueT, int RANK>
-void ZSparseArray<CountT,IndexT,ValueT,RANK>::
+void ZSparseArray<IndexT,ValueT,RANK>::
     ncio(NcIO &ncio, std::string const &vname)
     {
+printf("BEGIN ncio(%c)\n", ncio.rw);
         auto info_v = get_or_add_var(ncio, vname + ".info", "int", {});
         get_or_put_att(info_v, ncio.rw, "nnz", "int64", &_nnz, 1);
         get_or_put_att(info_v, ncio.rw, "shape", "int64", &_shape[0], RANK);
 
-        ncio_vector(ncio, indices, true, vname+".indices", "ubyte", {});
-        ncio_vector(ncio, values, true, vname+".values", "ubyte", {});
+        auto dims(get_or_add_dims(ncio, indices, {vname + ".zsize"}));    // size ignored on read
+
+        ncio_vector(ncio, indices, true, vname+".indices", "ubyte", dims);
+        ncio_vector(ncio, values, true, vname+".values", "ubyte", dims);
+printf("END ncio(%c)\n", ncio.rw);
     }
 
 
