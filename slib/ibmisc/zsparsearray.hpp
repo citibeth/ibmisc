@@ -114,6 +114,11 @@ class ZSparseArray {
     std::array<long, RANK> _shape;
 
 public:
+    ZSparseArray() : _nnz(0)
+    {
+        for (int i=0; i<RANK; ++i) _shape[i] = 0;
+    }
+
     ZSparseArray(std::array<long, RANK> const &shape) :
         _nnz(0), _shape(shape)
     {}
@@ -154,7 +159,6 @@ template<class IndexT, class ValueT, int RANK>
 void ZSparseArray<IndexT,ValueT,RANK>::
     ncio(NcIO &ncio, std::string const &vname)
     {
-printf("BEGIN ncio(%c)\n", ncio.rw);
         auto info_v = get_or_add_var(ncio, vname + ".info", "int", {});
         get_or_put_att(info_v, ncio.rw, "nnz", "int64", &_nnz, 1);
         get_or_put_att(info_v, ncio.rw, "shape", "int64", &_shape[0], RANK);
@@ -163,14 +167,14 @@ printf("BEGIN ncio(%c)\n", ncio.rw);
         ncvar = ncio_vector<char,uint8_t>(
             ncio, indices, true, vname+".indices", "ubyte",
             get_or_add_dims(ncio, indices, {vname + ".indices.zsize"}));
-        ncvar.setCompression(false, false, 0);    // We're already compressing, NetCDF should not also compress
+        if (ncio.rw == 'w')
+            ncvar.setCompression(false, false, 0);    // We're already compressing, NetCDF should not also compress
 
         ncvar = ncio_vector<char,uint8_t>(
             ncio, values, true, vname+".values", "ubyte",
             get_or_add_dims(ncio, values, {vname + ".values.zsize"}));
-        ncvar.setCompression(false, false, 0);    // We're already compressing, NetCDF should not also compress
-
-printf("END ncio(%c)\n", ncio.rw);
+        if (ncio.rw == 'w')
+            ncvar.setCompression(false, false, 0);    // We're already compressing, NetCDF should not also compress
     }
 
 

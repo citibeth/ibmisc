@@ -208,9 +208,19 @@ TEST_F(ZVectorTest, ZSparseArray1)
         zsa1.ncio(ncio, "vals");
     }
 
+    // Load it
+    ZSparseArray<int,double,2> zsa2;
+    {NcIO ncio(fname, 'r');
+        zsa2.ncio(ncio, "vals");
+    }
+    EXPECT_EQ(zsa1.nnz(), zsa2.nnz());
+    EXPECT_EQ(zsa1.shape()[0], zsa2.shape()[0]);
+    EXPECT_EQ(zsa1.shape()[1], zsa2.shape()[1]);
+
+
     // Uncompress it
-    TupleList<int,double,2> arr2(zsa1.shape());
-    for (auto ii(zsa1.generator()); ++*ii; ) {
+    TupleList<int,double,2> arr2(zsa2.shape());
+    for (auto ii(zsa2.generator()); ++*ii; ) {
         arr2.add(ii->index(), ii->value());
     }
 
