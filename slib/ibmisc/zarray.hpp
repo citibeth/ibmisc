@@ -10,19 +10,10 @@
 
 namespace ibmisc {
 
-BOOST_ENUM_VALUES(SparseFillType, int,
-    (zero) (0)
-    (nan) (1)
-)
-
-
-
-
-
-// ======================================================================================
+// ======================================================================
 
 template<class IndexT, class ValueT, int RANK>
-class ZSparseArray_Accum {
+class ZArray_Accum {
 public:
     typedef ValueT val_type;
 
@@ -33,7 +24,7 @@ private:
     long &nnz;
 
 public:
-    ZSparseArray_Accum(
+    ZArray_Accum(
         std::vector<char> &_indices,    // Holds std::array<IndexT,RANK>
         std::vector<char> &_values,     // Holds std::array<ValueT,1>
         std::array<long,RANK> &_shape,
@@ -52,8 +43,8 @@ public:
 
 
 template<class IndexT, class ValueT, int RANK>
-ZSparseArray_Accum<IndexT,ValueT,RANK>::
-    ZSparseArray_Accum(
+ZArray_Accum<IndexT,ValueT,RANK>::
+    ZArray_Accum(
         std::vector<char> &_indices,    // Holds std::array<IndexT,RANK>
         std::vector<char> &_values,     // Holds std::array<ValueT,1>
         std::array<long,RANK> &_shape,
@@ -64,15 +55,15 @@ ZSparseArray_Accum<IndexT,ValueT,RANK>::
     {}
 
 
-// ======================================================================================
+// ========================================================================
 
 template<class IndexT, class ValueT, int RANK>
-class ZSparseArray_Generator {
+class ZArray_Generator {
     spsparse::vgen::ZVector<IndexT,RANK> indices;
     spsparse::vgen::ZVector<ValueT,1> values;
 
 public:
-    ZSparseArray_Generator(
+    ZArray_Generator(
         std::vector<char> &_indices,    // Holds std::array<IndexT,RANK>
         std::vector<char> &_values)     // Holds std::array<ValueT,1>
     : indices(_indices), values(_values) {}
@@ -91,7 +82,7 @@ public:
 };
 
 template<class IndexT, class ValueT, int RANK>
-bool ZSparseArray_Generator<IndexT,ValueT,RANK>::
+bool ZArray_Generator<IndexT,ValueT,RANK>::
     operator++()
     {
         // Increment the iterators
@@ -103,30 +94,30 @@ bool ZSparseArray_Generator<IndexT,ValueT,RANK>::
     }
 
 
-// ======================================================================================
+// =========================================================================
 
+/** A compressed sparse array format
 
-
-/** NOTE: Singular used for template parameters, plural used for
+NOTE: Singular used for template parameters, plural used for
     vectors holding plural things (or accumulators).
 TODO: Add a ValueEqualT template parameter, to allow the user to change it if needed (it's not needed). */
 template<class IndexT, class ValueT, int RANK>
-class ZSparseArray {
+class ZArray {
 
-    friend class ZSparseArray_Generator<IndexT,ValueT,RANK>;
+    friend class ZArray_Generator<IndexT,ValueT,RANK>;
 
     std::vector<char> indices;    // Holds std::array<IndexT,RANK>
     std::vector<char> values;     // Holds std::array<ValueT,1>
-    long _nnz;    // Number of elements added to this ZSparseArray
+    long _nnz;    // Number of elements added to this ZArray
     std::array<long, RANK> _shape;
 
 public:
-    ZSparseArray() : _nnz(0)
+    ZArray() : _nnz(0)
     {
         for (int i=0; i<RANK; ++i) _shape[i] = 0;
     }
 
-    ZSparseArray(std::array<long, RANK> const &shape) :
+    ZArray(std::array<long, RANK> const &shape) :
         _nnz(0), _shape(shape)
     {}
 
@@ -135,13 +126,13 @@ public:
 
     void ncio(NcIO &ncio, std::string const &vname);
 
-    typedef ZSparseArray_Accum<IndexT,ValueT,RANK> accum_type;
+    typedef ZArray_Accum<IndexT,ValueT,RANK> accum_type;
     /** Creates an encoder */
     std::unique_ptr<accum_type> accum()
         { return std::unique_ptr<accum_type>(new accum_type(indices, values, _shape, _nnz)); }
 
 
-    typedef ZSparseArray_Generator<IndexT,ValueT,RANK> generator_type;
+    typedef ZArray_Generator<IndexT,ValueT,RANK> generator_type;
     std::unique_ptr<generator_type> generator() const
     {
         return std::unique_ptr<generator_type>(new generator_type(
@@ -163,7 +154,7 @@ public:
 
 
 template<class IndexT, class ValueT, int RANK>
-void ZSparseArray<IndexT,ValueT,RANK>::
+void ZArray<IndexT,ValueT,RANK>::
     ncio(NcIO &ncio, std::string const &vname)
     {
         auto info_v = get_or_add_var(ncio, vname + ".info", "int", {});

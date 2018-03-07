@@ -617,6 +617,7 @@ static void nc_write_eigen(
     int const N = A->nonZeros();
 
 
+    // Create in-memory data structure amenable to writing to disk quickly
     {std::vector<int> indices;
         std::vector<size_t> startp {0, 0};        // SIZE, RANK
         std::vector<size_t> countp {N, 2};  // Write RANK elements at a time
@@ -629,6 +630,7 @@ static void nc_write_eigen(
         indices_v.putVar(&indices[0]);
     }
 
+    // Write it out!
     {std::vector<double> vals;
         std::vector<size_t> startp {0};
         std::vector<size_t> countp {N};
@@ -651,7 +653,7 @@ void ncio_eigen(
     std::string const &vname);
 
 template<class _Scalar, int _Options, class _StorageIndex>
-static void ncio_eigen(
+void ncio_eigen(
     ibmisc::NcIO &ncio,
     Eigen::SparseMatrix<_Scalar,_Options,_StorageIndex> &A,
     std::string const &vname)
@@ -667,12 +669,8 @@ static void ncio_eigen(
     // Count the number of elements in the sparse matrix.
     // NOTE: This can/does give a diffrent answer from A.nonZeros().
     //       But it is what we want for dimensioning netCDF arrays.
-//    long count=0;
-//    for (auto ii(begin(A)); ii != end(A); ++ii) ++count;
     long const count = A.nonZeros();
     dims = ibmisc::get_or_add_dims(ncio, dim_names, {count, 2});
-
-printf("eigen2 bounds1: (%ld %ld)\n", count, (long)2);
 
     auto info_v = get_or_add_var(ncio, vname + ".info", "int64", {});
     std::array<size_t,2> shape { A.rows(), A.cols() };

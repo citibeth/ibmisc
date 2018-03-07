@@ -1,4 +1,4 @@
-void WeightedMatrix_Z::apply_weight(
+void Compressed::apply_weight(
     int dim,    // 0=B, 1=A
     blitz::Array<ValueT,2> const &As,    // As(nvec, nA)
     blitz::Array<ValueT,2> &out,          // out(nvec)
@@ -16,7 +16,7 @@ void WeightedMatrix_Z::apply_weight(
     }
 }
 
-void WeightedMatrix_Z::apply_M(
+void Compressed::apply_M(
     blitz::Array<double,2> const &As,    // As(nvec, nA)
     blitz::Array<double,2> &out,         // out(nvec, nB)
     FillType fill_type=FillType::nan,
@@ -76,7 +76,7 @@ void WeightedMatrix_Z::apply_M(
     }
 }
 
-void WeightedMatrix_Z::ncio(NcIO &ncio, std::string const &vname)
+void Compressed::ncio(NcIO &ncio, std::string const &vname)
 {
     auto info_v = get_or_add_var(ncio, vname + ".info", "int", {});
     get_or_put_att(info_v, ncio.rw, "conservative", conservative);

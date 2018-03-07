@@ -1,12 +1,24 @@
-#ifndef IBMISC_SPARSEMATRIX_HPP
-#define IBMISC_SPARSEMATRIX_HPP
+#ifndef IBMISC_LINTRANSFORM_LINTRANSFORM_HPP
+#define IBMISC_LINTRANSFORM_LINTRANSFORM_HPP
+
+#include <blitz/array.h>
 
 namespace ibmisc {
+namespace lintransform {
+
+BOOST_ENUM_VALUES(FillType, int,
+    (zero_all) (0)    // Fill unused dimensions with 0
+    (nan_all) (1)     // Fill unused dimensions with NaN
+    (zero_some) (2)    // Zero out ONLY the dimensions we use
+    (ignore) (3)  // Ignore unused imensions, don't touch them
+)
+
+
 
 #if 0
 /** Abstract sparse vector, just enough to multiply by. */
 template<class ValueT>
-class Vector_Abstract {
+class Vector {
 
     /** Compute inner product with v
     @param v_s Other vector to compute inner product with.
@@ -22,17 +34,8 @@ class Vector_Abstract {
 
 /** Abstract "compressed" matrix, just enough to multiply by. */
 template<class ValueT>
-class Matrix_Abstract {
-
-    BOOST_ENUM_VALUES(FillType, int,
-        (zero_all) (0)    // Fill unused dimensions with 0
-        (nan_all) (1)     // Fill unused dimensions with NaN
-        (zero_some) (2)    // Zero out ONLY the dimensions we use
-        (ignore) (3)  // Ignore unused imensions, don't touch them
-    )
-
-
-
+class Matrix
+{
     /** Computes M*v_s, stores result in out_s. */
     virtual void apply(
         blitz::Array<ValueT,2> const &As,
@@ -44,7 +47,7 @@ class Matrix_Abstract {
 
 
 template<class ValueT>
-class WeightedMatrix_Abstract {
+class Weighted {
     // TmpAlloc tmp;    // Sometimes, hold the things we're wrapping.
 
     virtual void apply_weight(
@@ -94,5 +97,5 @@ public:
 
 
 
-};    // namespace
+}};    // namespace
 #endif    // guad

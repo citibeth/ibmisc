@@ -1,6 +1,11 @@
+#ifndef IBMISC_LINTRANSFORM_COMPRESSED_HPP
+#define IBMISC_LINTRANSFORM_COMPRESSED_HPP
+
+namespace ibmisc {
+namespace lintransform {
 
 // ==================================================================
-class WeightedMatrix_Z : public WeightedMatrix_Abstract<double>
+class Weighted_Compressed : public Weighted<double>
 {
     std::array<ZSparseArray<int,double,1>, 2> weights;    // {wM, Mw}
     ZSparseArray<int,double,2> &M;
@@ -24,6 +29,5 @@ public:
 };
 
 
-
-
-
+}};    // namespace
+#endif    // guad
