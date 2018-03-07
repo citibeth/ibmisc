@@ -10,6 +10,13 @@
 
 namespace ibmisc {
 
+BOOST_ENUM_VALUES(SparseFillType, int,
+    (zero) (0)
+    (nan) (1)
+)
+
+
+
 
 
 // ======================================================================================
@@ -176,16 +183,6 @@ void ZSparseArray<IndexT,ValueT,RANK>::
         if (ncio.rw == 'w')
             ncvar.setCompression(false, false, 0);    // We're already compressing, NetCDF should not also compress
     }
-
-
-
-// ==================================================================
-
-
-
-
-
-
 
 // ---------------------------------------------------------------------
 } // namespace ibmisc
