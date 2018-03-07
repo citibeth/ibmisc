@@ -75,3 +75,13 @@ void WeightedMatrix_Z::apply_M(
         }
     }
 }
+
+void WeightedMatrix_Z::ncio(NcIO &ncio, std::string const &vname)
+{
+    auto info_v = get_or_add_var(ncio, vname + ".info", "int", {});
+    get_or_put_att(info_v, ncio.rw, "conservative", conservative);
+
+    weights[0].ncio(ncio, vname + ".wM");
+    M.ncio(ncio, vname + ".M");
+    weights[1].ncio(ncio, vname + ".Mw");
+}
