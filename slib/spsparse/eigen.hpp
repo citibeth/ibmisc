@@ -606,7 +606,7 @@ void nc_write_eigen(
     std::string const &vname);
 
 template<class _Scalar, int _Options, class _StorageIndex>
-void nc_write_eigen(
+static void nc_write_eigen(
     netCDF::NcGroup *nc,
     Eigen::SparseMatrix<_Scalar,_Options,_StorageIndex> *A,
     std::string const &vname)
@@ -614,15 +614,32 @@ void nc_write_eigen(
     netCDF::NcVar indices_v = nc->getVar(vname + ".indices");
     netCDF::NcVar vals_v = nc->getVar(vname + ".values");
 
-    std::vector<size_t> startp = {0, 0};        // SIZE, RANK
-    std::vector<size_t> countp = {1, 2};  // Write RANK elements at a time
-    for (auto ii = begin(*A); ii != end(*A); ++ii, ++startp[0]) {
-        auto index(ii->index());
-        auto &val(ii->value());
+    int const N = A->nonZeros();
 
-        indices_v.putVar(startp, countp, &index[0]);
-        vals_v.putVar(startp, countp, &val);
+
+    {std::vector<int> indices;
+        std::vector<size_t> startp {0, 0};        // SIZE, RANK
+        std::vector<size_t> countp {N, 2};  // Write RANK elements at a time
+
+        indices.reserve(N*2);
+        for (auto ii = begin(*A); ii != end(*A); ++ii, ++startp[0]) {
+            indices.push_back(ii->row());
+            indices.push_back(ii->col());
+        }
+        indices_v.putVar(&indices[0]);
     }
+
+    {std::vector<double> vals;
+        std::vector<size_t> startp {0};
+        std::vector<size_t> countp {N};
+
+        vals.reserve(N);
+        for (auto ii = begin(*A); ii != end(*A); ++ii, ++startp[0]) {
+            vals.push_back(ii->value());
+        }
+        vals_v.putVar(&vals[0]);    // Write to entire NetCDF variable directly from RAM
+    }
+
 }
 
 
@@ -634,7 +651,7 @@ void ncio_eigen(
     std::string const &vname);
 
 template<class _Scalar, int _Options, class _StorageIndex>
-void ncio_eigen(
+static void ncio_eigen(
     ibmisc::NcIO &ncio,
     Eigen::SparseMatrix<_Scalar,_Options,_StorageIndex> &A,
     std::string const &vname)
@@ -642,7 +659,7 @@ void ncio_eigen(
     if (ncio.rw == 'r') (*ibmisc::ibmisc_error)(-1,
         "ncio_eigen() currently does not support reading.");
 
-    std::vector<std::string> const dim_names({vname + ".size", vname + ".rank"});
+    std::vector<std::string> const dim_names({vname + ".nnz", vname + ".rank"});
     std::vector<netCDF::NcDim> dims;        // Dimensions in NetCDF
     std::vector<size_t> dim_sizes;          // Length of our two dimensions.
 
@@ -650,15 +667,18 @@ void ncio_eigen(
     // Count the number of elements in the sparse matrix.
     // NOTE: This can/does give a diffrent answer from A.nonZeros().
     //       But it is what we want for dimensioning netCDF arrays.
-    long count=0;
-    for (auto ii(begin(A)); ii != end(A); ++ii) ++count;
+//    long count=0;
+//    for (auto ii(begin(A)); ii != end(A); ++ii) ++count;
+    long const count = A.nonZeros();
     dims = ibmisc::get_or_add_dims(ncio, dim_names, {count, 2});
+
+printf("eigen2 bounds1: (%ld %ld)\n", count, (long)2);
 
     auto info_v = get_or_add_var(ncio, vname + ".info", "int64", {});
     std::array<size_t,2> shape { A.rows(), A.cols() };
     ibmisc::get_or_put_att(info_v, 'w', "shape", "int64", shape);
 
-    get_or_add_var(ncio, vname + ".indices", "int64", dims);
+    get_or_add_var(ncio, vname + ".indices", "int", dims);
     get_or_add_var(ncio, vname + ".values", "double", {dims[0]});
     ncio += std::bind(&nc_write_eigen<_Scalar, _Options, _StorageIndex>, ncio.nc, &A, vname);
 
