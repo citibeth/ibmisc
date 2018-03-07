@@ -3,95 +3,109 @@
 namespace ibmisc {
 namespace lintransform {
 
-static std::unique_ptr<Eigen> compute_AEvI(
-    IceRegridder const *regridder,
-    std::array<SparseSetT *,2> dims,
-    RegridMatrices::Params const &params,
-    blitz::Array<double,1> const *elevmaskI,
-    UrAE const &AE)
+// ----------------------------------------------------------------
+static void mask_result(EigenDenseMatrixT &ret, blitz::Array<double,1> const &wB_b, double fill)
 {
-printf("BEGIN compute_AEvI scale=%d correctA=%d\n", params.scale, params.correctA);
-    std::unique_ptr<Eigen> ret(new Eigen(dims, true));
-    SparseSetT * const dimA(ret->dims[0]);
-    SparseSetT * const dimI(ret->dims[1]);
-    SparseSetT _dimG;
-    SparseSetT * const dimG(&_dimG);
+    int nB = ret.rows();    // == wB_b.extent(0)
+    int nvar = ret.cols();
 
-    if (dimA) dimA->set_sparse_extent(AE.nfull);
-    if (dimI) dimI->set_sparse_extent(regridder->nI());
-    dimG->set_sparse_extent(regridder->nG());
-
-    // ----- Get the Ur matrices (which determines our dense dimensions)
-    MakeDenseEigenT GvI_m(
-        // Only includes ice model grid cells with ice in them.
-        std::bind(&IceRegridder::GvI, regridder, _1, elevmaskI),
-        {SparsifyTransform::ADD_DENSE},
-        {dimG, dimI}, '.');
-    MakeDenseEigenT ApvG_m(        // _m ==> type MakeDenseEigenT
-        // Only includes ice model grid cells with ice in them.
-        AE.GvAp,
-        {SparsifyTransform::ADD_DENSE},
-        {dimG, dimA}, 'T');
-
-    // ----- Convert to Eigen and multiply
-    auto ApvG(ApvG_m.to_eigen());
-    auto GvI(GvI_m.to_eigen());
-    auto sGvI(sum_to_diagonal(GvI, 0, '-'));
-
-    std::unique_ptr<EigenSparseMatrixT> ApvI(
-        new EigenSparseMatrixT(ApvG * sGvI * GvI));
-    ret->Mw.reference(sum(*ApvI, 1, '+'));    // Area of I cells
-
-    // ----- Apply final scaling, and convert back to sparse dimension
-    if (params.correctA) {
-        // ----- Compute the final weight matrix
-        auto wAvAp(MakeDenseEigenT(                   // diagonal
-            AE.sApvA,
-            {SparsifyTransform::TO_DENSE_IGNORE_MISSING},
-            {dimA, dimA}, '.').to_eigen());
-
-        auto wApvI(sum_to_diagonal(*ApvI, 0, '+'));        // diagonal
-
-        EigenSparseMatrixT wAvI(wAvAp * wApvI);    // diagonal...
-
-        // +correctA: Weight matrix in A space
-        ret->wM.reference(sum(wAvI, 0, '+'));    // Area of A cells
-
-        // Compute the main matrix
-        auto sAvAp(sum_to_diagonal(wAvAp, 0, '-'));
-        if (params.scale) {
-            // Get two diagonal Eigen scale matrices
-            auto sApvI(sum_to_diagonal(wApvI, 0, '-'));
-
-            ret->M.reset(new EigenSparseMatrixT(
-                sAvAp * sApvI * *ApvI));    // AvI_scaled
-        } else {
-            // Should be like this for test_conserv.py
-            // Note that sAvAp * sApvI = [size (weight) of grid cells in A]
-            ret->M = std::move(ApvI);
-        }
-
-    } else {
-
-        // ----- Compute the final weight matrix
-        // ~correctA: Weight matrix in Ap space
-        auto wApvI_b(sum(*ApvI, 0, '+'));
-        ret->wM.reference(wApvI_b);
-
-        if (params.scale) {
-            // Get two diagonal Eigen scale matrices
-            auto sApvI(diag_matrix(wApvI_b, '-'));
-
-            ret->M.reset(new EigenSparseMatrixT(
-                sApvI * *ApvI));    // ApvI_scaled
-        } else {
-            ret->M = std::move(ApvI);
-        }
+    // Mask out cells that slipped into the output because they were
+    // in the SparseSet; but don't actually get any contribution.
+    for (int i=0; i<nB; ++i) {
+        if (wB_b(i) != 0.) continue;
+        for (int n=0; n<nvar; ++n) ret(i,n) = fill;
     }
 
-printf("END compute_AEvI\n");
+}
+// -----------------------------------------------------------------------
+EigenDenseMatrixT Eigen::apply_e(
+    // Eigen const &BvA,            // BvA_s{ij} smoothed regrid matrix
+    blitz::Array<double,2> const &A_b,       // A_b{nj} One row per variable
+    double fill,     // Fill value for cells not in BvA matrix
+    bool force_conservation) const
+{
+    auto &BvA(*this);
+
+    // A{jn}   One col per variable
+    int nvar = A_b.extent(0);
+    int nA = A_b.extent(1);
+
+    Eigen::Map<EigenDenseMatrixT> const A(
+        const_cast<double *>(A_b.data()), nA, nvar);
+
+    // |i| = size of output vector space (B)
+    // |j| = size of input vector space (A)
+    // |n| = number of variables being processed together
+
+
+    if (BvA.M->cols() != A.rows()) (*icebin_error)(-1,
+        "BvA.cols=%d does not match A.rows=%d", BvA.M->cols(), A.rows());
+
+    // Apply initial regridding.
+    EigenDenseMatrixT B0(*BvA.M * A);        // B0{in}
+
+    // Only apply conservation correction if all of:
+    //   a) Matrix is smoothed, so it needs a conservation correction
+    //   b) User requested conservation be maintained
+    if (BvA.conservative || !force_conservation) {
+        // Remove cells not in the sparse matrix
+        mask_result(B0, BvA.wM, fill);
+        return B0;
+    }
+    // -------------- Apply the Conservation Correction
+    // Integrate each variable of input (A) over full domain
+    auto &wA_b(BvA.Mw);
+    Eigen::Map<EigenRowVectorT> const wA(const_cast<double *>(wA_b.data()), 1, wA_b.extent(0));
+    typedef Eigen::Array<double,Eigen::Dynamic,Eigen::Dynamic> EigenArrayT;
+    EigenArrayT TA((wA * A).array());        // TA{n} row array
+
+    // Integrate each variable of output (B) over full domain
+    auto &wB_b(BvA.wM);
+    int nB = wB_b.extent(0);
+    Eigen::Map<EigenRowVectorT> const wB(const_cast<double *>(wB_b.data()), 1, wB_b.extent(0));
+    EigenArrayT TB((wB * B0).array());
+    EigenArrayT TB_inv(1. / TB);    // TB_inv{n} row array
+
+    // Factor{nn}: Conservation correction for each variable.
+
+    auto Factor(TA * TB_inv);    // Factor{n} row array
+
+    std::cout << "-------- Eigen::apply() conservation" << std::endl;
+    std::cout << "    |input|    = " << TA << std::endl;
+    std::cout << "    |output|   = " << TB << std::endl;
+    std::cout << "    correction = " << Factor << std::endl;
+
+    EigenDenseMatrixT ret(B0 * Factor.matrix().asDiagonal());    // ret{in}
+    // Remove cells not in the sparse matrix
+    mask_result(B0, BvA.wM, fill);
+
     return ret;
 }
+
+blitz::Array<double,2> Eigen::apply(
+    // Eigen const &BvA,            // BvA_s{ij} smoothed regrid matrix
+    blitz::Array<double,2> const &A_b,       // A_b{nj} One row per variable
+    double fill,    // Fill value for cells not in BvA matrix
+    bool force_conservation,
+    ibmisc::TmpAlloc &tmp) const
+{
+    return spsparse::to_blitz<double>(apply_e(A_b, fill), tmp);
+}
+
+
+/** Apply to a single variable */
+blitz::Array<double,1> Eigen::apply(
+    // Eigen const &BvA,            // BvA_s{ij} smoothed regrid matrix
+    blitz::Array<double,1> const &A_b,       // A_b{j} One variable
+    double fill,    // Fill value for cells not in BvA matrix
+    bool force_conservation,
+    ibmisc::TmpAlloc &tmp) const
+{
+    auto A_b2(ibmisc::reshape<double,1,2>(A_b, {1, A_b.shape()[0]}));
+    auto ret2(spsparse::to_blitz(apply_e(A_b2, fill), tmp));
+    return ibmisc::reshape<double,2,1>(ret2, {ret2.shape()[1]});
+}
+// -----------------------------------------------------------------------
 // ---------------------------------------------------------
 
 
