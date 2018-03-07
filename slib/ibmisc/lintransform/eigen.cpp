@@ -1,4 +1,9 @@
-static std::unique_ptr<WeightedSparse> compute_AEvI(
+#include <ibmisc/lintransform/eigen.hpp>
+
+namespace ibmisc {
+namespace lintransform {
+
+static std::unique_ptr<Eigen> compute_AEvI(
     IceRegridder const *regridder,
     std::array<SparseSetT *,2> dims,
     RegridMatrices::Params const &params,
@@ -6,7 +11,7 @@ static std::unique_ptr<WeightedSparse> compute_AEvI(
     UrAE const &AE)
 {
 printf("BEGIN compute_AEvI scale=%d correctA=%d\n", params.scale, params.correctA);
-    std::unique_ptr<WeightedSparse> ret(new WeightedSparse(dims, true));
+    std::unique_ptr<Eigen> ret(new Eigen(dims, true));
     SparseSetT * const dimA(ret->dims[0]);
     SparseSetT * const dimI(ret->dims[1]);
     SparseSetT _dimG;
@@ -88,3 +93,33 @@ printf("END compute_AEvI\n");
     return ret;
 }
 // ---------------------------------------------------------
+
+
+void Eigen::ncio(ibmisc::NcIO &ncio,
+    std::string const &vname,
+    std::array<std::string,2> dim_names)
+{
+    // Matches dimension name created by SparseSet.
+    auto ncdims(ibmisc::get_or_add_dims(ncio,
+        {dim_names[0] + ".dense_extent", dim_names[1] + ".dense_extent"},
+        {dims[0]->dense_extent(), dims[1]->dense_extent()}));
+
+    // --------- M
+    ncio_eigen(ncio, *M, vname + ".M");
+
+    // ---- Mw
+    ncio_blitz_alloc<double,1>(ncio, Mw, vname + ".Mw", get_nc_type<double>(),
+        {ncdims[1]});
+
+    // ----------- wM
+    std::string matrix_name(dim_names[0] + "v" + dim_names[1]);
+    ncio_blitz_alloc<double,1>(ncio, wM, vname+".wM", get_nc_type<double>(),
+        {ncdims[0]});
+
+    netCDF::NcVar ncvar = ncio.nc->getVar(vname + ".M.info");
+    get_or_put_att(ncvar, ncio.rw,
+        "conservative", get_nc_type<bool>(), &conservative, 1);
+
+}
+
+}}    // namespace
