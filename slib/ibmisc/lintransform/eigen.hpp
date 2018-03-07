@@ -8,10 +8,10 @@ namespace ibmisc {
 namespace lintransform {
 
 /** Return value of a sparse matrix */
-struct Eigen {
+struct Weighted_Eigen : public Weighted {
     ibmisc::TmpAlloc tmp;            // Stuff that needs same lifetime as Eigen
 
-    std::array<SparseSetT *,2> dims;            // Dense-to-sparse mapping for the dimensions
+    std::array<SparseSetT *,2> dims;            // Dense-to-sparse mapping for the dimensions.  (Store the originals in tmp if you need to)
 
     // If M=BvA, then wM = wBvA = area of B cells
     blitz::Array<double,1> wM;           // Dense indexing
@@ -73,6 +73,26 @@ struct Eigen {
         std::string const &vname,
         std::array<std::string,2> dim_names);
 
+    // =============== Implement lintransform::Weighted
+    void apply_weight(
+        int dim,    // 0=B, 1=A
+        blitz::Array<ValueT,2> const &As,    // As(nvec, ndim)
+        blitz::Array<ValueT,2> &out,
+        FillType fill_type=FillType::nan,
+        int invert=false);
+
+    /** Sparse shape of the matrix */
+    std::array<long,2> shape();
+
+    /** Compute M * As */
+    void apply_M(
+        blitz::Array<ValueT,2> const &As,
+        blitz::Array<ValueT,2> &out,
+        FillType fill_type=FillType::nan,
+        bool force_conservation=true);
+
 };
+
+
 }}    // namespace
 #endif

@@ -199,6 +199,12 @@ public:
     TmpAlloc(TmpAlloc &&other) :
         deleters(std::move(other.deleters)) {}
 
+    void merge(TmpAlloc &&other)
+    {
+        for (auto const &x : other.deleters) deleters.push_back(x);
+        other.deleters.clear();
+    }
+
     void operator=(TmpAlloc &&other)
     {
         this->deleters = std::move(other.deleters);

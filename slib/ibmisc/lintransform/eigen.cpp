@@ -18,7 +18,7 @@ static void mask_result(EigenDenseMatrixT &ret, blitz::Array<double,1> const &wB
 
 }
 // -----------------------------------------------------------------------
-EigenDenseMatrixT Eigen::apply_e(
+EigenDenseMatrixT Weighted_Eigen::apply_e(
     // Eigen const &BvA,            // BvA_s{ij} smoothed regrid matrix
     blitz::Array<double,2> const &A_b,       // A_b{nj} One row per variable
     double fill,     // Fill value for cells not in BvA matrix
@@ -82,7 +82,7 @@ EigenDenseMatrixT Eigen::apply_e(
     return ret;
 }
 
-blitz::Array<double,2> Eigen::apply(
+blitz::Array<double,2> Weighted_Eigen::apply(
     // Eigen const &BvA,            // BvA_s{ij} smoothed regrid matrix
     blitz::Array<double,2> const &A_b,       // A_b{nj} One row per variable
     double fill,    // Fill value for cells not in BvA matrix
@@ -94,7 +94,7 @@ blitz::Array<double,2> Eigen::apply(
 
 
 /** Apply to a single variable */
-blitz::Array<double,1> Eigen::apply(
+blitz::Array<double,1> Weighted_Eigen::apply(
     // Eigen const &BvA,            // BvA_s{ij} smoothed regrid matrix
     blitz::Array<double,1> const &A_b,       // A_b{j} One variable
     double fill,    // Fill value for cells not in BvA matrix
@@ -109,7 +109,7 @@ blitz::Array<double,1> Eigen::apply(
 // ---------------------------------------------------------
 
 
-void Eigen::ncio(ibmisc::NcIO &ncio,
+void Weighted_Eigen::ncio(ibmisc::NcIO &ncio,
     std::string const &vname,
     std::array<std::string,2> dim_names)
 {
@@ -135,5 +135,36 @@ void Eigen::ncio(ibmisc::NcIO &ncio,
         "conservative", get_nc_type<bool>(), &conservative, 1);
 
 }
+
+// ------------------------------------------------------
+void apply_weight(
+    int dim,    // 0=B, 1=A
+    blitz::Array<ValueT,2> const &As,    // As(nvec, ndim)
+    blitz::Array<ValueT,2> &out,
+    FillType fill_type=FillType::nan,
+    int invert=false)
+{
+    TODO... invent new code
+    REMEMBER, this must work with SPARSE indexing!
+}
+
+/** Sparse shape of the matrix */
+std::array<long,2> shape()
+{ TODO }
+
+
+/** Compute M * As */
+void apply_M(
+    blitz::Array<ValueT,2> const &As,
+    blitz::Array<ValueT,2> &out,
+    FillType fill_type=FillType::nan,
+    bool force_conservation=true)
+{
+    TODO... move code from icebin_cython.cpp
+    REMEMBER, this must work with SPARSE indexing!
+}
+
+
+
 
 }}    // namespace

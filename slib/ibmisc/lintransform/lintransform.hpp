@@ -19,6 +19,7 @@ BOOST_ENUM_VALUES(FillType, int,
 /** Abstract sparse vector, just enough to multiply by. */
 template<class ValueT>
 class Vector {
+    virtual ~Vector() {}
 
     /** Compute inner product with v
     @param v_s Other vector to compute inner product with.
@@ -36,6 +37,8 @@ class Vector {
 template<class ValueT>
 class Matrix
 {
+    virtual ~Matrix() {}
+
     /** Computes M*v_s, stores result in out_s. */
     virtual void apply(
         blitz::Array<ValueT,2> const &As,
@@ -50,12 +53,17 @@ template<class ValueT>
 class Weighted {
     // TmpAlloc tmp;    // Sometimes, hold the things we're wrapping.
 
+    virtual ~Weighted() {}
+
     virtual void apply_weight(
         int dim,    // 0=B, 1=A
         blitz::Array<ValueT,2> const &As,    // As(nvec, ndim)
         blitz::Array<ValueT,2> &out,
         FillType fill_type=FillType::nan,
         int invert=false) = 0;
+
+    /** Sparse shape of the matrix */
+    virtual std::array<long,2> shape() = 0;
 
 public:
     /** Compute M * As */

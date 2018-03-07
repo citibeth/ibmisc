@@ -26,6 +26,8 @@ public:
         FillType fill_type=FillType::nan,
         bool force_conservation=true);
 
+    void ncio(..) {}
+
 };
 
 
