@@ -1,10 +1,15 @@
-#include <ibmisc/lintransform/eigen.hpp>
+#include <ibmisc/linear/eigen.hpp>
+#include <spsparse/eigen.hpp>
+#include <ibmisc/netcdf.hpp>
+
+using namespace spsparse;
+using namespace blitz;
 
 namespace ibmisc {
-namespace lintransform {
+namespace linear {
 
 // ----------------------------------------------------------------
-static void mask_result(EigenDenseMatrixT &ret, blitz::Array<double,1> const &wB_b, double fill)
+static void mask_result(Weighted_Eigen::EigenDenseMatrixT &ret, blitz::Array<double,1> const &wB_b, double fill)
 {
     int nB = ret.rows();    // == wB_b.extent(0)
     int nvar = ret.cols();
@@ -18,7 +23,7 @@ static void mask_result(EigenDenseMatrixT &ret, blitz::Array<double,1> const &wB
 
 }
 // -----------------------------------------------------------------------
-EigenDenseMatrixT Weighted_Eigen::apply_e(
+Weighted_Eigen::EigenDenseMatrixT Weighted_Eigen::apply_e(
     // Eigen const &BvA,            // BvA_s{ij} smoothed regrid matrix
     blitz::Array<double,2> const &A_b,       // A_b{nj} One row per variable
     double fill,     // Fill value for cells not in BvA matrix
@@ -38,7 +43,7 @@ EigenDenseMatrixT Weighted_Eigen::apply_e(
     // |n| = number of variables being processed together
 
 
-    if (BvA.M->cols() != A.rows()) (*icebin_error)(-1,
+    if (BvA.M->cols() != A.rows()) (*ibmisc_error)(-1,
         "BvA.cols=%d does not match A.rows=%d", BvA.M->cols(), A.rows());
 
     // Apply initial regridding.
@@ -113,6 +118,9 @@ void Weighted_Eigen::ncio(ibmisc::NcIO &ncio,
     std::string const &vname,
     std::array<std::string,2> dim_names)
 {
+    // Call to superclass
+    Weighted::ncio(ncio, vname);
+
     // Matches dimension name created by SparseSet.
     auto ncdims(ibmisc::get_or_add_dims(ncio,
         {dim_names[0] + ".dense_extent", dim_names[1] + ".dense_extent"},
@@ -137,31 +145,89 @@ void Weighted_Eigen::ncio(ibmisc::NcIO &ncio,
 }
 
 // ------------------------------------------------------
-void apply_weight(
+void Weighted_Eigen::apply_weight(
     int dim,    // 0=B, 1=A
-    blitz::Array<ValueT,2> const &As,    // As(nvec, ndim)
-    blitz::Array<ValueT,2> &out,
-    FillType fill_type=FillType::nan,
-    int invert=false)
+    blitz::Array<double,2> const &As,    // As(nvec, ndim)
+    blitz::Array<double,2> &out,    // out(nvec)
+    bool zero_out)
 {
-    TODO... invent new code
-    REMEMBER, this must work with SPARSE indexing!
+    auto &weights(dim == 0 ? wM : Mw);
+    auto const nvec(As.extent(0));
+    auto const nA(As.extent(1));
+
+    if (zero_out) out = 0;
+
+    for (int j_d=0; j_d < dims[dim]->dense_extent(); ++j_d) {
+        int const j_s = adim.to_sparse(j_d);
+        for (int k=0; k<nvec; ++k) {
+            out(k) += weights(j_d) * As(k,j_s);
+        }
+    }
 }
 
 /** Sparse shape of the matrix */
-std::array<long,2> shape()
-{ TODO }
+std::array<long,2> Weighted_Eigen::shape()
+    { return std::array<long,2>{dims[0]->sparse_extent(), dims[1]->sparse_extent()}; }
 
 
 /** Compute M * As */
-void apply_M(
-    blitz::Array<ValueT,2> const &As,
-    blitz::Array<ValueT,2> &out,
-    FillType fill_type=FillType::nan,
+void Weighted_Eigen::apply_M(
+    blitz::Array<double,2> const &A_s,
+    blitz::Array<double,2> &B_s,
+    AccumType accum_type,
     bool force_conservation=true)
 {
-    TODO... move code from icebin_cython.cpp
-    REMEMBER, this must work with SPARSE indexing!
+    // TODO: Re-do this method, to work without copying over the matrix.
+    //       This would have to stop using Eigen's facilities
+
+    // |j_s| = size of sparse input vector space (A_s)
+    // |j_d] = size of dense input vector space (A_d)
+    // |n| = number of variables being processed together
+
+    // Allocate dense A matrix
+    auto &bdim(*dims[0]);
+    auto &adim(*dims[1]);
+    int n_n = A_s.extent(0);
+
+    // Densify the A matrix
+    blitz::Array<double,2> A_d(n_n, adim.dense_extent());
+    for (int j_d=0; j_d < adim.dense_extent(); ++j_d) {
+        int const j_s = adim.to_sparse(j_d);
+        for (int n=0; n < n_n; ++n) {
+            A_d(n,j_d) = A_s(n,j_s);
+        }
+    }
+
+    // Apply...
+    auto B_d_eigen(apply_e(A_d, 0, force_conservation));    // Column major indexing
+
+    switch(accum_type) {
+        case AccumType::REPLACE :
+            for (int j_d=0; j_d < bdim.dense_extent(); ++j_d) {
+                if (wM(j_d) == 0.) continue;    // Skip nullspace that crept into dense
+                int j_s = bdim.to_sparse(j_d);
+                for (int n=0; n < n_n; ++n) B_s(n,j_s) = B_d_eigen(j_d,n);
+            }
+        break;
+        case AccumType::ACCUMULATE :
+            for (int j_d=0; j_d < bdim.dense_extent(); ++j_d) {
+                if (wM(j_d) == 0.) continue;    // Skip nullspace that crept into dense
+                int j_s = bdim.to_sparse(j_d);
+                for (int n=0; n < n_n; ++n) B_s(n,j_s) += B_d_eigen(j_d,n);
+            }
+        break;
+        case AccumType::REPLACE_OR_ACCUMULATE :
+            for (int j_d=0; j_d < bdim.dense_extent(); ++j_d) {
+                if (wM(j_d) == 0.) continue;    // Skip nullspace that crept into dense
+                int j_s = bdim.to_sparse(j_d);
+                for (int n=0; n < n_n; ++n) {
+                    auto &oval(B_s(n,j_s));
+                    if (std::isnan(oval)) oval = B_d_eigen(j_d,n);
+                    else oval += B_d_eigen(j_d,n);
+                }
+            }
+        break;
+    }
 }
 
 

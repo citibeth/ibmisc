@@ -13,7 +13,9 @@ set(IBMISC_SOURCE
     ibmisc/fortranio.cpp
     ibmisc/memory.cpp
     ibmisc/stdio.cpp
-    ibmisc/ncbulk.cpp)
+    ibmisc/ncbulk.cpp
+    ibmisc/linear/compressed.cpp
+    ibmisc/linear/eigen.cpp)
 
 
 if (USE_PROJ4)

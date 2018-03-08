@@ -1,14 +1,22 @@
-#ifndef IBMISC_LINTRANSFORM_EIGEN_HPP
-#define IBMISC_LINTRANSFORM_EIGEN_HPP
+#ifndef IBMISC_LINEAR_EIGEN_HPP
+#define IBMISC_LINEAR_EIGEN_HPP
 
 #include <memory>
-#include <ibmisc/lintransform/lintransform.hpp>
+#include <Eigen/SparseCore>
+#include <spsparse/SparseSet.hpp>
+#include <ibmisc/linear/linear.hpp>
 
 namespace ibmisc {
-namespace lintransform {
+namespace linear {
 
 /** Return value of a sparse matrix */
 struct Weighted_Eigen : public Weighted {
+    typedef spsparse::SparseSet<long,int> SparseSetT;
+    typedef Eigen::SparseMatrix<double,0,int> EigenSparseMatrixT;
+    typedef Eigen::Matrix<double, Eigen::Dynamic, Eigen::Dynamic> EigenDenseMatrixT;
+    typedef Eigen::Matrix<double, Eigen::Dynamic, 1> EigenColVectorT;
+    typedef Eigen::Matrix<double, 1, Eigen::Dynamic> EigenRowVectorT;
+
     ibmisc::TmpAlloc tmp;            // Stuff that needs same lifetime as Eigen
 
     std::array<SparseSetT *,2> dims;            // Dense-to-sparse mapping for the dimensions.  (Store the originals in tmp if you need to)
@@ -16,20 +24,13 @@ struct Weighted_Eigen : public Weighted {
     // If M=BvA, then wM = wBvA = area of B cells
     blitz::Array<double,1> wM;           // Dense indexing
 
-    typedef Eigen::SparseMatrix<double,0,int> EigenSparseMatrixT;
 
     std::unique_ptr<EigenSparseMatrixT> M;    // Dense indexing
 
     // Area of A cells
     blitz::Array<double,1> Mw;
 
-
-    /** True if this regridding matrix is conservative.  Matrices could be
-    non-conservative, for example, in the face of smoothing on I.  Or when
-    regridding between the IceBin and ModelE ice sheets. */
-    bool conservative;
-
-    Eigen(std::array<SparseSetT *,2> _dims, bool _conservative) : dims(_dims), conservative(_conservative) {}
+    Weighted_Eigen(std::array<SparseSetT *,2> _dims, bool _conservative) : Weighted(LinearType::EIGEN, _conservative) {}
 
     /** Applies a regrid matrix.
     Nominally computes B{in} = BvA{ij} * A{jn}
@@ -73,12 +74,12 @@ struct Weighted_Eigen : public Weighted {
         std::string const &vname,
         std::array<std::string,2> dim_names);
 
-    // =============== Implement lintransform::Weighted
+    // =============== Implement linear::Weighted
     void apply_weight(
         int dim,    // 0=B, 1=A
-        blitz::Array<ValueT,2> const &As,    // As(nvec, ndim)
-        blitz::Array<ValueT,2> &out,
-        FillType fill_type=FillType::nan,
+        blitz::Array<double,2> const &As,    // As(nvec, ndim)
+        blitz::Array<double,2> &out,
+        FillType fill_type=FillType::nan_all,
         int invert=false);
 
     /** Sparse shape of the matrix */
@@ -86,9 +87,9 @@ struct Weighted_Eigen : public Weighted {
 
     /** Compute M * As */
     void apply_M(
-        blitz::Array<ValueT,2> const &As,
-        blitz::Array<ValueT,2> &out,
-        FillType fill_type=FillType::nan,
+        blitz::Array<double,2> const &As,
+        blitz::Array<double,2> &out,
+        FillType fill_type=FillType::nan_all,
         bool force_conservation=true);
 
 };

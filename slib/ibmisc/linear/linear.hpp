@@ -1,23 +1,29 @@
-#ifndef IBMISC_LINTRANSFORM_LINTRANSFORM_HPP
-#define IBMISC_LINTRANSFORM_LINTRANSFORM_HPP
+#ifndef IBMISC_LINEAR_LINEAR_HPP
+#define IBMISC_LINEAR_LINEAR_HPP
 
+#include <boost/enum.hpp>
 #include <blitz/array.h>
+#include <ibmisc/netcdf.hpp>
 
 namespace ibmisc {
-namespace lintransform {
+namespace linear {
 
-BOOST_ENUM_VALUES(FillType, int,
-    (zero_all) (0)    // Fill unused dimensions with 0
-    (nan_all) (1)     // Fill unused dimensions with NaN
-    (zero_some) (2)    // Zero out ONLY the dimensions we use
-    (ignore) (3)  // Ignore unused imensions, don't touch them
+BOOST_ENUM_VALUES(LinearType, int,
+    (EIGEN) (0)
+    (COMPRESSED) (1)
+)
+
+// What do do with output values in the active space
+BOOST_ENUM_VALUES(AccumType, int,
+    (REPLACE) (0)
+    (ACCUMULATE) (1)        // Accumulate; error if any NaNs creep in
+    (REPLACE_OR_ACCUMULATE) (2)    // Replace if NaN, else accumulate
 )
 
 
 
 #if 0
 /** Abstract sparse vector, just enough to multiply by. */
-template<class ValueT>
 class Vector {
     virtual ~Vector() {}
 
@@ -26,83 +32,97 @@ class Vector {
         Indexing!
     @param invert If true, then compute 1/inner product. */
     virtual void apply(
-        blitz::Array<ValueT,2> const &As,
-        blitz::Array<ValueT,1> &out,
-        FillType fill_type,
+        blitz::Array<double,2> const &As,
+        blitz::Array<double,1> &out,
+        FillType accum_type,
         bool invert = false) = 0;
 
 };
 
 /** Abstract "compressed" matrix, just enough to multiply by. */
-template<class ValueT>
 class Matrix
 {
     virtual ~Matrix() {}
 
     /** Computes M*v_s, stores result in out_s. */
     virtual void apply(
-        blitz::Array<ValueT,2> const &As,
-        blitz::Array<ValueT,2> &out,
-        FillType fill_type) = 0;
+        blitz::Array<double,2> const &As,
+        blitz::Array<double,2> &out,
+        FillType accum_type) = 0;
 
 };
 #endif
 
 
-template<class ValueT>
 class Weighted {
+public:
     // TmpAlloc tmp;    // Sometimes, hold the things we're wrapping.
+    LinearType const type;
+
+    /** True if this regridding matrix is conservative.  Matrices could be
+    non-conservative, for example, in the face of smoothing on I.  Or when
+    regridding between the IceBin and ModelE ice sheets. */
+    bool conservative;    // Is this matrix conservative?
+
+protected:
+    Weighted(LinearType _type) : type(_type), conservative(true) {}
+    Weighted(LinearType _type, bool _conservative) : type(_type), conservative(_conservative) {}
 
     virtual ~Weighted() {}
 
     virtual void apply_weight(
         int dim,    // 0=B, 1=A
-        blitz::Array<ValueT,2> const &As,    // As(nvec, ndim)
-        blitz::Array<ValueT,2> &out,
-        FillType fill_type=FillType::nan,
-        int invert=false) = 0;
+        blitz::Array<double,2> const &As,    // As(nvec, ndim)
+        blitz::Array<double,1> &out,
+        bool zero_out=true) = 0;
 
+public:
     /** Sparse shape of the matrix */
     virtual std::array<long,2> shape() = 0;
 
-public:
-    /** Compute M * As */
+    virtual void ncio(NcIO &ncio, std::string const &vname); 
+
+    /** Compute M * As.
+    Does not touch the nullspace of M. */
     virtual void apply_M(
-        blitz::Array<ValueT,2> const &As,
-        blitz::Array<ValueT,2> &out,
-        FillType fill_type=FillType::nan,
+        blitz::Array<double,2> const &As,
+        blitz::Array<double,2> &out,
+        AccumType accum_type=AccumType::REPLACE,
         bool force_conservation=true) = 0;
 
     /** Compute wM * As */
     void apply_wM(
-        blitz::Array<ValueT,2> const &As,
-        blitz::Array<ValueT,2> &out,
-        FillType fill_type=FillType::nan)
-    { apply_weight(0, As, out, fill_type, false); }
+        blitz::Array<double,2> const &As,
+        blitz::Array<double,1> &out,
+        AccumType accum_type=AccumType::REPLACE)
+    { apply_weight(0, As, out, accum_type, false); }
 
     /** Compute Mw * As */
     void apply_Mw(
-        blitz::Array<ValueT,2> const &As,
-        blitz::Array<ValueT,2> &out,
-        FillType fill_type=FillType::nan)
-    { apply_weight(1, As, out, fill_type, false); }
+        blitz::Array<double,2> const &As,
+        blitz::Array<double,1> &out,
+        AccumType accum_type=AccumType::REPLACE)
+    { apply_weight(1, As, out, accum_type, false); }
 
     /** Compute 1. / (wM * As) */
     void apply_sM(
-        blitz::Array<ValueT,2> const &As,
-        blitz::Array<ValueT,2> &out,
-        FillType fill_type=FillType::nan)
-    { apply_weight(0, As, out, fill_type, true); }
+        blitz::Array<double,2> const &As,
+        blitz::Array<double,1> &out,
+        AccumType accum_type=AccumType::REPLACE)
+    { apply_weight(0, As, out, accum_type, true); }
 
     /** Compute 1. / (Mw * As) */
     void apply_Ms(
-        blitz::Array<ValueT,2> const &As,
-        blitz::Array<ValueT,2> &out,
-        FillType fill_type=FillType::nan)
-    { apply_weight(1, As, out, fill_type, true); }
+        blitz::Array<double,2> const &As,
+        blitz::Array<double,1> &out,
+        AccumType accum_type=AccumType::REPLACE)
+    { apply_weight(1, As, out, accum_type, true); }
 
 };
 
+extern std::unique_ptr<Weighted> new_weighted(LinearType type);
+
+std::unique_ptr<Weighted> nc_read_weighted(netCDF::NcGroup *nc, std::string const &vname);
 
 
 }};    // namespace

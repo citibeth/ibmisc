@@ -20,7 +20,7 @@ void Weighted_Compressed::apply_weight(
 
     for (auto ii(weights[dim].generator()); ++*ii; ) {
         for (int k=0; k<nvec; ++k) {
-            out(k) += ii->value() * As(ii->index(0));
+            out(k) += ii->value() * As(k,ii->index(0));
         }
     }
 }
@@ -28,24 +28,26 @@ void Weighted_Compressed::apply_weight(
 void Weighted_Compressed::apply_M(
     blitz::Array<double,2> const &As,    // As(nvec, nA)
     blitz::Array<double,2> &Bs,         // Bs(nvec, nB)
-    FillType fill_type,
+    AccumType accum_type,
     bool force_conservation)
 {
     auto const nvec(As.extent(0));
     auto const nA(As.extent(1));
     auto const nB(Bs.extent(1));
 
-    // Zero out beforehand
-    switch(fill_type.index()) {
-        case FillType::zero_all :
-            Bs = 0;
-        break;
-        case FillType::nan_all :
-            Bs = nan;
-        break;
-        case FillType::zero_some :
+    // Prepare ActiveSpace, ased on accum_type
+    switch(accum_type.index()) {
+        case AccumType::REPLACE :
             for (auto ii(weights[0].generator()); ++*ii; ) {
                 for (int k=0; k<nvec; ++k) Bs(k,ii->index(0)) = 0;
+            }
+        break;
+        case AccumType::REPLACE_OR_ACCUMULATE :
+            for (auto ii(weights[0].generator()); ++*ii; ) {
+                for (int k=0; k<nvec; ++k) {
+                    auto &Bs_ki(Bs(k,ii->index(0)));
+                    if (std::isnan(Bs_ki)) Bs_ki = 0;
+                }
             }
         break;
     }
@@ -55,11 +57,7 @@ void Weighted_Compressed::apply_M(
         auto const i(ii->index(0));
 
         for (int k=0; k<nvec; ++k) {
-            auto &B_ki(Bs(k,i));
-            auto val(ii->value() * As(ii->index(1)));
-
-            B_ki = ((fill_type == FillType::nan_all) && std::isnan(B_ki)
-                ? val : B_ki + val);
+            Bs(k,i) += ii->value() * As(k,ii->index(1));
         }
     }
 
