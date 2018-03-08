@@ -17,7 +17,6 @@ class ZArray_Accum {
 public:
     typedef ValueT val_type;
     typedef IndexT index_type;
-    typedef Zarray_Accum base_array_type;
     static int const rank = RANK;
 
 private:

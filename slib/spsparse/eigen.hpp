@@ -268,21 +268,6 @@ void TupleList<IndexT,ValT,RANK>::add(std::array<index_type,rank> const &index, 
 }
 
 // --------------------------------------------------------
-
-template<class ArrayT>
-extern Eigen::SparseMatrix<typename ArrayT::val_type,0,typename ArrayT::index_type>
-    to_eigen_sparsematrix(ArrayT const &tuples);
-
-template<class ArrayT>
-Eigen::SparseMatrix<typename ArrayT::val_type,0,typename ArrayT::index_type>
-    to_eigen_sparsematrix(ArrayT const &tuples)
-{
-    Eigen::SparseMatrix<typename ArrayT::val_type,0,typename ArrayT::index_type> M(tuples.base().shape(0), tuples.base().shape(1));
-    M.setFromTriplets(tuples.base().begin(), tuples.base().end());
-    return M;
-}
-
-
 template<class AccumT, class IndexT, class ValT, int RANK>
 extern void spcopy(AccumT &&ret, TupleList<IndexT,ValT,RANK> const &A, bool set_shape = true);
 
@@ -476,7 +461,9 @@ Eigen::SparseMatrix<ARGS> sum_to_diagonal(
             tuples[i].value() = 1. / tuples[i].value();
     }
 
-    return to_eigen_sparsematrix(tuples);
+    Eigen::SparseMatrix<ARGS> Mdiag;
+    Mdiag.setFromTriplets(tuples.begin(), tuples.end());
+    return Mdiag;
 }
 #undef ARGS
 // --------------------------------------------------------------
