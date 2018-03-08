@@ -173,7 +173,6 @@ public:
     static const int rank = RANK;
     typedef IndexT index_type;
     typedef ValT val_type;
-    typedef TupleList base_array_type;
     
     std::array<long, rank> _shape;
 
@@ -184,12 +183,6 @@ public:
         ar & tuples;
         ar & _shape;
     }
-
-    base_array_type &base()
-        { return *this; }
-    base_array_type const &base() const
-        { return *this; }
-
 
     // -----------------------------------------------------
     // https://stackoverflow.com/questions/7758580/writing-your-own-stl-container/7759622#7759622

@@ -62,15 +62,10 @@ public:
 @endcode
 */
 template<class ArrayOrIterT>
-struct SpsparseTraits {
+struct AccumTraits {
     static const int rank = ArrayOrIterT::rank;
     typedef typename ArrayOrIterT::index_type index_type;
     typedef typename ArrayOrIterT::val_type val_type;
-};
-
-template<class AccumT>
-struct AccumTraits : public SpsparseTraits<AccumT> {
-    typedef typename AccumT::base_array_type base_array_type;
 };
 
 

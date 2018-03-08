@@ -32,7 +32,6 @@ struct Blitz
     static const int rank = RANK;
     typedef int index_type;
     typedef ValT val_type;
-    typedef Blitz base_array_type;
 
 private:
     blitz::Array<val_type,rank> &result;

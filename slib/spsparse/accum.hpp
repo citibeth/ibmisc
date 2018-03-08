@@ -56,9 +56,6 @@ public:
     Filter(AccumT &&_sub)
         : sub(std::move(_sub)) {}
 
-    typename super::base_array_type &base()
-        { return sub.base(); }
-
     void set_shape(std::array<long, super::rank> const &_shape)
         { sub.set_shape(_shape); }
 
@@ -84,10 +81,6 @@ public:
 
     Tee(AccumT0 &&_sub0, AccumTs&&... _subs)
         : subs(std::move(_sub0), std::move(_subs)...) {}
-
-    typename super::base_array_type &base()
-        { return boost::fusion::get<0>(subs).base(); }
-
 
     // ----------------------------------------------
 private:
@@ -170,9 +163,6 @@ public:
 
     Ref(AccumT &_sub)
         : sub(_sub) {}
-
-    typename super::base_array_type &base()
-        { return sub.base(); }
 
     void set_shape(std::array<long, super::rank> const &_shape)
         { sub.set_shape(_shape); }
@@ -301,8 +291,6 @@ public:
     static const size_t rank = RANK;
     typedef IndexT index_type;
     // typedef void val_type;    // Doesn't have a val_type, so make an error (for now) if that is expected.
-    typedef Indices base_array_type;
-
 private:
     std::vector<std::array<IndexT, RANK>> &indices;
 
