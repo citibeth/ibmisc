@@ -66,21 +66,18 @@ public:
 
 protected:
     Weighted(LinearType _type) : type(_type), conservative(true) {}
-    Weighted(LinearType _type, bool _conservative) : type(_type), conservative(_conservative) {}
 
+public:
     virtual ~Weighted() {}
+
+    /** Sparse shape of the matrix */
+    virtual std::array<long,2> shape() = 0;
 
     virtual void apply_weight(
         int dim,    // 0=B, 1=A
         blitz::Array<double,2> const &As,    // As(nvec, ndim)
         blitz::Array<double,1> &out,
         bool zero_out=true) = 0;
-
-public:
-    /** Sparse shape of the matrix */
-    virtual std::array<long,2> shape() = 0;
-
-    virtual void ncio(NcIO &ncio, std::string const &vname); 
 
     /** Compute M * As.
     Does not touch the nullspace of M. */
@@ -90,34 +87,8 @@ public:
         AccumType accum_type=AccumType::REPLACE,
         bool force_conservation=true) = 0;
 
-    /** Compute wM * As */
-    void apply_wM(
-        blitz::Array<double,2> const &As,
-        blitz::Array<double,1> &out,
-        AccumType accum_type=AccumType::REPLACE)
-    { apply_weight(0, As, out, accum_type, false); }
-
-    /** Compute Mw * As */
-    void apply_Mw(
-        blitz::Array<double,2> const &As,
-        blitz::Array<double,1> &out,
-        AccumType accum_type=AccumType::REPLACE)
-    { apply_weight(1, As, out, accum_type, false); }
-
-    /** Compute 1. / (wM * As) */
-    void apply_sM(
-        blitz::Array<double,2> const &As,
-        blitz::Array<double,1> &out,
-        AccumType accum_type=AccumType::REPLACE)
-    { apply_weight(0, As, out, accum_type, true); }
-
-    /** Compute 1. / (Mw * As) */
-    void apply_Ms(
-        blitz::Array<double,2> const &As,
-        blitz::Array<double,1> &out,
-        AccumType accum_type=AccumType::REPLACE)
-    { apply_weight(1, As, out, accum_type, true); }
-
+    /** I/O */
+    virtual void ncio(NcIO &ncio, std::string const &vname); 
 };
 
 extern std::unique_ptr<Weighted> new_weighted(LinearType type);

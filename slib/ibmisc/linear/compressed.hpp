@@ -13,10 +13,13 @@ class Weighted_Compressed : public Weighted
     std::array<ZArray<int,double,1>, 2> weights;    // {wM, Mw}
     ZArray<int,double,2> M;
 
+public:
     Weighted_Compressed() : Weighted(LinearType::COMPRESSED) {}
 
     // ================= Implements Weighted
-protected:
+    /** Sparse shape of the matrix */
+    std::array<long,2> shape() { return M.shape(); }
+
     /** Computes out = As * weights[dim] */
     void apply_weight(
         int dim,    // 0=B, 1=A
@@ -24,13 +27,11 @@ protected:
         blitz::Array<double,1> &out,
         bool zero_out=true);
 
-public:
-
     /** Computes out = M * As */
     void apply_M(
         blitz::Array<double,2> const &As,
         blitz::Array<double,2> &out,
-        FillType fill_type=FillType::nan_all,
+        AccumType accum_type=AccumType::REPLACE,
         bool force_conservation=true);
 
     void ncio(NcIO &ncio, std::string const &vname);

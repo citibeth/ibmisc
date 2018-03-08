@@ -96,7 +96,8 @@ bool ZArray_Generator<IndexT,ValueT,RANK>::
 
 // =========================================================================
 
-/** A compressed sparse array format
+/** A compressed sparse array format.
+Most directly, a compressed verison of TupleList.
 
 NOTE: Singular used for template parameters, plural used for
     vectors holding plural things (or accumulators).

@@ -146,19 +146,20 @@ void Weighted_Eigen::ncio(ibmisc::NcIO &ncio,
 
 // ------------------------------------------------------
 void Weighted_Eigen::apply_weight(
-    int dim,    // 0=B, 1=A
+    int _dim,    // 0=B, 1=A
     blitz::Array<double,2> const &As,    // As(nvec, ndim)
-    blitz::Array<double,2> &out,    // out(nvec)
+    blitz::Array<double,1> &out,    // out(nvec)
     bool zero_out)
 {
-    auto &weights(dim == 0 ? wM : Mw);
+    auto &weights(_dim == 0 ? wM : Mw);
+    auto &dim(*dims[_dim]);
     auto const nvec(As.extent(0));
     auto const nA(As.extent(1));
 
     if (zero_out) out = 0;
 
-    for (int j_d=0; j_d < dims[dim]->dense_extent(); ++j_d) {
-        int const j_s = adim.to_sparse(j_d);
+    for (int j_d=0; j_d < dim.dense_extent(); ++j_d) {
+        int const j_s = dim.to_sparse(j_d);
         for (int k=0; k<nvec; ++k) {
             out(k) += weights(j_d) * As(k,j_s);
         }
@@ -175,7 +176,7 @@ void Weighted_Eigen::apply_M(
     blitz::Array<double,2> const &A_s,
     blitz::Array<double,2> &B_s,
     AccumType accum_type,
-    bool force_conservation=true)
+    bool force_conservation)
 {
     // TODO: Re-do this method, to work without copying over the matrix.
     //       This would have to stop using Eigen's facilities
@@ -201,7 +202,7 @@ void Weighted_Eigen::apply_M(
     // Apply...
     auto B_d_eigen(apply_e(A_d, 0, force_conservation));    // Column major indexing
 
-    switch(accum_type) {
+    switch(accum_type.value()) {
         case AccumType::REPLACE :
             for (int j_d=0; j_d < bdim.dense_extent(); ++j_d) {
                 if (wM(j_d) == 0.) continue;    // Skip nullspace that crept into dense

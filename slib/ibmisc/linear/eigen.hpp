@@ -30,7 +30,13 @@ struct Weighted_Eigen : public Weighted {
     // Area of A cells
     blitz::Array<double,1> Mw;
 
-    Weighted_Eigen(std::array<SparseSetT *,2> _dims, bool _conservative) : Weighted(LinearType::EIGEN, _conservative) {}
+    Weighted_Eigen(std::array<SparseSetT *,2> _dims) : Weighted(LinearType::EIGEN) {}
+
+    Weighted_Eigen() : Weighted(LinearType::EIGEN)
+    {
+        dims[0] = tmp.newptr<SparseSetT>();
+        dims[1] = tmp.newptr<SparseSetT>();
+    }
 
     /** Applies a regrid matrix.
     Nominally computes B{in} = BvA{ij} * A{jn}
@@ -78,9 +84,8 @@ struct Weighted_Eigen : public Weighted {
     void apply_weight(
         int dim,    // 0=B, 1=A
         blitz::Array<double,2> const &As,    // As(nvec, ndim)
-        blitz::Array<double,2> &out,
-        FillType fill_type=FillType::nan_all,
-        int invert=false);
+        blitz::Array<double,1> &out,
+        bool zero_out=true);
 
     /** Sparse shape of the matrix */
     std::array<long,2> shape();
@@ -89,7 +94,7 @@ struct Weighted_Eigen : public Weighted {
     void apply_M(
         blitz::Array<double,2> const &As,
         blitz::Array<double,2> &out,
-        FillType fill_type=FillType::nan_all,
+        AccumType accum_type=AccumType::REPLACE,
         bool force_conservation=true);
 
 };

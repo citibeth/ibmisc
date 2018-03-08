@@ -14,6 +14,7 @@ set(IBMISC_SOURCE
     ibmisc/memory.cpp
     ibmisc/stdio.cpp
     ibmisc/ncbulk.cpp
+    ibmisc/linear/linear.cpp
     ibmisc/linear/compressed.cpp
     ibmisc/linear/eigen.cpp)
 

@@ -27,7 +27,7 @@
 //#include <ibmisc/rlarray.hpp>
 #include <spsparse/zvector.hpp>
 #include <spsparse/eigen.hpp>
-#include <ibmisc/zsparsearray.hpp>
+#include <ibmisc/zarray.hpp>
 
 
 
@@ -177,7 +177,7 @@ TEST_F(ZVectorTest, double)
 // -----------------------------------------------------------------
 
 #if 1
-TEST_F(ZVectorTest, ZSparseArray1)
+TEST_F(ZVectorTest, ZArray1)
 {
     // Set up a TupleList
     TupleList<int, double, 2> arr1({400,400});
@@ -195,7 +195,7 @@ TEST_F(ZVectorTest, ZSparseArray1)
     arr1.add({2,27}, 1.9);
 
     // ZVector-Compress it
-    ZSparseArray<int,double,2> zsa1(arr1.shape());
+    ZArray<int,double,2> zsa1(arr1.shape());
     {auto accum(zsa1.accum());
         for (auto &tup : arr1) accum->add(tup.index(), tup.value());
     }
@@ -209,7 +209,7 @@ TEST_F(ZVectorTest, ZSparseArray1)
     }
 
     // Load it
-    ZSparseArray<int,double,2> zsa2;
+    ZArray<int,double,2> zsa2;
     {NcIO ncio(fname, 'r');
         zsa2.ncio(ncio, "vals");
     }

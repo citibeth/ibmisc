@@ -14,9 +14,9 @@ void Weighted::ncio(NcIO &ncio, std::string const &vname)
 std::unique_ptr<Weighted> new_weighted(LinearType type)
 {
     switch(type.index()) {
-        case Linear::EIGEN :
+        case LinearType::EIGEN :
             return std::unique_ptr<Weighted>(new Weighted_Eigen);
-        case Linear::COMPRESSED :
+        case LinearType::COMPRESSED :
             return std::unique_ptr<Weighted>(new Weighted_Compressed);
         default:
             (*ibmisc_error)(-1,
