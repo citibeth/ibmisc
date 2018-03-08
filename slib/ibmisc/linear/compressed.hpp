@@ -1,32 +1,39 @@
-#ifndef IBMISC_LINTRANSFORM_COMPRESSED_HPP
-#define IBMISC_LINTRANSFORM_COMPRESSED_HPP
+#ifndef IBMISC_LINEAR_COMPRESSED_HPP
+#define IBMISC_LINEAR_COMPRESSED_HPP
+
+#include <ibmisc/linear/linear.hpp>
+#include <ibmisc/zarray.hpp>
 
 namespace ibmisc {
-namespace lintransform {
+namespace linear {
 
 // ==================================================================
-class Weighted_Compressed : public Weighted<double>
+class Weighted_Compressed : public Weighted
 {
-    std::array<ZSparseArray<int,double,1>, 2> weights;    // {wM, Mw}
-    ZSparseArray<int,double,2> &M;
+    std::array<ZArray<int,double,1>, 2> weights;    // {wM, Mw}
+    ZArray<int,double,2> M;
 
+    Weighted_Compressed() : Weighted(LinearType::COMPRESSED) {}
+
+    // ================= Implements Weighted
 protected:
     /** Computes out = As * weights[dim] */
     void apply_weight(
         int dim,    // 0=B, 1=A
-        blitz::Array<ValueT,2> const &As,    // As(nvec, ndim)
-        blitz::Array<ValueT,2> &out,
+        blitz::Array<double,2> const &As,    // As(nvec, ndim)
+        blitz::Array<double,1> &out,
         bool zero_out=true);
 
 public:
+
     /** Computes out = M * As */
     void apply_M(
-        blitz::Array<ValueT,2> const &As,
-        blitz::Array<ValueT,2> &out,
-        FillType fill_type=FillType::nan,
+        blitz::Array<double,2> const &As,
+        blitz::Array<double,2> &out,
+        FillType fill_type=FillType::nan_all,
         bool force_conservation=true);
 
-    void ncio(..) {}
+    void ncio(NcIO &ncio, std::string const &vname);
 
 };
 
