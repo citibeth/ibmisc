@@ -1,4 +1,8 @@
+#include <spsparse/eigen.hpp>
+#include <spsparse/blitz.hpp>
+#include <spsparse/SparseSet.hpp>
 #include <ibmisc/linear/compressed.hpp>
+#include <ibmisc/linear/eigen.hpp>
 
 
 namespace ibmisc {
@@ -18,7 +22,7 @@ void Weighted_Compressed::apply_weight(
 
     if (zero_out) out = 0;
 
-    for (auto ii(weights[dim].generator()); ++*ii; ) {
+    for (auto ii(weights[dim].generator()); ++ii; ) {
         for (int k=0; k<nvec; ++k) {
             out(k) += ii->value() * As(k,ii->index(0));
         }
@@ -38,12 +42,12 @@ void Weighted_Compressed::apply_M(
     // Prepare ActiveSpace, ased on accum_type
     switch(accum_type.index()) {
         case AccumType::REPLACE :
-            for (auto ii(weights[0].generator()); ++*ii; ) {
+            for (auto ii(weights[0].generator()); ++ii; ) {
                 for (int k=0; k<nvec; ++k) Bs(k,ii->index(0)) = 0;
             }
         break;
         case AccumType::REPLACE_OR_ACCUMULATE :
-            for (auto ii(weights[0].generator()); ++*ii; ) {
+            for (auto ii(weights[0].generator()); ++ii; ) {
                 for (int k=0; k<nvec; ++k) {
                     auto &Bs_ki(Bs(k,ii->index(0)));
                     if (std::isnan(Bs_ki)) Bs_ki = 0;
@@ -53,7 +57,7 @@ void Weighted_Compressed::apply_M(
     }
 
     // Multiply
-    for (auto ii(M.generator()); ++*ii; ) {
+    for (auto ii(M.generator()); ++ii; ) {
         auto const i(ii->index(0));
 
         for (int k=0; k<nvec; ++k) {
@@ -73,7 +77,7 @@ void Weighted_Compressed::apply_M(
         for (int k=0; k<nvec; ++k) factor(k)=wA(k)/wB(k);
 
         // Multiply by correction factor
-        for (auto ii(weights[0].generator()); ++*ii; ) {
+        for (auto ii(weights[0].generator()); ++ii; ) {
             auto const i(ii->index(0));
             for (int k=0; k<nvec; ++k) {
                 Bs(k,i) *= factor(k);
@@ -91,5 +95,31 @@ void Weighted_Compressed::ncio(NcIO &ncio, std::string const &vname)
     M.ncio(ncio, vname + ".M");
     weights[1].ncio(ncio, vname + ".Mw");
 }
+
+// ======================================================
+Weighted_Compressed compress(Weighted_Eigen &eigen)
+{
+    Weighted_Compressed ret;
+
+
+    spsparse::spcopy(
+        spsparse::accum::to_sparse({eigen.dims[0]},
+        ret.weights[0].accum()),
+        *eigen.M);
+
+    spsparse::spcopy(
+        spsparse::accum::to_sparse(eigen.dims,
+        ret.M.accum()),
+        eigen.wM);
+
+    spsparse::spcopy(
+        spsparse::accum::to_sparse({eigen.dims[1]},
+        ret.weights[1].accum()),
+        eigen.Mw);
+
+    return ret;
+}
+
+
 
 }}    // namespace

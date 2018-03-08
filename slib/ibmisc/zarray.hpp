@@ -16,6 +16,9 @@ template<class IndexT, class ValueT, int RANK>
 class ZArray_Accum {
 public:
     typedef ValueT val_type;
+    typedef IndexT index_type;
+    typedef Zarray_Accum base_array_type;
+    static int const rank = RANK;
 
 private:
     spsparse::vaccum::ZVector<IndexT,RANK> indices;
@@ -79,6 +82,8 @@ public:
     ValueT value() const
         { return (*values)[0]; }
 
+
+    ZArray_Generator<IndexT,ValueT,RANK> const *operator->() const { return this; }
 };
 
 template<class IndexT, class ValueT, int RANK>
@@ -129,17 +134,16 @@ public:
 
     typedef ZArray_Accum<IndexT,ValueT,RANK> accum_type;
     /** Creates an encoder */
-    std::unique_ptr<accum_type> accum()
-        { return std::unique_ptr<accum_type>(new accum_type(indices, values, _shape, _nnz)); }
+    accum_type accum()
+        { return accum_type(indices, values, _shape, _nnz); }
 
 
     typedef ZArray_Generator<IndexT,ValueT,RANK> generator_type;
-    std::unique_ptr<generator_type> generator() const
+    generator_type generator() const
     {
-        return std::unique_ptr<generator_type>(new generator_type(
+        return generator_type(
             *const_cast<std::vector<char> *>(&indices),
-            *const_cast<std::vector<char> *>(&values)));
-
+            *const_cast<std::vector<char> *>(&values));
     }
 
 

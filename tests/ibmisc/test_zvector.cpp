@@ -197,7 +197,7 @@ TEST_F(ZVectorTest, ZArray1)
     // ZVector-Compress it
     ZArray<int,double,2> zsa1(arr1.shape());
     {auto accum(zsa1.accum());
-        for (auto &tup : arr1) accum->add(tup.index(), tup.value());
+        for (auto &tup : arr1) accum.add(tup.index(), tup.value());
     }
 
     // Store it

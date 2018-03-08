@@ -7,9 +7,13 @@
 namespace ibmisc {
 namespace linear {
 
+class Weighted_Eigen;
+
 // ==================================================================
 class Weighted_Compressed : public Weighted
 {
+    friend Weighted_Compressed compress(Weighted_Eigen &eigen);
+
     std::array<ZArray<int,double,1>, 2> weights;    // {wM, Mw}
     ZArray<int,double,2> M;
 
@@ -37,6 +41,10 @@ public:
     void ncio(NcIO &ncio, std::string const &vname);
 
 };
+
+extern Weighted_Compressed compress(Weighted_Eigen &eigen);
+
+
 
 
 }};    // namespace

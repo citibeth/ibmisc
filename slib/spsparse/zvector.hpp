@@ -35,7 +35,7 @@ struct ToIntType<double>
 
 namespace vaccum {
 template<class ValueT, int RANK>
-class ZVector {
+class _ZVector {
 public:
     typedef ValueT val_type;
 
@@ -50,15 +50,31 @@ private:
     zstr::ostream zos;
 
 public:
-    ZVector(std::vector<char> &_zbuf, ZVAlgo _algo);
+    _ZVector(std::vector<char> &_zbuf, ZVAlgo _algo);
     void add(std::array<ValueT,RANK> const &raws);
-    ~ZVector();
+    ~_ZVector();
 };
 
-
+/** Wrap the guts in a std::unique_ptr<> so ZVector is fully C++11
+    compliant (and moveable) */
 template<class ValueT, int RANK>
-ZVector<ValueT,RANK>::
-    ZVector(std::vector<char> &_zbuf, ZVAlgo _algo)
+class ZVector {
+    std::unique_ptr<_ZVector<ValueT,RANK>> self;
+public:
+    typedef ValueT val_type;
+
+    ZVector(std::vector<char> &_zbuf, ZVAlgo _algo) :
+        self(new _ZVector<ValueT,RANK>(_zbuf, _algo)) {}
+    void add(std::array<ValueT,RANK> const &raws)
+        { self->add(raws); }
+};
+// -------------------------------------------------------------
+
+
+/** Compressed version of std::vector */
+template<class ValueT, int RANK>
+_ZVector<ValueT,RANK>::
+    _ZVector(std::vector<char> &_zbuf, ZVAlgo _algo)
         : zbuf(_zbuf),
         algo(_algo),
         os(std::ios_base::out | std::ios_base::binary),
@@ -72,7 +88,7 @@ ZVector<ValueT,RANK>::
     }
 
 template<class ValueT, int RANK>
-void ZVector<ValueT,RANK>::
+void _ZVector<ValueT,RANK>::
     add(std::array<ValueT,RANK> const &raws)
     {
 
@@ -98,23 +114,25 @@ void ZVector<ValueT,RANK>::
     }
 
 template<class ValueT, int RANK>
-ZVector<ValueT,RANK>::
-    ~ZVector()
+_ZVector<ValueT,RANK>::
+    ~_ZVector()
     {
         zos.flush();
         // Make output available to the user
         os.swap_vector(zbuf);
     }
-}
-// ============================================================================
 
+// -------------------------------------------------------------
+
+}    // namespace vaccum
+// ============================================================================
 
 
 // --------------------------------------------------------------------------
 namespace vgen {
 
 template<class ValueT, int RANK>
-class ZVector {
+class _ZVector {
     typedef ValueT val_type;
 
 private:
@@ -129,7 +147,7 @@ private:
     zstr::istream zis;
 
 public:
-    explicit ZVector(std::vector<char> &_zbuf);
+    explicit _ZVector(std::vector<char> &_zbuf);
 
     bool operator++();
 
@@ -138,14 +156,33 @@ public:
         return cur_raws;
     }
 
-    ~ZVector();
+    ~_ZVector();
 
 };
 
+// -------------------------------------------------------------
+/** Wrap the guts in a std::unique_ptr<> so ZVector is fully C++11
+    compliant (and moveable) */
+template<class ValueT, int RANK>
+class ZVector {
+    std::unique_ptr<_ZVector<ValueT,RANK>> self;
+public:
+    typedef ValueT val_type;
+
+    explicit ZVector(std::vector<char> &_zbuf) :
+        self(new _ZVector<ValueT,RANK>(_zbuf)) {}
+
+    bool operator++()
+        { return self->operator++(); }
+
+    std::array<ValueT,RANK> const &operator*() const
+        { return self->operator*(); }
+};
+// -------------------------------------------------------------
 
 template<class ValueT, int RANK>
-ZVector<ValueT,RANK>::
-    ZVector(std::vector<char> &_zbuf)
+_ZVector<ValueT,RANK>::
+    _ZVector(std::vector<char> &_zbuf)
         : zbuf(_zbuf),
         is(std::ios_base::out | std::ios_base::binary),
         zis(is)
@@ -163,7 +200,7 @@ ZVector<ValueT,RANK>::
 
 
 template<class ValueT, int RANK>
-bool ZVector<ValueT,RANK>::
+bool _ZVector<ValueT,RANK>::
     operator++()
     {
         std::array<ValueT,RANK> vals;
@@ -192,14 +229,15 @@ bool ZVector<ValueT,RANK>::
     }
 
 template<class ValueT, int RANK>
-ZVector<ValueT,RANK>::
-    ~ZVector()
+_ZVector<ValueT,RANK>::
+    ~_ZVector()
     {
         // Get our original vector back!
         is.swap_vector(zbuf);
     }
 
-}
+}    // namespace spsparse::vgen
+
 
 }    // Namespace spsparse
 #endif    // guard

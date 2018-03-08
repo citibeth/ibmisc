@@ -113,7 +113,7 @@ blitz::Array<double,1> Weighted_Eigen::apply(
 // -----------------------------------------------------------------------
 // ---------------------------------------------------------
 
-
+/** NOTE: this->dims must already be allocated and read, if you are reading. */
 void Weighted_Eigen::ncio(ibmisc::NcIO &ncio,
     std::string const &vname,
     std::array<std::string,2> dim_names)
