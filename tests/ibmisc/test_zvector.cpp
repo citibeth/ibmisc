@@ -220,7 +220,7 @@ TEST_F(ZVectorTest, ZArray1)
 
     // Uncompress it
     TupleList<int,double,2> arr2(zsa2.shape());
-    for (auto ii(zsa2.generator()); ++*ii; ) {
+    for (auto ii(zsa2.generator()); ++ii; ) {
         arr2.add(ii->index(), ii->value());
     }
 

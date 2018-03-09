@@ -103,17 +103,19 @@ Weighted_Compressed compress(Weighted_Eigen &eigen)
 
 
     spsparse::spcopy(
-        spsparse::accum::to_sparse({eigen.dims[0]},
+        spsparse::accum::to_sparse(
+            std::array<Weighted_Eigen::SparseSetT *,1>{eigen.dims[0]},
         ret.weights[0].accum()),
-        *eigen.M);
+        eigen.wM);
 
     spsparse::spcopy(
         spsparse::accum::to_sparse(eigen.dims,
         ret.M.accum()),
-        eigen.wM);
+        *eigen.M);
 
     spsparse::spcopy(
-        spsparse::accum::to_sparse({eigen.dims[1]},
+        spsparse::accum::to_sparse(
+            std::array<Weighted_Eigen::SparseSetT *,1>{eigen.dims[1]},
         ret.weights[1].accum()),
         eigen.Mw);
 

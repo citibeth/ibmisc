@@ -441,6 +441,7 @@ TEST_F(SpSparseTest, make_dense_eigen)
     }
 }
 
+#if 0
 TEST_F(SpSparseTest, diag_matrix)
 {
     blitz::Array<double,1> diag(5);
@@ -449,7 +450,9 @@ TEST_F(SpSparseTest, diag_matrix)
     diag(2) = 0.;
     diag(3) = 16.;
     diag(4) = 0.;
-    auto M(diag_matrix(diag, '+'));
+
+    Eigen::DiagonalMatrix<double,Eigen::Dynamic,Eigen::Dynamic> Md(map_eigen_diagonal(diag));
+    Eigen::SparseMatrix<double> M(Md);
 
     EXPECT_EQ(5, M.rows());
     EXPECT_EQ(5, M.cols());
@@ -470,7 +473,9 @@ TEST_F(SpSparseTest, diag_matrix)
     ++ii;
     EXPECT_TRUE(ii == end(M));
 }
+#endif
 
+/** Not strictly a test of Eigen stuff.  But this is used in IceBin/RegridMatrices.cpp */
 TEST_F(SpSparseTest, diag_matrix_inv)
 {
     blitz::Array<double,1> diag(4);
@@ -478,25 +483,12 @@ TEST_F(SpSparseTest, diag_matrix_inv)
     diag(1) = 8.;
     diag(2) = 0.;
     diag(3) = 16.;
-    auto M(diag_matrix(diag, '-'));
 
-    EXPECT_EQ(4, M.rows());
-    EXPECT_EQ(4, M.cols());
+    blitz::Array<double,1> diag_inv(1. / diag);
 
-    auto ii(begin(M));
-    EXPECT_EQ(0, ii->index(0));
-    EXPECT_EQ(0, ii->index(1));
-    EXPECT_EQ(1./4., ii->value());
-    ++ii;
-    EXPECT_EQ(1, ii->index(0));
-    EXPECT_EQ(1, ii->index(1));
-    EXPECT_EQ(1./8., ii->value());
-    ++ii;
-    EXPECT_EQ(3, ii->index(0));
-    EXPECT_EQ(3, ii->index(1));
-    EXPECT_EQ(1./16., ii->value());
-    ++ii;
-    EXPECT_TRUE(ii == end(M));
+    EXPECT_EQ(1./4., diag_inv(0));
+    EXPECT_EQ(1./8., diag_inv(1));
+    EXPECT_EQ(1./16., diag_inv(3));
 }
 
 
@@ -514,7 +506,8 @@ TEST_F(SpSparseTest, sum)
     arr.add({2,3}, 8.);
     arr.add({2,1}, 16.);
 
-    auto M(to_eigen_sparsematrix(arr));
+    Eigen::SparseMatrix<double,0,int> M(arr.shape(0), arr.shape(1));
+    M.setFromTriplets(arr.begin(), arr.end());
 
     // Test correctness of iterator
     int n=0;
@@ -545,73 +538,6 @@ TEST_F(SpSparseTest, sum)
         EXPECT_EQ(18., arrb(1));
         EXPECT_EQ(1., arrb(2));
         EXPECT_EQ(12., arrb(3));
-    }
-}
-
-TEST_F(SpSparseTest, sum_to_diagonal)
-{
-    typedef TupleList<int, double, 2> TupleListT;
-    TupleListT arr({3,4});
-
-    arr.add({0,0}, 1.);
-    arr.add({0,1}, 2.);
-    arr.add({0,3}, 4.);
-
-    arr.add({2,3}, 8.);
-    arr.add({2,1}, 16.);
-
-    auto M(to_eigen_sparsematrix(arr));
-
-    {auto M2(sum_to_diagonal(M,0,'+'));
-        EXPECT_EQ(3, M2.rows());
-
-        auto ii(begin(M2));
-        EXPECT_EQ(0, ii->index(0));
-        EXPECT_EQ(0, ii->index(1));
-        EXPECT_EQ(7., ii->value());
-        ++ii;    // zeros not skipped
-        ++ii;
-        EXPECT_EQ(2, ii->index(0));
-        EXPECT_EQ(2, ii->index(1));
-        EXPECT_EQ(24., ii->value());
-        ++ii;
-        EXPECT_TRUE(ii == end(M2));
-    }
-
-    {auto M2(sum_to_diagonal(M,0,'-'));
-        EXPECT_EQ(3, M2.rows());
-
-        auto ii(begin(M2));
-        EXPECT_EQ(0, ii->index(0));
-        EXPECT_EQ(0, ii->index(1));
-        EXPECT_DOUBLE_EQ(1./7., ii->value());
-        ++ii;    // zeros not skipped
-        ++ii;
-        EXPECT_EQ(2, ii->index(0));
-        EXPECT_EQ(2, ii->index(1));
-        EXPECT_DOUBLE_EQ(1./24., ii->value());
-        ++ii;
-        EXPECT_TRUE(ii == end(M2));
-    }
-
-    {auto M2(sum_to_diagonal(M,1,'+'));
-        EXPECT_EQ(4, M2.cols());
-
-        auto ii(begin(M2));
-        EXPECT_EQ(0, ii->index(0));
-        EXPECT_EQ(0, ii->index(1));
-        EXPECT_EQ(1., ii->value());
-        ++ii;
-        EXPECT_EQ(1, ii->index(0));
-        EXPECT_EQ(1, ii->index(1));
-        EXPECT_DOUBLE_EQ(18., ii->value());
-        ++ii;    // zeros not skipped
-        ++ii;
-        EXPECT_EQ(3, ii->index(0));
-        EXPECT_EQ(3, ii->index(1));
-        EXPECT_DOUBLE_EQ(12., ii->value());
-        ++ii;
-        EXPECT_TRUE(ii == end(M2));
     }
 }
 

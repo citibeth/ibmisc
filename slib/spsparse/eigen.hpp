@@ -51,7 +51,7 @@ void spcopy(
     Eigen::SparseMatrix<ARGS> const &M,
     bool set_shape=true)
 {
-    if (set_shape) ret.set_shape({M.rows(), M.cols()});
+    if (set_shape) ret.set_shape(std::array<long,2>{M.rows(), M.cols()});
 
     // See here for note on iterating through Eigen::SparseMatrix
     // http://eigen.tuxfamily.org/bz/show_bug.cgi?id=1104
@@ -82,30 +82,6 @@ void spcopy(
 }
 
 // --------------------------------------------------------------
-
-template<class ValT>
-Eigen::SparseMatrix<ValT> diag_matrix(
-    blitz::Array<ValT,1> const &diag, char invert='+');
-
-template<class ValT>
-Eigen::SparseMatrix<ValT> diag_matrix(
-    blitz::Array<ValT,1> const &diag, char invert='+')
-{
-    int n = diag.extent(0);
-
-    // Invert weight vector into Eigen-format scale matrix
-    std::vector<Eigen::Triplet<ValT>> triplets;
-    for (int i=0; i < diag.extent(0); ++i) {
-        if (diag(i) == 0) continue;
-        triplets.push_back(Eigen::Triplet<ValT>(
-            i, i, invert == '-' ? 1./diag(i) : diag(i)));
-    }
-
-    Eigen::SparseMatrix<ValT> M(diag.extent(0), diag.extent(0));
-    M.setFromTriplets(triplets.begin(), triplets.end());
-
-    return M;
-}
 
 // --------------------------------------------------------------
 /** An N-dimensional generalization of Eigen::Triplet */
@@ -433,38 +409,6 @@ std::array<blitz::Array<_Scalar,1>,2> sums(
     return rets;
 }
 
-
-
-
-template<class _Scalar, int _Options, class _StorageIndex>
-Eigen::SparseMatrix<ARGS> sum_to_diagonal(
-    Eigen::SparseMatrix<ARGS> const &M, int dimi, char invert='+');
-
-template<class _Scalar, int _Options, class _StorageIndex>
-Eigen::SparseMatrix<ARGS> sum_to_diagonal(
-    Eigen::SparseMatrix<ARGS> const &M, int dimi, char invert='+')
-{
-    // Set up diagonal matrix w/ predictable indices in a TupleList
-    _StorageIndex n = (dimi == 0 ? M.rows() : M.cols());
-    TupleList<_StorageIndex, _Scalar, 2> tuples;
-    tuples.set_shape({n,n});
-    tuples.reserve(n);
-    for (int i=0; i<n; ++i) tuples.add({i,i},0);
-
-    for (auto ii(begin(M)); ii != end(M); ++ii) {
-        auto ix(dimi == 0 ? ii->row() : ii->col());
-        tuples[ix].value() += ii->value();
-    }
-
-    if (invert == '-') {
-        for (size_t i=0; i<tuples.size(); ++i)
-            tuples[i].value() = 1. / tuples[i].value();
-    }
-
-    Eigen::SparseMatrix<ARGS> Mdiag;
-    Mdiag.setFromTriplets(tuples.begin(), tuples.end());
-    return Mdiag;
-}
 #undef ARGS
 // --------------------------------------------------------------
 // --------------------------------------------------------------
