@@ -524,48 +524,84 @@ typename MakeDenseEigen<ARGS>::EigenSparseMatrixT MakeDenseEigen<ARGS>::to_eigen
 
 // ====================================================
 template<class _Scalar, int _Options, class _StorageIndex>
-void nc_write_eigen(
+void nc_rw_eigen(
     netCDF::NcGroup *nc,
+    char rw,
     Eigen::SparseMatrix<_Scalar,_Options,_StorageIndex> *A,
     std::string const &vname);
 
 template<class _Scalar, int _Options, class _StorageIndex>
-static void nc_write_eigen(
+static void nc_rw_eigen(
     netCDF::NcGroup *nc,
+    char rw,
     Eigen::SparseMatrix<_Scalar,_Options,_StorageIndex> *A,
     std::string const &vname)
 {
+printf("XBEGIN nc_rw_eigen\n");
     netCDF::NcVar indices_v = nc->getVar(vname + ".indices");
     netCDF::NcVar vals_v = nc->getVar(vname + ".values");
 
-    int const N = A->nonZeros();
+    if (rw == 'w') {
+        int const N = A->nonZeros();
 
-
-    // Create in-memory data structure amenable to writing to disk quickly
-    {std::vector<int> indices;
-        std::vector<size_t> startp {0, 0};        // SIZE, RANK
-        std::vector<size_t> countp {N, 2};  // Write RANK elements at a time
-
-        indices.reserve(N*2);
-        for (auto ii = begin(*A); ii != end(*A); ++ii, ++startp[0]) {
-            indices.push_back(ii->row());
-            indices.push_back(ii->col());
+        // Create in-memory data structure amenable to writing to disk quickly
+        {std::vector<int> indices;
+            indices.reserve(N*2);
+            for (auto ii = begin(*A); ii != end(*A); ++ii) {
+                indices.push_back(ii->row());
+                indices.push_back(ii->col());
+            }
+            indices_v.putVar(&indices[0]);
         }
-        indices_v.putVar(&indices[0]);
-    }
 
-    // Write it out!
-    {std::vector<double> vals;
-        std::vector<size_t> startp {0};
-        std::vector<size_t> countp {N};
-
-        vals.reserve(N);
-        for (auto ii = begin(*A); ii != end(*A); ++ii, ++startp[0]) {
-            vals.push_back(ii->value());
+        // Write it out!
+        {std::vector<double> vals;
+            vals.reserve(N);
+            for (auto ii = begin(*A); ii != end(*A); ++ii) {
+                vals.push_back(ii->value());
+            }
+            vals_v.putVar(&vals[0]);    // Write to entire NetCDF variable directly from RAM
         }
-        vals_v.putVar(&vals[0]);    // Write to entire NetCDF variable directly from RAM
-    }
+    } else {    // rw == 'r'
+printf("BEGIN nc_rw_eigen %p\n", A);
+        int const N = vals_v.getDim(0).getSize();
 
+        // Create in-memory data structure amenable to writing to disk quickly
+        std::vector<int> indices;
+        std::vector<double> vals;
+
+        // Read it
+        indices.resize(N*2);
+        indices_v.getVar(&indices[0]);
+        vals.resize(N);
+        vals_v.getVar(&vals[0]);    // Write to entire NetCDF variable directly from RAM
+
+        // Read the shape
+        ibmisc::NcIO ncio(nc, rw);    // dummy
+        auto info_v = get_or_add_var(ncio, vname + ".info", "int64", {});
+        std::vector<size_t> shape;
+        ibmisc::get_or_put_att(info_v, rw, "shape", "int64", shape);
+
+        // Convert to TupleList
+        // TODO: If we are more clever with iterators, we don't have to copy to
+        //       a TupleList first.
+        TupleList<_StorageIndex,_Scalar,2> tuples;
+        for (size_t i=0; i<vals.size(); ++i) {
+            tuples.add({indices[i*2], indices[i*2+1]}, vals[i]);
+        }
+        indices.clear();
+        vals.clear();
+
+        A->setZero();
+        A->resize(shape[0], shape[1]);
+        A->reserve(tuples.tuples.size());
+
+        // Convert to Eigen
+printf("A-shape (%ld %ld)\n", shape[0], shape[1]);
+printf("XEND nc_rw_eigen: %ld\n", tuples.tuples.size());
+        A->setFromTriplets(tuples.begin(), tuples.end());
+printf("END nc_rw_eigen\n");
+    }
 }
 
 
@@ -582,27 +618,28 @@ void ncio_eigen(
     Eigen::SparseMatrix<_Scalar,_Options,_StorageIndex> &A,
     std::string const &vname)
 {
-    if (ncio.rw == 'r') (*ibmisc::ibmisc_error)(-1,
-        "ncio_eigen() currently does not support reading.");
-
+printf("BEGIN ncio_eigen\n");
     std::vector<std::string> const dim_names({vname + ".nnz", vname + ".rank"});
     std::vector<netCDF::NcDim> dims;        // Dimensions in NetCDF
     std::vector<size_t> dim_sizes;          // Length of our two dimensions.
 
-
     // Count the number of elements in the sparse matrix.
     // NOTE: This can/does give a diffrent answer from A.nonZeros().
     //       But it is what we want for dimensioning netCDF arrays.
-    long const count = A.nonZeros();
-    dims = ibmisc::get_or_add_dims(ncio, dim_names, {count, 2});
+    if (ncio.rw == 'w') {
+        long const count = (ncio.rw == 'w' ? A.nonZeros() : 0);
+        dims = ibmisc::get_or_add_dims(ncio, dim_names, {count, 2});
 
-    auto info_v = get_or_add_var(ncio, vname + ".info", "int64", {});
-    std::array<size_t,2> shape { A.rows(), A.cols() };
-    ibmisc::get_or_put_att(info_v, 'w', "shape", "int64", shape);
+        auto info_v = get_or_add_var(ncio, vname + ".info", "int64", {});
+        std::array<size_t,2> shape { A.rows(), A.cols() };
+        ibmisc::get_or_put_att(info_v, 'w', "shape", "int64", shape);
+    } else {    // Read 
+        dims = ibmisc::get_or_add_dims(ncio, dim_names, {0,0});    // length ignored on read
+    }
 
     get_or_add_var(ncio, vname + ".indices", "int", dims);
     get_or_add_var(ncio, vname + ".values", "double", {dims[0]});
-    ncio += std::bind(&nc_write_eigen<_Scalar, _Options, _StorageIndex>, ncio.nc, &A, vname);
+    ncio += std::bind(&nc_rw_eigen<_Scalar, _Options, _StorageIndex>, ncio.nc, ncio.rw, &A, vname);
 
 }
 // ====================================================

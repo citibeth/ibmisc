@@ -19,6 +19,7 @@ struct Weighted_Eigen : public Weighted {
 
     ibmisc::TmpAlloc tmp;            // Stuff that needs same lifetime as Eigen
 
+    std::array<std::string,2> dim_names;
     std::array<SparseSetT *,2> dims;            // Dense-to-sparse mapping for the dimensions.  (Store the originals in tmp if you need to)
 
     // If M=BvA, then wM = wBvA = area of B cells
@@ -30,9 +31,10 @@ struct Weighted_Eigen : public Weighted {
     // Area of A cells
     blitz::Array<double,1> Mw;
 
-    Weighted_Eigen(std::array<SparseSetT *,2> _dims) : Weighted(LinearType::EIGEN) {}
+    Weighted_Eigen(std::array<std::string,2> const &_dim_names, std::array<SparseSetT *,2> _dims)
+        : Weighted(LinearType::EIGEN), dim_names(_dim_names), dims(_dims) {}
 
-    Weighted_Eigen() : Weighted(LinearType::EIGEN)
+    Weighted_Eigen(std::array<std::string,2> const &_dim_names={"",""}) : Weighted(LinearType::EIGEN), dim_names(_dim_names)
     {
         dims[0] = tmp.newptr<SparseSetT>();
         dims[1] = tmp.newptr<SparseSetT>();
@@ -76,9 +78,7 @@ struct Weighted_Eigen : public Weighted {
         ibmisc::TmpAlloc &tmp) const;
 
     /** Read/write to NetCDF */
-    void ncio(ibmisc::NcIO &ncio,
-        std::string const &vname,
-        std::array<std::string,2> dim_names);
+    void ncio(ibmisc::NcIO &ncio, std::string const &vname);
 
     // =============== Implement linear::Weighted
     void apply_weight(

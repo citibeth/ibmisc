@@ -114,24 +114,41 @@ blitz::Array<double,1> Weighted_Eigen::apply(
 // ---------------------------------------------------------
 
 /** NOTE: this->dims must already be allocated and read, if you are reading. */
-void Weighted_Eigen::ncio(ibmisc::NcIO &ncio,
-    std::string const &vname,
-    std::array<std::string,2> dim_names)
+void Weighted_Eigen::ncio(ibmisc::NcIO &ncio, std::string const &vname)
 {
     // Call to superclass
     Weighted::ncio(ncio, vname);
 
+    auto info_v = get_or_add_var(ncio, vname + ".info", "int", {});
+//    get_or_put_att(info_v, ncio.rw, "dim_names", "", dim_names);
+
+    std::vector<std::string> data_v(to_vector(dim_names));
+    get_or_put_att(info_v, ncio.rw, "dim_names", "", data_v);
+printf("data_v %ld\n", data_v.size());
+    if (ncio.rw == 'r') {
+        dim_names[0] = data_v[0];
+        dim_names[1] = data_v[1];
+    }
+
+
     // Matches dimension name created by SparseSet.
+printf("get_or_add_dims %p %p\n", dims[0], dims[1]);
+printf("get_or_add_dims %d %d\n", dims[0]->dense_extent(), dims[1]->dense_extent());
+printf("get_or_add_dims '%s' '%s'\n", dim_names[0].c_str(), dim_names[1].c_str());
     auto ncdims(ibmisc::get_or_add_dims(ncio,
         {dim_names[0] + ".dense_extent", dim_names[1] + ".dense_extent"},
         {dims[0]->dense_extent(), dims[1]->dense_extent()}));
+printf("BB2\n");
 
     // --------- M
+    if (ncio.rw == 'r') M.reset(new EigenSparseMatrixT);
     ncio_eigen(ncio, *M, vname + ".M");
+printf("BB3\n");
 
     // ---- Mw
     ncio_blitz_alloc<double,1>(ncio, Mw, vname + ".Mw", get_nc_type<double>(),
         {ncdims[1]});
+printf("BB4\n");
 
     // ----------- wM
     std::string matrix_name(dim_names[0] + "v" + dim_names[1]);

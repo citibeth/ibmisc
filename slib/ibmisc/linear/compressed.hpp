@@ -14,6 +14,7 @@ class Weighted_Compressed : public Weighted
 {
     friend Weighted_Compressed compress(Weighted_Eigen &eigen);
 
+public:
     std::array<ZArray<int,double,1>, 2> weights;    // {wM, Mw}
     ZArray<int,double,2> M;
 
