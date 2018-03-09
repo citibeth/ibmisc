@@ -132,23 +132,17 @@ printf("data_v %ld\n", data_v.size());
 
 
     // Matches dimension name created by SparseSet.
-printf("get_or_add_dims %p %p\n", dims[0], dims[1]);
-printf("get_or_add_dims %d %d\n", dims[0]->dense_extent(), dims[1]->dense_extent());
-printf("get_or_add_dims '%s' '%s'\n", dim_names[0].c_str(), dim_names[1].c_str());
     auto ncdims(ibmisc::get_or_add_dims(ncio,
         {dim_names[0] + ".dense_extent", dim_names[1] + ".dense_extent"},
         {dims[0]->dense_extent(), dims[1]->dense_extent()}));
-printf("BB2\n");
 
     // --------- M
     if (ncio.rw == 'r') M.reset(new EigenSparseMatrixT);
     ncio_eigen(ncio, *M, vname + ".M");
-printf("BB3\n");
 
     // ---- Mw
     ncio_blitz_alloc<double,1>(ncio, Mw, vname + ".Mw", get_nc_type<double>(),
         {ncdims[1]});
-printf("BB4\n");
 
     // ----------- wM
     std::string matrix_name(dim_names[0] + "v" + dim_names[1]);
@@ -166,7 +160,7 @@ void Weighted_Eigen::apply_weight(
     int _dim,    // 0=B, 1=A
     blitz::Array<double,2> const &As,    // As(nvec, ndim)
     blitz::Array<double,1> &out,    // out(nvec)
-    bool zero_out)
+    bool zero_out) const
 {
     auto &weights(_dim == 0 ? wM : Mw);
     auto &dim(*dims[_dim]);
@@ -184,7 +178,7 @@ void Weighted_Eigen::apply_weight(
 }
 
 /** Sparse shape of the matrix */
-std::array<long,2> Weighted_Eigen::shape()
+std::array<long,2> Weighted_Eigen::shape() const
     { return std::array<long,2>{dims[0]->sparse_extent(), dims[1]->sparse_extent()}; }
 
 
@@ -193,7 +187,7 @@ void Weighted_Eigen::apply_M(
     blitz::Array<double,2> const &A_s,
     blitz::Array<double,2> &B_s,
     AccumType accum_type,
-    bool force_conservation)
+    bool force_conservation) const
 {
     // TODO: Re-do this method, to work without copying over the matrix.
     //       This would have to stop using Eigen's facilities

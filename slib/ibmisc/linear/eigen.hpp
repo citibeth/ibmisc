@@ -85,17 +85,17 @@ struct Weighted_Eigen : public Weighted {
         int dim,    // 0=B, 1=A
         blitz::Array<double,2> const &As,    // As(nvec, ndim)
         blitz::Array<double,1> &out,
-        bool zero_out=true);
+        bool zero_out=true) const;
 
     /** Sparse shape of the matrix */
-    std::array<long,2> shape();
+    std::array<long,2> shape() const;
 
     /** Compute M * As */
     void apply_M(
         blitz::Array<double,2> const &As,
         blitz::Array<double,2> &out,
         AccumType accum_type=AccumType::REPLACE,
-        bool force_conservation=true);
+        bool force_conservation=true) const;
 
 };
 

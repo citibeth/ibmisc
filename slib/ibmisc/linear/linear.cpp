@@ -8,6 +8,10 @@ namespace linear {
 void Weighted::ncio(NcIO &ncio, std::string const &vname)
 {
     auto info_v = get_or_add_var(ncio, vname + ".info", "int", {});
+    if (ncio.rw == 'w') {
+        LinearType _type = type;
+        get_or_put_att_enum(info_v, ncio.rw, "type", _type);
+    }
     get_or_put_att(info_v, ncio.rw, "conservative", conservative);
 }
 

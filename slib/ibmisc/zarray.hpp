@@ -162,7 +162,7 @@ void ZArray<IndexT,ValueT,RANK>::
     ncio(NcIO &ncio, std::string const &vname)
     {
         auto info_v = get_or_add_var(ncio, vname + ".info", "int", {});
-        std::string zarray("zarray");
+        std::string zarray("ZARRAY");
         get_or_put_att(info_v, ncio.rw, "format", zarray);
         int rank = RANK;
         get_or_put_att(info_v, ncio.rw, "rank", "int", &rank, 1);

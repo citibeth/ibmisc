@@ -53,7 +53,10 @@ class Matrix
 };
 #endif
 
-
+/** Encapsulates a (possibly not conservative) regridding matrix with
+weight vectors for input and output vector space.  Implementations use
+either with Eigen matrices on a subspace, or with Zlib-compressed
+matrices. */
 class Weighted {
 public:
     // TmpAlloc tmp;    // Sometimes, hold the things we're wrapping.
@@ -71,13 +74,19 @@ public:
     virtual ~Weighted() {}
 
     /** Sparse shape of the matrix */
-    virtual std::array<long,2> shape() = 0;
+    virtual std::array<long,2> shape() const = 0;
 
+    /** Takes inner product between a weight vector and the input(s) As.
+    @param dim 0=B (output) weight, 1=A (intput) weight.
+    @param As As[nvec,nA] Vector(s) to compute inner product.
+    @param out out[nvec] Place output here.
+    @param zero_out If set, zero indices in out we will change, before applying.
+        Indices for which weight==0 will not be touched. */
     virtual void apply_weight(
         int dim,    // 0=B, 1=A
         blitz::Array<double,2> const &As,    // As(nvec, ndim)
         blitz::Array<double,1> &out,
-        bool zero_out=true) = 0;
+        bool zero_out=true) const = 0;
 
     /** Compute M * As.
     Does not touch the nullspace of M. */
@@ -85,7 +94,7 @@ public:
         blitz::Array<double,2> const &As,
         blitz::Array<double,2> &out,
         AccumType accum_type=AccumType::REPLACE,
-        bool force_conservation=true) = 0;
+        bool force_conservation=true) const = 0;
 
     /** I/O */
     virtual void ncio(NcIO &ncio, std::string const &vname); 

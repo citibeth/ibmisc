@@ -15,7 +15,7 @@ void Weighted_Compressed::apply_weight(
     int dim,    // 0=B, 1=A
     blitz::Array<double,2> const &As,    // As(nvec, nA)
     blitz::Array<double,1> &out,          // out(nvec)
-    bool zero_out)
+    bool zero_out) const
 {
     auto const nvec(As.extent(0));
     auto const nA(As.extent(1));
@@ -33,7 +33,7 @@ void Weighted_Compressed::apply_M(
     blitz::Array<double,2> const &As,    // As(nvec, nA)
     blitz::Array<double,2> &Bs,         // Bs(nvec, nB)
     AccumType accum_type,
-    bool force_conservation)
+    bool force_conservation) const
 {
     auto const nvec(As.extent(0));
     auto const nA(As.extent(1));
@@ -100,7 +100,7 @@ void Weighted_Compressed::ncio(NcIO &ncio, std::string const &vname)
 Weighted_Compressed compress(Weighted_Eigen &eigen)
 {
     Weighted_Compressed ret;
-
+    ret.conservative = eigen.conservative;
 
     spsparse::spcopy(
         spsparse::accum::to_sparse(

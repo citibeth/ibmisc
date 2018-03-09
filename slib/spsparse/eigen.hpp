@@ -537,7 +537,6 @@ static void nc_rw_eigen(
     Eigen::SparseMatrix<_Scalar,_Options,_StorageIndex> *A,
     std::string const &vname)
 {
-printf("XBEGIN nc_rw_eigen\n");
     netCDF::NcVar indices_v = nc->getVar(vname + ".indices");
     netCDF::NcVar vals_v = nc->getVar(vname + ".values");
 
@@ -563,7 +562,6 @@ printf("XBEGIN nc_rw_eigen\n");
             vals_v.putVar(&vals[0]);    // Write to entire NetCDF variable directly from RAM
         }
     } else {    // rw == 'r'
-printf("BEGIN nc_rw_eigen %p\n", A);
         int const N = vals_v.getDim(0).getSize();
 
         // Create in-memory data structure amenable to writing to disk quickly
@@ -597,10 +595,7 @@ printf("BEGIN nc_rw_eigen %p\n", A);
         A->reserve(tuples.tuples.size());
 
         // Convert to Eigen
-printf("A-shape (%ld %ld)\n", shape[0], shape[1]);
-printf("XEND nc_rw_eigen: %ld\n", tuples.tuples.size());
         A->setFromTriplets(tuples.begin(), tuples.end());
-printf("END nc_rw_eigen\n");
     }
 }
 
@@ -618,7 +613,6 @@ void ncio_eigen(
     Eigen::SparseMatrix<_Scalar,_Options,_StorageIndex> &A,
     std::string const &vname)
 {
-printf("BEGIN ncio_eigen\n");
     std::vector<std::string> const dim_names({vname + ".nnz", vname + ".rank"});
     std::vector<netCDF::NcDim> dims;        // Dimensions in NetCDF
     std::vector<size_t> dim_sizes;          // Length of our two dimensions.

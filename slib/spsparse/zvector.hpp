@@ -10,6 +10,70 @@
 
 namespace spsparse {
 
+// ==============================================================
+
+/** vector-like class, but wraps a std::vector, allows multiple
+    boost::interprocess:basic_ivectorstream to read from vector at
+    once.
+
+NOTE: This is to the C++11 standard */
+
+template<
+    class T,
+    class Allocator = std::allocator<T>
+>
+class _pvector {
+    std::vector<T,Allocator> dummy;
+    std::vector<T,Allocator> *vec;
+
+    typedef std::vector<T,Allocator> wrapped;
+public:
+    // Member types (type traits)
+    typedef typename wrapped::value_type value_type;
+    typedef typename wrapped::allocator_type allocator_type;
+    typedef typename wrapped::size_type size_type;
+    typedef typename wrapped::difference_type difference_type;
+    typedef typename wrapped::reference reference;
+    typedef typename wrapped::const_reference const_reference;
+    typedef typename wrapped::pointer pointer;
+    typedef typename wrapped::const_pointer const_pointer;
+    typedef typename wrapped::iterator iterator;
+    typedef typename wrapped::const_iterator const_iterator;
+    typedef typename wrapped::reverse_iterator reverse_iterator;
+    typedef typename wrapped::const_reverse_iterator const_reverse_iterator;
+
+    // Member functions (only those we need)
+    _pvector() : vec(&dummy) {}
+    _pvector(std::vector<T,Allocator> *_vec) : vec(_vec) {}
+
+    void resize( size_type count )
+        { vec->resize(count); }
+    void swap( _pvector<T,Allocator>& other )
+        { std::swap(vec, other.vec); }
+    void reserve( size_type new_cap )
+        { vec->reserve(new_cap); }
+    void clear()
+        { vec->clear(); }
+    bool empty() const
+        { return vec->empty(); }
+    reference operator[]( size_type pos )
+        { return vec->operator[](pos); }
+    const_reference operator[]( size_type pos ) const
+        { return vec->operator[](pos); }
+    size_type size() const
+        { return vec->size(); }
+    size_type capacity() const
+        { return vec->capacity(); }
+    void push_back( const T& value )
+        {vec->push_back(value); }
+    void push_back( T&& value )
+        { vec->push_back(std::move(value)); }
+};
+
+// ==============================================================
+
+
+
 enum class ZVAlgo {PLAIN, DIFFS};
 
 // ---------------------------------------------------------
@@ -138,12 +202,12 @@ class _ZVector {
 private:
     typedef typename ToIntType<ValueT>::int_type int_type;
 
-    std::vector<char> &zbuf;
+    _pvector<char> pzbuf;
 
     std::array<ValueT,RANK> cur_raws;
     ZVAlgo algo;
 
-    boost::interprocess::basic_ivectorstream<std::vector<char>> is;
+    boost::interprocess::basic_ivectorstream<_pvector<char>> is;
     zstr::istream zis;
 
 public:
@@ -182,12 +246,12 @@ public:
 
 template<class ValueT, int RANK>
 _ZVector<ValueT,RANK>::
-    _ZVector(std::vector<char> &_zbuf)
-        : zbuf(_zbuf),
+    _ZVector(std::vector<char> &_zbuf)    // GENERATOR
+        : pzbuf(&_zbuf),
         is(std::ios_base::out | std::ios_base::binary),
         zis(is)
     {
-        is.swap_vector(zbuf);
+        is.swap_vector(pzbuf);
 
         // Read the algo from the stream
         int ialgo;
@@ -233,7 +297,8 @@ _ZVector<ValueT,RANK>::
     ~_ZVector()
     {
         // Get our original vector back!
-        is.swap_vector(zbuf);
+        // (We don't need this with _pvector
+        // // is.swap_vector(zbuf);
     }
 
 }    // namespace spsparse::vgen

@@ -220,6 +220,7 @@ TEST_F(ZVectorTest, ZArray1)
 
     // Uncompress it
     TupleList<int,double,2> arr2(zsa2.shape());
+    auto gen2(zsa2.generator());    // Add an extra generator; make sure 2 can work at once
     for (auto ii(zsa2.generator()); ++ii; ) {
         arr2.add(ii->index(), ii->value());
     }
@@ -239,6 +240,10 @@ TEST_F(ZVectorTest, ZArray1)
 // -----------------------------------------------------------
 
 int main(int argc, char **argv) {
+    // For test, configure Everytrace to silently throw exceptions (which we can catch)
+    everytrace_init();
+//    everytrace_exit = &everytrace_exit_silent_exception;
+
     ::testing::InitGoogleTest(&argc, argv);
     return RUN_ALL_TESTS();
 }
