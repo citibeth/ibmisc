@@ -80,7 +80,7 @@ public:
     @param dim 0=B (output) weight, 1=A (intput) weight.
     @param As As[nvec,nA] Vector(s) to compute inner product.
     @param out out[nvec] Place output here.
-    @param zero_out If set, zero indices in out we will change, before applying.
+    @param zero_out If set, zero indices in out that we will change, before applying.
         Indices for which weight==0 will not be touched. */
     virtual void apply_weight(
         int dim,    // 0=B, 1=A

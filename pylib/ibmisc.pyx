@@ -58,6 +58,19 @@ cdef class NcIO:
 
 # ===================================================
 
+cdef split_shape(ashape, alen):
+    # See if we can find some set of dimensions matching ilen
+    cumlen = np.cumprod(tuple(reversed(ashape)))
+    try:
+        icut = len(ashape) - 1 - next(i for i,x in enumerate(cumlen) if x==alen)
+    except StopIteration:
+        raise ValueError('Cannot find trailing dimension of {} in input of shape {}'.format(alen, ashape)) from None
+
+    return ashape[0:icut], (
+        functools.reduce(operator.mul, ashape[0:icut], 1),
+        functools.reduce(operator.mul, ashape[icut:], 1))
+
+
 cdef extern from "examples.hpp" namespace "ibmisc::cython":
     cdef void cyexample_double_blitz(PyObject *) except +
     cdef object cyexample_sparse_matrix() except +
@@ -71,3 +84,53 @@ def example_sparse_matrix():
     return scipy.sparse.coo_matrix(data, shape)
 
 # --------------------------
+cdef class linear_Weighted:
+    """The result of RegridMatrices.matrix()"""
+    cdef unique_ptr[cibmisc.linear_Weighted] cself
+
+    @property
+    def shape(self):
+        return linear_Weighted_shape(self.cself.get())
+
+    def apply_weight(self, A_s):
+        # Number of elements in sparse in put vector
+        _,alen = self.shape
+        leading_shape, new_shape = split_shape(A_s.shape, alen)
+        A_s = A_s.reshape(new_shape)
+        B_s = cibmisc.linear_weighted_apply_weight(self.cself.get(),
+            dim, A_s)
+
+        return B_s
+
+
+    def apply_M(self, A_s, fill=np.nan, bool force_conservation=True):
+        """Applies the regrid matrix to A_s.  Smoothes and conserves, if those
+        options were specified in RegridMatrices.matrix().
+        A_s: Either:
+            - A single vector (1-D array) to be transformed.
+            - A 2-D array of row vectors to be transformed.
+        fill:
+            Un-set indices in output array will get this value."""
+
+        # Number of elements in sparse in put vector
+        _,alen = self.shape
+        leading_shape, new_shape = split_shape(A_s.shape, alen)
+        A_s = A_s.reshape(new_shape)
+        B_s = cibmisc.linear_weighted_apply_M(self.cself.get(),
+            A_s, fill, force_conservation)
+
+        return B_s
+
+    def ncio(self, ncio, vname):
+        self.cself.get().ncio(ncio.cself, vname)
+
+def example_linear_weighted(slinear_type):
+    ret = linear_Weighted()
+    ret.cself = std_move(cibmisc.example_linear_weighted(slinear_type))
+    return ret
+
+def nc_read_weighted(ncio, vname):
+    ret = linear_Weighted()
+    ret.cself = std_move(cibmisc.nc_read_weighted(ncio.cself.nc, vname))
+    return ret
+

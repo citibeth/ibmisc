@@ -34,7 +34,7 @@ struct Weighted_Eigen : public Weighted {
     Weighted_Eigen(std::array<std::string,2> const &_dim_names, std::array<SparseSetT *,2> _dims)
         : Weighted(LinearType::EIGEN), dim_names(_dim_names), dims(_dims) {}
 
-    Weighted_Eigen(std::array<std::string,2> const &_dim_names={"",""}) : Weighted(LinearType::EIGEN), dim_names(_dim_names)
+    Weighted_Eigen(std::array<std::string,2> const &_dim_names={"dimB","dimA"}) : Weighted(LinearType::EIGEN), dim_names(_dim_names)
     {
         dims[0] = tmp.newptr<SparseSetT>();
         dims[1] = tmp.newptr<SparseSetT>();

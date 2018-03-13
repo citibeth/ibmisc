@@ -21,6 +21,37 @@ from libcpp.memory cimport shared_ptr, unique_ptr
 cimport cblitz
 from cpython.object cimport *
 
+cdef extern from "<utility>" namespace "std":
+    cdef T std_move "std::move" [T](T t)
+
+## See: https://github.com/apache/arrow/commit/000e1e34d6ad3b6c1a1bc430974f2eac05f96173
+#cdef extern from "<memory>" namespace "std" nogil:
+#
+#    cdef cppclass unique_ptr[T]:
+#        unique_ptr()
+#        unique_ptr(T*)
+#        T* get()
+#        T* release()
+#        void reset()
+#        void reset(nullptr_t)
+#        void reset(T*)
+#        void swap(unique_ptr&)
+#
+#    cdef cppclass shared_ptr[T]:
+#        shared_ptr()
+#        shared_ptr(T*)
+#        T* get()
+#        void reset()
+#        void reset(T* p)
+#        void swap(shared_ptr&)
+#
+#cdef extern from "<array>" namespace "std" nogil:
+#    cdef cppclass array[T,rank]:
+#        array() except+
+#        T &operator[](size_t)
+#
+# ==========================================================
+
 # This will make the C++ class def for Rectangle available..
 cdef extern from "ibmisc/indexing.hpp" namespace "ibmisc":
     pass
@@ -31,35 +62,38 @@ cdef extern from "ibmisc/indexing.hpp" namespace "ibmisc":
         vector[int] indices
 
 cdef extern from "ibmisc/netcdf.hpp" namespace "ibmisc":
-    pass
+    cdef class NcGroup:
+        pass
 
     cdef cppclass NcIO:
+        NcGroup *nc
         NcIO(string fname, int fMode) except +
         void close()
+
 
 cdef extern from "ibmisc/cython.hpp" namespace "ibmisc::cython":
     cdef extern void init()
     cdef extern call_import_array()
     cdef NcIO *new_ncio(string fname, string sFileMode)
 
-# See: https://github.com/apache/arrow/commit/000e1e34d6ad3b6c1a1bc430974f2eac05f96173
-cdef extern from "<memory>" namespace "std" nogil:
 
-    cdef cppclass unique_ptr[T]:
-        unique_ptr()
-        unique_ptr(T*)
-        T* get()
-        T* release()
-        void reset()
-        void reset(nullptr_t)
-        void reset(T*)
-        void swap(unique_ptr&)
+cdef extern from "ibmisc/linear/linear.hpp" namespace "ibmisc::linear":
+    cdef cppclass linear_Weighted "ibmisc::linear::Weighted":
+        void ncio(NcIO, string) except +
 
-    cdef cppclass shared_ptr[T]:
-        shared_ptr()
-        shared_ptr(T*)
-        T* get()
-        void reset()
-        void reset(T* p)
-        void swap(shared_ptr&)
+    cdef extern unique_ptr[linear_Weighted] nc_read_weighted(
+        NcGroup *nc, string vname) except +
+
+cdef extern from "ibmisc_cython.hpp" namespace "ibmisc::cython":
+    cdef object linear_Weighted_shape(linear_Weighted *) except +
+
+    cdef object linear_Weighted_apply_weight(linear_Weighted *,
+        int, PyObject *) except +
+
+    cdef object linear_Weighted_apply_M(linear_Weighted *,
+        PyObject *, double, bool) except +
+
+    # Used for unit testing
+    cdef unique_ptr[linear_Weighted] example_linear_weighted(str) except +
+
 

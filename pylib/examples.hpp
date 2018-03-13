@@ -15,11 +15,18 @@
  * You should have received a copy of the GNU Lesser General Public License
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
+#ifndef IBMISC_PYLIB_EXAMPLES_HPP
+#define IBMISC_PYLIB_EXAMPLES_HPP
 
 namespace ibmisc {
 namespace cython {
 
 void cyexample_double_blitz(PyObject *a);
 PyObject *cyexample_sparse_matrix();
+std::unique_ptr<linear::Weighted> example_linear_weighted(
+    std::string slinear_type);
 
-}}
+}}    // namespace
+#endif    // guard
+
+
