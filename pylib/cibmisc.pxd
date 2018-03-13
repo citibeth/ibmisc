@@ -61,10 +61,11 @@ cdef extern from "ibmisc/indexing.hpp" namespace "ibmisc":
         vector[TupleT] extent
         vector[int] indices
 
-cdef extern from "ibmisc/netcdf.hpp" namespace "ibmisc":
-    cdef class NcGroup:
+cdef extern from "<netcdf>" namespace "netCDF":
+    cdef cppclass NcGroup:
         pass
 
+cdef extern from "ibmisc/netcdf.hpp" namespace "ibmisc":
     cdef cppclass NcIO:
         NcGroup *nc
         NcIO(string fname, int fMode) except +
@@ -77,20 +78,20 @@ cdef extern from "ibmisc/cython.hpp" namespace "ibmisc::cython":
     cdef NcIO *new_ncio(string fname, string sFileMode)
 
 
-cdef extern from "ibmisc/linear/linear.hpp" namespace "ibmisc::linear":
+cdef extern from "<ibmisc/linear/linear.hpp>" namespace "ibmisc::linear":
     cdef cppclass linear_Weighted "ibmisc::linear::Weighted":
-        void ncio(NcIO, string) except +
+        void ncio(NcIO &, string) except +
 
     cdef extern unique_ptr[linear_Weighted] nc_read_weighted(
         NcGroup *nc, string vname) except +
 
 cdef extern from "ibmisc_cython.hpp" namespace "ibmisc::cython":
-    cdef object linear_Weighted_shape(linear_Weighted *) except +
+    cdef object linear_Weighted_shape(linear_Weighted &) except +
 
-    cdef object linear_Weighted_apply_weight(linear_Weighted *,
+    cdef object linear_Weighted_apply_weight(linear_Weighted &,
         int, PyObject *) except +
 
-    cdef object linear_Weighted_apply_M(linear_Weighted *,
+    cdef object linear_Weighted_apply_M(linear_Weighted &,
         PyObject *, double, bool) except +
 
     # Used for unit testing

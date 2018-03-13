@@ -22,11 +22,15 @@ import scipy.sparse
 cimport cibmisc
 from cpython.object cimport *
 from cython.operator cimport dereference as deref, preincrement as inc
+from libcpp.memory cimport unique_ptr
+from libcpp cimport bool
+import functools
+import operator
 
 cibmisc.init()
 
-cdef class NcIO:
-    # cdef cibmisc.NcIO *cself
+cdef class NcIOx:
+    cdef cibmisc.NcIO *cself
 
     def __cinit__(self, filePath, sfMode):
         self.cself = cibmisc.new_ncio(filePath.encode(), sfMode.encode());
@@ -90,17 +94,22 @@ cdef class linear_Weighted:
 
     @property
     def shape(self):
-        return linear_Weighted_shape(self.cself.get())
+        return cibmisc.linear_Weighted_shape(self.cself.get()[0])
 
-    def apply_weight(self, A_s):
+    def apply_weight(self, int dim, A_s):
         # Number of elements in sparse in put vector
         _,alen = self.shape
         leading_shape, new_shape = split_shape(A_s.shape, alen)
         A_s = A_s.reshape(new_shape)
-        B_s = cibmisc.linear_weighted_apply_weight(self.cself.get(),
-            dim, A_s)
+        B_s = cibmisc.linear_Weighted_apply_weight(self.cself.get()[0], dim, <PyObject *>A_s)
 
         return B_s
+
+    def apply_wM(self, A_s):
+        return self.apply_weight(0,A_s)
+    def apply_Mw(self, A_s):
+        return self.apply_weight(1,A_s)
+
 
 
     def apply_M(self, A_s, fill=np.nan, bool force_conservation=True):
@@ -116,21 +125,21 @@ cdef class linear_Weighted:
         _,alen = self.shape
         leading_shape, new_shape = split_shape(A_s.shape, alen)
         A_s = A_s.reshape(new_shape)
-        B_s = cibmisc.linear_weighted_apply_M(self.cself.get(),
-            A_s, fill, force_conservation)
+        B_s = cibmisc.linear_Weighted_apply_M(self.cself.get()[0],
+            <PyObject *>A_s, fill, force_conservation)
 
         return B_s
 
-    def ncio(self, ncio, vname):
-        self.cself.get().ncio(ncio.cself, vname)
+    def ncio(self, NcIO ncio, vname):
+        self.cself.get().ncio(ncio.cself[0], vname)
 
 def example_linear_weighted(slinear_type):
     ret = linear_Weighted()
-    ret.cself = std_move(cibmisc.example_linear_weighted(slinear_type))
+    ret.cself = cibmisc.std_move(cibmisc.example_linear_weighted(slinear_type))
     return ret
 
-def nc_read_weighted(ncio, vname):
+def nc_read_weighted(NcIO ncio, vname):
     ret = linear_Weighted()
-    ret.cself = std_move(cibmisc.nc_read_weighted(ncio.cself.nc, vname))
+    ret.cself = cibmisc.std_move(cibmisc.nc_read_weighted(ncio.cself[0].nc, vname))
     return ret
 

@@ -8,15 +8,15 @@ namespace ibmisc {
 namespace cython {
 
 extern PyObject *linear_Weighted_shape(
-    linear::Weighted *M);
+    linear::Weighted &self);
 
 extern PyObject *linear_Weighted_apply_weight(
-    linear::Weighted *self,
+    linear::Weighted &self,
     int dim,
     PyObject *A_s_py);            // A_b{nj_s} One row per variable
 
 extern PyObject *linear_Weighted_apply_M(
-    linear::Weighted *self,
+    linear::Weighted &self,
     PyObject *A_s_py,            // A_b{nj_s} One row per variable
     double fill,
     // std::string const &saccum_type,

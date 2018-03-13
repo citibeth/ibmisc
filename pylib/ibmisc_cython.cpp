@@ -4,13 +4,13 @@ namespace cython {
 
 
 PyObject *linear_Weighted_shape(
-    linear::Weighted *M)
+    linear::Weighted &self)
 {
-    return py_build_tuple<pytype_long, long, 2>(M->shape());
+    return py_build_tuple<pytype_long, long, 2>(self.shape());
 }
 
 PyObject *linear_Weighted_apply_weight(
-    linear::Weighted *self,
+    linear::Weighted &self,
     int dim,
     PyObject *A_s_py)            // A_b{nj_s} One row per variable
 {
@@ -37,7 +37,7 @@ PyObject *linear_Weighted_apply_weight(
 }
 
 PyObject *linear_Weighted_apply_M(
-    linear::Weighted *self,
+    linear::Weighted &self,
     PyObject *A_s_py,            // A_b{nj_s} One row per variable
     double fill,
     // std::string const &saccum_type,
@@ -63,34 +63,7 @@ PyObject *linear_Weighted_apply_M(
 }
 
 
-// -----------------------------------------
-typedef spsparse::MakeDenseEigen<sparse_index_type, val_type, 0, dense_index_type> MakeDenseEigenT;
-template<int RANK>
-    using TupleListT = MakeDenseEigenT::TupleListT<RANK>;
-template<int RANK>
-    using DenseArrayT = blitz::Array<val_type,RANK>;
-typedef MakeDenseEigenT::SparseSetT SparseSetT;
-typedef MakeDenseEigenT::EigenSparseMatrixT EigenSparseMatrixT;
-typedef Eigen::Matrix<val_type, Eigen::Dynamic, Eigen::Dynamic> EigenDenseMatrixT;
-typedef Eigen::Matrix<val_type, Eigen::Dynamic, 1> EigenColVectorT;
-typedef Eigen::Matrix<val_type, 1, Eigen::Dynamic> EigenRowVectorT;
-typedef Eigen::DiagonalMatrix<val_type, Eigen::Dynamic> EigenDiagonalMatrixT;
-// -----------------------------------------
 
-void sample_makedense(MakeDenseEigenT::AccumT &&accum)
-{
-
-    accum.add({0,0},.5);
-    accum.add({10,10},.5);
-    accum.add({20,20},.5);
-
-
-    //accum.add({30,30},.5);    // Nullspace
-    accum.add({00,40},.5);
-    accum.add({10,40},.5);
-    accum.add({20,40},.5);
-    //accum.add({30,40},.5);
-}
 
 
 }}    // namespace
