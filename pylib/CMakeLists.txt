@@ -23,7 +23,7 @@ list(APPEND EXTERNAL_LIBS ${PYTHON_LIBRARY})
 add_definitions(-DPY_ARRAY_UNIQUE_SYMBOL=ibmisc_array_unique_symbol)
 
 # Only ONE compilation unit should NOT have -DNO_IMPORT_ARRAY
-foreach (SOURCE_FILE cython.cpp examples.cpp)
+foreach (SOURCE_FILE cython.cpp examples.cpp ibmisc_cython.cpp)
     list(APPEND PYLIB_SOURCES ${SOURCE_FILE})
     set_property(SOURCE ${SOURCE_FILE}
         PROPERTY COMPILE_DEFINITIONS NO_IMPORT_ARRAY )
