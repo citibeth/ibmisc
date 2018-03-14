@@ -1,5 +1,5 @@
-#ifndef IBMISC_PYLIB_EXAMPLES_HPP
-#define IBMISC_PYLIB_EXAMPLES_HPP
+#ifndef IBMISC_PYLIB_IBMISC_CYTHON_HPP
+#define IBMISC_PYLIB_IBMISC_CYTHON_HPP
 
 #include <Python.h>
 #include <ibmisc/linear/linear.hpp>

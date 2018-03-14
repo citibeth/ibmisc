@@ -19,3 +19,6 @@ cimport cibmisc
 
 cdef class NcIO:
     cdef cibmisc.NcIO *cself
+
+cdef class linear_Weighted:
+    cdef cibmisc.linear_Weighted *cself

@@ -21,8 +21,8 @@ from libcpp.memory cimport shared_ptr, unique_ptr
 cimport cblitz
 from cpython.object cimport *
 
-cdef extern from "<utility>" namespace "std":
-    cdef T std_move "std::move" [T](T t)
+#cdef extern from "<utility>" namespace "std":
+#    cdef T std_move "std::move" [T](T t)
 
 ## See: https://github.com/apache/arrow/commit/000e1e34d6ad3b6c1a1bc430974f2eac05f96173
 #cdef extern from "<memory>" namespace "std" nogil:
@@ -80,7 +80,7 @@ cdef extern from "ibmisc/cython.hpp" namespace "ibmisc::cython":
 
 cdef extern from "<ibmisc/linear/linear.hpp>" namespace "ibmisc::linear":
     cdef cppclass linear_Weighted "ibmisc::linear::Weighted":
-        void ncio(NcIO &, string) except +
+        void ncio(NcIO &, string &) except +
 
     cdef extern unique_ptr[linear_Weighted] nc_read_weighted(
         NcGroup *nc, string vname) except +
@@ -95,6 +95,6 @@ cdef extern from "ibmisc_cython.hpp" namespace "ibmisc::cython":
         PyObject *, double, bool) except +
 
     # Used for unit testing
-    cdef unique_ptr[linear_Weighted] example_linear_weighted(str) except +
+    cdef unique_ptr[linear_Weighted] example_linear_weighted(string &) except +
 
 

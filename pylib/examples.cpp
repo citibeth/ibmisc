@@ -19,14 +19,25 @@
 #include <memory>
 #include <ibmisc/cython.hpp>
 #include <spsparse/eigen.hpp>
+#include <spsparse/SparseSet.hpp>
 #include <ibmisc/linear/compressed.hpp>
+#include <ibmisc/linear/eigen.hpp>
+#include <ibmisc/enum.hpp>
 
 #include "examples.hpp"
+
+using namespace spsparse;
+using namespace ibmisc;
 
 namespace ibmisc {
 namespace cython {
 
 // -----------------------------------------
+// Types that will be used throughout as template arguments
+typedef long sparse_index_type;
+typedef int dense_index_type;
+typedef double val_type;
+
 typedef spsparse::MakeDenseEigen<sparse_index_type, val_type, 0, dense_index_type> MakeDenseEigenT;
 template<int RANK>
     using TupleListT = MakeDenseEigenT::TupleListT<RANK>;
@@ -94,8 +105,8 @@ std::unique_ptr<linear::Weighted> example_linear_weighted(
     dims[1].add_dense(15);
 
     MakeDenseEigenT BvA_o(
-        std::bind(&sample_makedense, _1),
-        {SparsifyTransform::ADD_DENSE},
+        std::bind(&sample_makedense, std::placeholders::_1),
+        {spsparse::SparsifyTransform::ADD_DENSE},
         {&dims[0], &dims[1]}, '.');
 
     // Add extra unneeded dimensions
@@ -123,9 +134,9 @@ std::unique_ptr<linear::Weighted> example_linear_weighted(
     BvA1->wM(2) *= .9;
     BvA1->conservative = false;
 
-    auto linear_type(parse_enum<LinearType>(slinear_type));
+    auto linear_type(parse_enum<linear::LinearType>(slinear_type));
 
-    if (linear_type == LinearType::EIGEN) {
+    if (linear_type == linear::LinearType::EIGEN) {
         return std::unique_ptr<linear::Weighted>(BvA1.release());
     } else {
         return std::unique_ptr<linear::Weighted>(

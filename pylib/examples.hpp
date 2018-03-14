@@ -21,9 +21,11 @@
 namespace ibmisc {
 namespace cython {
 
-void cyexample_double_blitz(PyObject *a);
-PyObject *cyexample_sparse_matrix();
-std::unique_ptr<linear::Weighted> example_linear_weighted(
+extern void cyexample_double_blitz(PyObject *a);
+
+extern PyObject *cyexample_sparse_matrix();
+
+extern std::unique_ptr<linear::Weighted> example_linear_weighted(
     std::string slinear_type);
 
 }}    // namespace

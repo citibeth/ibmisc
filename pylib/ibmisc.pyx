@@ -29,11 +29,11 @@ import operator
 
 cibmisc.init()
 
-cdef class NcIOx:
-    cdef cibmisc.NcIO *cself
+cdef class NcIO:
+    # cdef cibmisc.NcIO *cself    # Already defined in ibmisc.pxd
 
     def __cinit__(self, filePath, sfMode):
-        self.cself = cibmisc.new_ncio(filePath.encode(), sfMode.encode());
+        self.cself = cibmisc.new_ncio(filePath.encode(), sfMode.encode())
 
     def __dealloc__(self):
         del self.cself
@@ -90,18 +90,25 @@ def example_sparse_matrix():
 # --------------------------
 cdef class linear_Weighted:
     """The result of RegridMatrices.matrix()"""
-    cdef unique_ptr[cibmisc.linear_Weighted] cself
+    # cdef unique_ptr[cibmisc.linear_Weighted] cself    # Defined in ibmisc.pxd
+
+    def __cinit__(self):
+        self.cself = NULL
+
+    def __dealloc__(self):
+        if (self.cself):
+            del self.cself
 
     @property
     def shape(self):
-        return cibmisc.linear_Weighted_shape(self.cself.get()[0])
+        return cibmisc.linear_Weighted_shape(self.cself[0])
 
     def apply_weight(self, int dim, A_s):
         # Number of elements in sparse in put vector
         _,alen = self.shape
         leading_shape, new_shape = split_shape(A_s.shape, alen)
         A_s = A_s.reshape(new_shape)
-        B_s = cibmisc.linear_Weighted_apply_weight(self.cself.get()[0], dim, <PyObject *>A_s)
+        B_s = cibmisc.linear_Weighted_apply_weight(self.cself[0], dim, <PyObject *>A_s)
 
         return B_s
 
@@ -125,21 +132,25 @@ cdef class linear_Weighted:
         _,alen = self.shape
         leading_shape, new_shape = split_shape(A_s.shape, alen)
         A_s = A_s.reshape(new_shape)
-        B_s = cibmisc.linear_Weighted_apply_M(self.cself.get()[0],
+        B_s = cibmisc.linear_Weighted_apply_M(self.cself[0],
             <PyObject *>A_s, fill, force_conservation)
 
         return B_s
 
     def ncio(self, NcIO ncio, vname):
-        self.cself.get().ncio(ncio.cself[0], vname)
+        self.cself.ncio(ncio.cself[0], vname.encode())
+
+# https://stackoverflow.com/questions/12204441/passing-c-pointer-as-argument-into-cython-function
+cdef linear_Weighted_init(cibmisc.linear_Weighted *_cself):
+    ret = linear_Weighted()
+    ret.cself = _cself
+    return ret
 
 def example_linear_weighted(slinear_type):
-    ret = linear_Weighted()
-    ret.cself = cibmisc.std_move(cibmisc.example_linear_weighted(slinear_type))
-    return ret
+    return linear_Weighted_init(
+        cibmisc.example_linear_weighted(slinear_type.encode()).release())
 
 def nc_read_weighted(NcIO ncio, vname):
-    ret = linear_Weighted()
-    ret.cself = cibmisc.std_move(cibmisc.nc_read_weighted(ncio.cself[0].nc, vname))
-    return ret
+    return linear_Weighted_init(
+        cibmisc.nc_read_weighted(ncio.cself[0].nc, vname.encode()).release())
 
