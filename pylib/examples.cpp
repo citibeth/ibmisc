@@ -122,10 +122,10 @@ std::unique_ptr<linear::Weighted> example_linear_weighted(
     // Scale and stick into a linear::Weighted_Eigen
     std::unique_ptr<linear::Weighted_Eigen> BvA1(
         new linear::Weighted_Eigen({"dimB", "dimA"}));
-//    BvA1->tmp.take(BvA1->dims[0], std::move(dims[0]));
-//    BvA1->tmp.take(BvA1->dims[1], std::move(dims[1]));
-    BvA1->dims[0] = &dims[0];
-    BvA1->dims[1] = &dims[1];
+    BvA1->tmp.take(BvA1->dims[0], std::move(dims[0]));
+    BvA1->tmp.take(BvA1->dims[1], std::move(dims[1]));
+//    BvA1->dims[0] = &dims[0];
+//    BvA1->dims[1] = &dims[1];
     BvA1->M.reset(new MakeDenseEigenT::EigenSparseMatrixT(map_eigen_diagonal(sBvA) * BvA));
     BvA1->wM.reference(sum(BvA,0,'+'));
     BvA1->Mw.reference(sum(BvA,1,'+'));
@@ -137,11 +137,13 @@ std::unique_ptr<linear::Weighted> example_linear_weighted(
     auto linear_type(parse_enum<linear::LinearType>(slinear_type));
 
     if (linear_type == linear::LinearType::EIGEN) {
-        return std::unique_ptr<linear::Weighted>(BvA1.release());
+        auto ret(std::unique_ptr<linear::Weighted>(BvA1.release()));
+        return ret;
     } else {
-        return std::unique_ptr<linear::Weighted>(
+        auto ret(std::unique_ptr<linear::Weighted>(
             new linear::Weighted_Compressed(
-                compress(*BvA1)));
+                compress(*BvA1))));
+        return ret;
     }
 }
 

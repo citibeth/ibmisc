@@ -45,11 +45,12 @@ int ndim);
 
 static inline ibmisc::NcIO *new_ncio(std::string fname, std::string sfileMode)
 {
+    // See ibmisc/slib/ibmisc/netcdf.cpp: _filemode_to_netcdf(char mode)
     netCDF::NcFile::FileMode fileMode;
-    if (sfileMode == "read") fileMode = netCDF::NcFile::FileMode::read;
-    else if (sfileMode == "write") fileMode = netCDF::NcFile::FileMode::write;
-    else if (sfileMode == "replace") fileMode = netCDF::NcFile::FileMode::replace;
-    else if (sfileMode == "newFile") fileMode = netCDF::NcFile::FileMode::newFile;
+    if (sfileMode == "read" || sfileMode == "r") fileMode = netCDF::NcFile::FileMode::read;
+    else if (sfileMode == "write" || sfileMode == "a") fileMode = netCDF::NcFile::FileMode::write;
+    else if (sfileMode == "replace" || sfileMode == "w") fileMode = netCDF::NcFile::FileMode::replace;
+    else if (sfileMode == "newFile" || sfileMode == "x") fileMode = netCDF::NcFile::FileMode::newFile;
     else {
         (*ibmisc::ibmisc_error)(-1,
             "Bad file mode for netCDF::NcFile::FileMode: %s", sfileMode.c_str());
