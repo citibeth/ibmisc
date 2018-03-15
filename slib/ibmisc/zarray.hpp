@@ -94,6 +94,7 @@ bool ZArray_Generator<IndexT,ValueT,RANK>::
         bool good_values = ++values;
         if (good_indices != good_values) (*ibmisc_error)(-1,
             "All iterators should be of same length (more debugging needed here)");
+		// if (good_indices) printf("   ++  (%d, %d) %g\n", (*indices)[0], (*indices)[1], (*values)[0]);
         return good_indices;
     }
 

@@ -191,6 +191,18 @@ _ZVector<ValueT,RANK>::
 }    // namespace vaccum
 // ============================================================================
 
+/** Use a simple vectorwrap to read from std::vector<char>, instead of
+the boost ivectorstream.  The Boost solution seemed to have a buffer
+overrun bug that sent spurious bytes to gzip in some cases.
+https://stackoverflow.com/questions/8815164/c-wrapping-vectorchar-with-istream
+*/
+template<typename CharT, typename TraitsT = std::char_traits<CharT> >
+class vectorwrapbuf : public std::basic_streambuf<CharT, TraitsT> {
+public:
+    vectorwrapbuf(std::vector<CharT> &vec) {
+        this->setg(vec.data(), vec.data(), vec.data() + vec.size());
+    }
+};
 
 // --------------------------------------------------------------------------
 namespace vgen {
@@ -202,12 +214,12 @@ class _ZVector {
 private:
     typedef typename ToIntType<ValueT>::int_type int_type;
 
-    _pvector<char> pzbuf;
+    vectorwrapbuf<char> databuf;
 
     std::array<ValueT,RANK> cur_raws;
     ZVAlgo algo;
 
-    boost::interprocess::basic_ivectorstream<_pvector<char>> is;
+    std::istream is;
     zstr::istream zis;
 
 public:
@@ -243,16 +255,11 @@ public:
         { return self->operator*(); }
 };
 // -------------------------------------------------------------
-
 template<class ValueT, int RANK>
 _ZVector<ValueT,RANK>::
     _ZVector(std::vector<char> &_zbuf)    // GENERATOR
-        : pzbuf(&_zbuf),
-        is(std::ios_base::out | std::ios_base::binary),
-        zis(is)
+        : databuf(_zbuf), is(&databuf), zis(is)
     {
-        is.swap_vector(pzbuf);
-
         // Read the algo from the stream
         int ialgo;
         zis.read((char *)&ialgo, sizeof(ialgo));
