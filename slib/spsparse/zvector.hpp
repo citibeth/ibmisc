@@ -12,6 +12,8 @@ namespace spsparse {
 
 // ==============================================================
 
+#if 0
+/** Not needed, but this was some work to create. */
 /** vector-like class, but wraps a std::vector, allows multiple
     boost::interprocess:basic_ivectorstream to read from vector at
     once.
@@ -69,6 +71,7 @@ public:
     void push_back( T&& value )
         { vec->push_back(std::move(value)); }
 };
+#endif
 
 // ==============================================================
 
@@ -228,12 +231,7 @@ public:
     bool operator++();
 
     std::array<ValueT,RANK> const &operator*() const
-    {
-        return cur_raws;
-    }
-
-    ~_ZVector();
-
+        { return cur_raws; }
 };
 
 // -------------------------------------------------------------
@@ -299,14 +297,6 @@ bool _ZVector<ValueT,RANK>::
         return true;
     }
 
-template<class ValueT, int RANK>
-_ZVector<ValueT,RANK>::
-    ~_ZVector()
-    {
-        // Get our original vector back!
-        // (We don't need this with _pvector
-        // // is.swap_vector(zbuf);
-    }
 
 }    // namespace spsparse::vgen
 
