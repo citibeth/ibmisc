@@ -223,7 +223,7 @@ private:
     zstr::istream zis;
 
 public:
-    explicit _ZVector(std::vector<char> &_zbuf);
+    explicit _ZVector(std::vector<char> const &_zbuf);
 
     bool operator++();
 
@@ -245,7 +245,7 @@ class ZVector {
 public:
     typedef ValueT val_type;
 
-    explicit ZVector(std::vector<char> &_zbuf) :
+    explicit ZVector(std::vector<char> const &_zbuf) :
         self(new _ZVector<ValueT,RANK>(_zbuf)) {}
 
     bool operator++()
@@ -257,8 +257,8 @@ public:
 // -------------------------------------------------------------
 template<class ValueT, int RANK>
 _ZVector<ValueT,RANK>::
-    _ZVector(std::vector<char> &_zbuf)    // GENERATOR
-        : databuf(_zbuf), is(&databuf), zis(is)
+    _ZVector(std::vector<char> const &_zbuf)    // GENERATOR
+        : databuf(*const_cast<std::vector<char> *>(&_zbuf)), is(&databuf), zis(is)
     {
         // Read the algo from the stream
         int ialgo;

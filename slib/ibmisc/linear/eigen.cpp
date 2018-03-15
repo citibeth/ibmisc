@@ -124,7 +124,6 @@ void Weighted_Eigen::ncio(ibmisc::NcIO &ncio, std::string const &vname)
 
     std::vector<std::string> data_v(to_vector(dim_names));
     get_or_put_att(info_v, ncio.rw, "dim_names", "", data_v);
-printf("data_v %ld\n", data_v.size());
     if (ncio.rw == 'r') {
         dim_names[0] = data_v[0];
         dim_names[1] = data_v[1];
