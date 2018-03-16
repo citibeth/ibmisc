@@ -120,8 +120,7 @@ std::unique_ptr<linear::Weighted> example_linear_weighted(
     auto sBvA(sum(BvA, 0, '-'));
 
     // Scale and stick into a linear::Weighted_Eigen
-    std::unique_ptr<linear::Weighted_Eigen> BvA1(
-        new linear::Weighted_Eigen({"dimB", "dimA"}));
+    std::unique_ptr<linear::Weighted_Eigen> BvA1(new linear::Weighted_Eigen);
     BvA1->tmp.take(BvA1->dims[0], std::move(dims[0]));
     BvA1->tmp.take(BvA1->dims[1], std::move(dims[1]));
 //    BvA1->dims[0] = &dims[0];

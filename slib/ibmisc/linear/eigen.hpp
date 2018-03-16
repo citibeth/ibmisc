@@ -19,7 +19,6 @@ struct Weighted_Eigen : public Weighted {
 
     ibmisc::TmpAlloc tmp;            // Stuff that needs same lifetime as Eigen
 
-    std::array<std::string,2> dim_names;
     std::array<SparseSetT *,2> dims;            // Dense-to-sparse mapping for the dimensions.  (Store the originals in tmp if you need to)
 
     // If M=BvA, then wM = wBvA = area of B cells
@@ -32,13 +31,13 @@ struct Weighted_Eigen : public Weighted {
     blitz::Array<double,1> Mw;
 
     /** Construct with shared dimensions from elsewhere */
-    Weighted_Eigen(std::array<std::string,2> const &_dim_names, std::array<SparseSetT *,2> _dims, bool conservative=true)
-        : Weighted(LinearType::EIGEN, conservative), dim_names(_dim_names), dims(_dims) {}
+    Weighted_Eigen(std::array<SparseSetT *,2> _dims, bool conservative=true)
+        : Weighted(LinearType::EIGEN, conservative), dims(_dims) {}
 
     /** Construct with internal dimensions.
-    @param dim_names Starting with a dot means, add vname in ncio().
+    @param dim_names Starting with a dot means, add vname in ncio().  Only used for writing.
     NOTE: dim_names might be changed later, as we read from disk. */
-    Weighted_Eigen(std::array<std::string,2> const &_dim_names={".dimB",".dimA"}, bool conservative=true) : Weighted(LinearType::EIGEN, conservative), dim_names(_dim_names)
+    Weighted_Eigen(bool conservative=true) : Weighted(LinearType::EIGEN, conservative)
     {
         dims[0] = tmp.newptr<SparseSetT>();
         dims[1] = tmp.newptr<SparseSetT>();
@@ -81,10 +80,13 @@ struct Weighted_Eigen : public Weighted {
         bool force_conservation,
         ibmisc::TmpAlloc &tmp) const;
 
-    /** NOTE: this->dims must already be allocated and read, if you are reading. */
-    void ncio_nodim(ibmisc::NcIO &ncio, std::string const &vname);
+    /** Read/write to NetCDF, NOT writing dimensions.
+    @param dim_names Names the dimensions will be saved under.  Only used for writing. */
+    void ncio(ibmisc::NcIO &ncio, std::string const &vname,
+        std::array<std::string,2> dim_names);
 
-    /** Read/write to NetCDF */
+    /** Read/write to NetCDF, with dimensions included.  They will be
+        saved as <vname>.dimB and <vname>.dimA. */
     void ncio(ibmisc::NcIO &ncio, std::string const &vname);
 
     // =============== Implement linear::Weighted

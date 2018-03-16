@@ -140,7 +140,7 @@ TEST_F(LinearTest, overlap)
     auto sBvA(sum(BvA, 0, '-'));
 
     // Scale and stick into a linear::Weighted_Eigen
-    linear::Weighted_Eigen BvA1({"dimB", "dimA"});
+    linear::Weighted_Eigen BvA1;
 //    BvA1.tmp.take(BvA1.dims[0], std::move(dims[0]));
 //    BvA1.tmp.take(BvA1.dims[1], std::move(dims[1]));
     BvA1.dims[0] = &dims[0];

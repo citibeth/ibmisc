@@ -113,22 +113,22 @@ blitz::Array<double,1> Weighted_Eigen::apply(
 // -----------------------------------------------------------------------
 // ---------------------------------------------------------
 
-/** NOTE: this->dims must already be allocated and read, if you are reading. */
-void Weighted_Eigen::ncio_nodim(ibmisc::NcIO &ncio, std::string const &vname)
+void Weighted_Eigen::ncio(ibmisc::NcIO &ncio, std::string const &vname,
+        std::array<std::string,2> dim_names)
 {
     // Call to superclass
     Weighted::ncio(ncio, vname);
 
     auto info_v = get_or_add_var(ncio, vname + ".info", "int", {});
-//    get_or_put_att(info_v, ncio.rw, "dim_names", "", dim_names);
+    //get_or_put_att(info_v, ncio.rw, "dim_names", "", dim_names);
 
-    std::vector<std::string> data_v(to_vector(dim_names));
+    // If reading... overwrite user-supplied dim_names with what we found on disk.
+    std::vector<std::string> data_v{dim_names[0], dim_names[1]};
     get_or_put_att(info_v, ncio.rw, "dim_names", "", data_v);
     if (ncio.rw == 'r') {
         dim_names[0] = data_v[0];
         dim_names[1] = data_v[1];
     }
-
 
     // Matches dimension name created by SparseSet.
     auto ncdims(ibmisc::get_or_add_dims(ncio,
@@ -153,28 +153,33 @@ void Weighted_Eigen::ncio_nodim(ibmisc::NcIO &ncio, std::string const &vname)
         "conservative", get_nc_type<bool>(), &conservative, 1);
 }
 
-/** Read/Write, WITH dimensions! */
 void Weighted_Eigen::ncio(ibmisc::NcIO &ncio, std::string const &vname)
 {
-    ncio_nodim(ncio, vname);
+    // Use standard dimnames for virtual function implementation.
+    std::array<std::string,2> default_dim_names{vname+".dimB", vname+".dimA"};
+    this->ncio(ncio, vname, default_dim_names);
 
     // Read/Write Dimensions, which might be shared with another Weighted_Eigen
     if (ncio.rw == 'r') {
+        auto info_v = get_or_add_var(ncio, vname + ".info", "int", {});
+
+        // Retrieve actual dim_names this was written with.
+        std::vector<std::string> data_v;
+        get_or_put_att(info_v, ncio.rw, "dim_names", "", data_v);
+        std::array<std::string,2> dim_names {data_v[0], data_v[1]};
+
         for (int i=0; i<2; ++i) {
             // Allocate dimension if not already done
             if (!dims[i]) dims[i] = tmp.newptr<SparseSetT>();
 
-            // Figure variable name for the dimension
-            std::string dim_name = (dim_names[i][0] == '.' ? vname + dim_names[i] : dim_names[i]);
-
             // Read dimension if not already done
-            if (dims[i]->dense_extent() == 0) dims[i]->ncio(ncio, dim_name);
+            if (dims[i]->dense_extent() == 0) dims[i]->ncio(ncio, dim_names[i]);
         }
     } else {
         for (int i=0; i<2; ++i) {
             // Write dimension if not already written
-            if (ncio.nc->getVar(dim_names[i]).isNull()) {
-                dims[i]->ncio(ncio, dim_names[i]);
+            if (ncio.nc->getVar(default_dim_names[i]).isNull()) {
+                dims[i]->ncio(ncio, default_dim_names[i]);
             }
         }
     }
