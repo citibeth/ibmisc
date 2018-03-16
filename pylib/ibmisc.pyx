@@ -19,7 +19,8 @@ cimport numpy as np
 np.import_array()
 import scipy.sparse
 
-cimport cibmisc
+cimport cibmisc            # Exports
+cimport cibmisc_cython    # Internal
 from cpython.object cimport *
 from cython.operator cimport dereference as deref, preincrement as inc
 from libcpp.memory cimport unique_ptr
@@ -101,18 +102,18 @@ cdef class linear_Weighted:
 
     @property
     def type(self):
-        return cibmisc.linear_Weighted_type(self.cself[0])
+        return cibmisc_cython.linear_Weighted_type(self.cself[0])
 
     @property
     def shape(self):
-        return cibmisc.linear_Weighted_shape(self.cself[0])
+        return cibmisc_cython.linear_Weighted_shape(self.cself[0])
 
     def apply_weight(self, int dim, A_s):
         # Number of elements in sparse in put vector
         _,alen = self.shape
         leading_shape, new_shape = split_shape(A_s.shape, alen)
         A_s = A_s.reshape(new_shape)
-        B_s = cibmisc.linear_Weighted_apply_weight(self.cself[0], dim, <PyObject *>A_s)
+        B_s = cibmisc_cython.linear_Weighted_apply_weight(self.cself[0], dim, <PyObject *>A_s)
 
         return B_s
 
@@ -136,7 +137,7 @@ cdef class linear_Weighted:
         _,alen = self.shape
         leading_shape, new_shape = split_shape(A_s.shape, alen)
         A_s = A_s.reshape(new_shape)
-        B_s = cibmisc.linear_Weighted_apply_M(self.cself[0],
+        B_s = cibmisc_cython.linear_Weighted_apply_M(self.cself[0],
             <PyObject *>A_s, fill, force_conservation)
 
         return B_s
@@ -152,7 +153,7 @@ cdef linear_Weighted_init(cibmisc.linear_Weighted *_cself):
 
 def example_linear_weighted(slinear_type):
     return linear_Weighted_init(
-        cibmisc.example_linear_weighted(slinear_type.encode()).release())
+        cibmisc_cython.example_linear_weighted(slinear_type.encode()).release())
 
 def nc_read_weighted(NcIO ncio, vname):
     return linear_Weighted_init(

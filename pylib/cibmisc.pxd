@@ -85,17 +85,4 @@ cdef extern from "<ibmisc/linear/linear.hpp>" namespace "ibmisc::linear":
     cdef extern unique_ptr[linear_Weighted] nc_read_weighted(
         NcGroup *nc, string vname) except +
 
-cdef extern from "ibmisc_cython.hpp" namespace "ibmisc::cython":
-    cdef object linear_Weighted_shape(linear_Weighted &) except +
-    cdef object linear_Weighted_type(linear_Weighted &) except +
-
-    cdef object linear_Weighted_apply_weight(linear_Weighted &,
-        int, PyObject *) except +
-
-    cdef object linear_Weighted_apply_M(linear_Weighted &,
-        PyObject *, double, bool) except +
-
-    # Used for unit testing
-    cdef unique_ptr[linear_Weighted] example_linear_weighted(string &) except +
-
 
