@@ -68,7 +68,7 @@ public:
     bool conservative;    // Is this matrix conservative?
 
 protected:
-    Weighted(LinearType _type) : type(_type), conservative(true) {}
+    Weighted(LinearType _type, bool _conservative=true) : type(_type), conservative(_conservative) {}
 
 public:
     virtual ~Weighted() {}

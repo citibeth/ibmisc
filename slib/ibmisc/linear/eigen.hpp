@@ -32,13 +32,13 @@ struct Weighted_Eigen : public Weighted {
     blitz::Array<double,1> Mw;
 
     /** Construct with shared dimensions from elsewhere */
-    Weighted_Eigen(std::array<std::string,2> const &_dim_names, std::array<SparseSetT *,2> _dims)
-        : Weighted(LinearType::EIGEN), dim_names(_dim_names), dims(_dims) {}
+    Weighted_Eigen(std::array<std::string,2> const &_dim_names, std::array<SparseSetT *,2> _dims, bool conservative=true)
+        : Weighted(LinearType::EIGEN, conservative), dim_names(_dim_names), dims(_dims) {}
 
     /** Construct with internal dimensions.
     @param dim_names Starting with a dot means, add vname in ncio().
     NOTE: dim_names might be changed later, as we read from disk. */
-    Weighted_Eigen(std::array<std::string,2> const &_dim_names={".dimB",".dimA"}) : Weighted(LinearType::EIGEN), dim_names(_dim_names)
+    Weighted_Eigen(std::array<std::string,2> const &_dim_names={".dimB",".dimA"}, bool conservative=true) : Weighted(LinearType::EIGEN, conservative), dim_names(_dim_names)
     {
         dims[0] = tmp.newptr<SparseSetT>();
         dims[1] = tmp.newptr<SparseSetT>();

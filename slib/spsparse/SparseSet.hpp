@@ -38,13 +38,14 @@ class SparseSet {
     SparseT _sparse_extent;
     std::unordered_map<SparseT, DenseT> _s2d;
     std::vector<SparseT> _d2s;
+    std::string name;    // OPTIONAL: For debugging, and ncio()
 
 public:
     typedef SparseT sparse_type;
     typedef DenseT dense_type;
 
 
-    NcVar ncio(ibmisc::NcIO &ncio, std::string const &vname);
+    NcVar ncio(ibmisc::NcIO &ncio, std::string const &vname_prefix);
 
     SparseSet() : _sparse_extent(-1) {}
     SparseSet(SparseT sparse_extent) : _sparse_extent(sparse_extent) {}
@@ -161,9 +162,9 @@ SparseSet<SparseT, DenseT>::SparseSet(SparseT sparse_extent, std::vector<SparseT
 
 
 template<class SparseT, class DenseT>
-NcVar SparseSet<SparseT, DenseT>::ncio(ibmisc::NcIO &ncio, std::string const &vname)
+NcVar SparseSet<SparseT, DenseT>::ncio(ibmisc::NcIO &ncio, std::string const &vname_prefix)
 {
-
+    std::string vname(vname_prefix + name);
 //printf("ncio %s: dense_extent=%d\n", vname.c_str(), dense_extent());
 
     // Set up dimensions
