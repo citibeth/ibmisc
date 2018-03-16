@@ -114,7 +114,7 @@ blitz::Array<double,1> Weighted_Eigen::apply(
 // ---------------------------------------------------------
 
 /** NOTE: this->dims must already be allocated and read, if you are reading. */
-void Weighted_Eigen::ncio(ibmisc::NcIO &ncio, std::string const &vname)
+void Weighted_Eigen::ncio_nodim(ibmisc::NcIO &ncio, std::string const &vname)
 {
     // Call to superclass
     Weighted::ncio(ncio, vname);
@@ -151,9 +151,35 @@ void Weighted_Eigen::ncio(ibmisc::NcIO &ncio, std::string const &vname)
     netCDF::NcVar ncvar = ncio.nc->getVar(vname + ".M.info");
     get_or_put_att(ncvar, ncio.rw,
         "conservative", get_nc_type<bool>(), &conservative, 1);
-
 }
 
+/** Read/Write, WITH dimensions! */
+void Weighted_Eigen::ncio(ibmisc::NcIO &ncio, std::string const &vname)
+{
+    ncio_nodim(ncio, vname);
+
+    // Read/Write Dimensions, which might be shared with another Weighted_Eigen
+    if (ncio.rw == 'r') {
+        for (int i=0; i<2; ++i) {
+            // Allocate dimension if not already done
+            if (!dims[i]) dims[i] = tmp.newptr<SparseSetT>();
+
+            // Figure variable name for the dimension
+            std::string dim_name = (dim_names[i][0] == '.' ? vname + dim_names[i] : dim_names[i]);
+
+            // Read dimension if not already done
+            if (dims[i]->dense_extent() == 0) dims[i]->ncio(ncio, dim_name);
+        }
+    } else {
+        for (int i=0; i<2; ++i) {
+            // Write dimension if not already written
+            if (ncio.nc->getVar(dim_names[i]).isNull()) {
+                dims[i]->ncio(ncio, dim_names[i]);
+            }
+        }
+    }
+            
+}
 // ------------------------------------------------------
 void Weighted_Eigen::apply_weight(
     int _dim,    // 0=B, 1=A

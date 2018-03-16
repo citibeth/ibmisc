@@ -56,6 +56,7 @@ class TestLinear(unittest.TestCase):
                 BvA1 = ibmisc.example_linear_weighted(linear_type)
                 shape = BvA1.shape
                 self.assertEqual(shape, (40,50))
+                self.assertEqual(BvA1.type, linear_type)
 
                 ncio = ibmisc.NcIO('__pylinear_{}.nc'.format(linear_type), 'w')
                 BvA1.ncio(ncio, 'BvA')
@@ -64,6 +65,9 @@ class TestLinear(unittest.TestCase):
                 ncio = ibmisc.NcIO('__pylinear_{}.nc'.format(linear_type), 'r')
                 BvA1 = ibmisc.nc_read_weighted(ncio, 'BvA')
                 ncio.close()
+
+                self.assertEqual(shape, (40,50))
+                self.assertEqual(BvA1.type, linear_type)
 
                 aa = np.zeros(shape[1])
                 for i in range(0,aa.shape[0]):

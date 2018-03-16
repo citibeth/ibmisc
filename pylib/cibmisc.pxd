@@ -87,6 +87,7 @@ cdef extern from "<ibmisc/linear/linear.hpp>" namespace "ibmisc::linear":
 
 cdef extern from "ibmisc_cython.hpp" namespace "ibmisc::cython":
     cdef object linear_Weighted_shape(linear_Weighted &) except +
+    cdef object linear_Weighted_type(linear_Weighted &) except +
 
     cdef object linear_Weighted_apply_weight(linear_Weighted &,
         int, PyObject *) except +

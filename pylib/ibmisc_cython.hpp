@@ -7,6 +7,9 @@
 namespace ibmisc {
 namespace cython {
 
+extern PyObject *linear_Weighted_type(
+    linear::Weighted &self);
+
 extern PyObject *linear_Weighted_shape(
     linear::Weighted &self);
 

@@ -11,6 +11,12 @@ namespace ibmisc {
 namespace cython {
 
 
+PyObject *linear_Weighted_type(
+    linear::Weighted &self)
+{
+    return Py_BuildValue("s", self.type.str());
+}
+
 PyObject *linear_Weighted_shape(
     linear::Weighted &self)
 {

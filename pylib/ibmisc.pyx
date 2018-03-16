@@ -100,6 +100,10 @@ cdef class linear_Weighted:
             del self.cself
 
     @property
+    def type(self):
+        return cibmisc.linear_Weighted_type(self.cself[0])
+
+    @property
     def shape(self):
         return cibmisc.linear_Weighted_shape(self.cself[0])
 
