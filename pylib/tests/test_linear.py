@@ -78,6 +78,9 @@ class TestLinear(unittest.TestCase):
                 assert_allclose(answers[force_conservation], bb1.reshape(-1))
 #                self.assertTrue(np.all(answers[force_conservation] == bb1))
 
+                # Convert to SciPy SparseMatrix
+                x = BvA1.to_coo()
+                print('xxx', type(x), x)
 
 
 if __name__ == '__main__':

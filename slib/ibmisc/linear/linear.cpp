@@ -5,6 +5,32 @@
 namespace ibmisc {
 namespace linear {
 
+void Weighted::to_coo(
+    blitz::Array<int,1> &indices0,        // Must be pre-allocated(nnz)
+    blitz::Array<int,1> &indices1,        // Must be pre-allocated(nnz)
+    blitz::Array<double,1> &values) const
+{
+    long nnz = this->nnz();
+    if (!indices0.data()) indices0.reference(blitz::Array<int,1>(nnz));
+    if (!indices1.data()) indices1.reference(blitz::Array<int,1>(nnz));
+    if (!values.data()) values.reference(blitz::Array<double,1>(nnz));
+
+    if (indices0.extent(0) != nnz) (*ibmisc_error)(-1,
+        "indices0[%d] must have dimension [%ld]",
+        indices0.extent(0), nnz);
+
+    if (indices1.extent(0) != nnz) (*ibmisc_error)(-1,
+        "indices1[%d] must have dimension [%ld]",
+        indices1.extent(0), nnz);
+
+    if (values.extent(0) != nnz) (*ibmisc_error)(-1,
+        "values[%d] must have dimension [%ld]",
+        values.extent(0), nnz);
+
+    _to_coo(indices0, indices1, values);
+}
+
+
 void Weighted::ncio(NcIO &ncio, std::string const &vname)
 {
     auto info_v = get_or_add_var(ncio, vname + ".info", "int", {});

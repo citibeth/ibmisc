@@ -96,6 +96,22 @@ public:
         AccumType accum_type=AccumType::REPLACE,
         bool force_conservation=true) const = 0;
 
+
+    /** @return {weights[0].nnz, M.nnz, weights[1].nnz} */
+    virtual long nnz() const = 0;
+
+protected:
+    virtual void _to_coo(
+        blitz::Array<int,1> &indices0,        // Must be pre-allocated(nnz)
+        blitz::Array<int,1> &indices1,        // Must be pre-allocated(nnz)
+        blitz::Array<double,1> &values) const = 0;      // Must bepre-allocated(nnz)
+public:
+    /** @return The sparse matrix in uncompressed, easily convertible form. */
+    void to_coo(
+        blitz::Array<int,1> &indices0,        // Must be pre-allocated(nnz)
+        blitz::Array<int,1> &indices1,        // Must be pre-allocated(nnz)
+        blitz::Array<double,1> &values) const;
+
     /** I/O */
     virtual void ncio(NcIO &ncio, std::string const &vname); 
 };

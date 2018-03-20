@@ -175,6 +175,29 @@ TEST_F(LinearTest, overlap)
         BvA2.ncio(ncio, "BvA");
     }
 
+    // ============= Must match sample_makedense()
+    std::array<std::vector<int>,2> xindices {
+        std::vector<int>{0,10,20,0,10,20},
+        std::vector<int>{0,10,20,40,40,40}
+    };
+    std::vector<double> xvalues {
+        {.5,.5,.5,.5,.5,.5}
+    };
+
+    // ============ Check coefficients
+    {
+        EXPECT_EQ(xvalues.size(), BvA1.nnz());
+        std::array<blitz::Array<int,1>,2> indices;
+        blitz::Array<double,1> values;
+        BvA2.to_coo(indices[0], indices[1], values);
+    
+        for (int i=0; i<xvalues.size(); ++i) {
+            EXPECT_EQ(indices[0](i), xindices[0][i]);
+            EXPECT_EQ(indices[1](i), xindices[1][i]);
+            EXPECT_DOUBLE_EQ(values(i), xvalues[i]);
+        }
+    }
+
     // =========== BvA2x: Compressed
     linear::Weighted_Compressed BvA2x(compress(BvA2));
 
@@ -192,6 +215,18 @@ TEST_F(LinearTest, overlap)
         BvA3.ncio(ncio, "BvA");
     }
 
+    {
+        EXPECT_EQ(xvalues.size(), BvA3.nnz());
+        std::array<blitz::Array<int,1>,2> indices;
+        blitz::Array<double,1> values;
+        BvA3.to_coo(indices[0], indices[1], values);
+    
+        for (int i=0; i<xvalues.size(); ++i) {
+            EXPECT_EQ(indices[0](i), xindices[0][i]);
+            EXPECT_EQ(indices[1](i), xindices[1][i]);
+            EXPECT_EQ(values(i), xvalues[i]);
+        }
+    }
 
     // =================== Compare Indices
     linear::Weighted const * const BvA1p = &BvA1;

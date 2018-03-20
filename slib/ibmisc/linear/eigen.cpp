@@ -272,7 +272,25 @@ void Weighted_Eigen::apply_M(
     }
 }
 
+long Weighted_Eigen::nnz() const
+{
+    return M->nonZeros();
+}
 
+void Weighted_Eigen::_to_coo(
+    blitz::Array<int,1> &indices0,        // Must be pre-allocated(nnz)
+    blitz::Array<int,1> &indices1,        // Must be pre-allocated(nnz)
+    blitz::Array<double,1> &values) const      // Must bepre-allocated(nnz)
+{
+    long nnz = this->nnz();
+    long j = 0;
+    for (auto ii(begin(*M)); ii != end(*M); ++ii) {
+        indices0(j) = dims[0]->to_sparse(ii->index(0));
+        indices1(j) = dims[1]->to_sparse(ii->index(1));
+        values(j) = ii->value();
+        ++j;
+    }
+}
 
 
 }}    // namespace

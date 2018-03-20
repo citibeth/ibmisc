@@ -78,7 +78,48 @@ PyObject *linear_Weighted_apply_M(
 }
 
 
+PyObject *linear_Weighted_to_coo(linear::Weighted const &self)
+{
+    int const rank = 2;
 
+
+    // Allocate Python arrays and Blitzify
+    std::array<PyObject *,rank> indices_np;
+    std::array<blitz::Array<int,1>, rank> indices_bl;
+    std::array<int,1> dims {(int)self.nnz()};
+    for (int k=0; k<rank; ++k) {
+        indices_np[k] = PyArray_FromDims(
+            1, &dims[0], np_type_num<int>());
+        indices_bl[k].reference(np_to_blitz<int,1>(indices_np[k], "index", dims));
+    }
+    PyObject *values_np = PyArray_FromDims(
+        1, &dims[0], np_type_num<double>());
+    auto values_bl(np_to_blitz<double,1>(values_np, "values", dims));
+
+
+    // Fill with data
+    self.to_coo(indices_bl[0], indices_bl[1], values_bl);
+
+
+    // Bind it up in a tuple
+    PyObject *indices_t = PyTuple_New(rank);
+    PyObject *shape_t = PyTuple_New(rank);
+    auto shape(self.shape());
+    for (int k=0; k<rank; ++k) {
+        // blitz::Array<typename ArrayT::val_type, rank> idx(indices(k));
+        PyTuple_SetItem(indices_t, k, indices_np[k]);
+        PyTuple_SetItem(shape_t, k, Py_BuildValue("i", shape[k]));
+    }
+
+
+    PyObject *data_t = Py_BuildValue("OO", values_np, indices_t);
+
+    // For scipy.sparse.coo_matrix((data1, (rows1, cols1)), shape=(nrow1, ncol1))
+    PyObject *ret = Py_BuildValue("OO", data_t, shape_t);
+
+    return ret;
+
+}
 
 
 }}    // namespace

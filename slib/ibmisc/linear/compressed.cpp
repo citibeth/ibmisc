@@ -122,6 +122,24 @@ Weighted_Compressed compress(Weighted_Eigen &eigen)
     return ret;
 }
 
+long Weighted_Compressed::nnz() const
+    { return M.nnz(); }
+
+void Weighted_Compressed::_to_coo(
+    blitz::Array<int,1> &indices0,        // Must be pre-allocated(nnz)
+    blitz::Array<int,1> &indices1,        // Must be pre-allocated(nnz)
+    blitz::Array<double,1> &values) const      // Must bepre-allocated(nnz)
+{
+    long nnz = this->nnz();
+    long j = 0;
+    for (auto ii(M.generator()); ++ii; ) {
+        indices0(j) = ii->index(0);
+        indices1(j) = ii->index(1);
+        values(j) = ii->value();
+        ++j;
+    }
+}
+
 
 
 }}    // namespace

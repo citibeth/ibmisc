@@ -32,6 +32,8 @@ class TestCython(unittest.TestCase):
         for a,b in zip(aa,bb):
             self.assertEqual(a,b*2)
 
+    # This test is working OK.  EXCEPT... instead of raising an
+    # exception, the underlying C++ code is aborting.
     def test_blitz_2d(self):
         aa = np.random.rand(2,3)
         # Should only work on 1-D arrays

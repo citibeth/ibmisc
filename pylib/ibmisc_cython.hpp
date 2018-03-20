@@ -25,6 +25,7 @@ extern PyObject *linear_Weighted_apply_M(
     // std::string const &saccum_type,
     bool force_conservation);
 
+extern PyObject *linear_Weighted_to_coo(linear::Weighted const &self);
 
 }}    // namespace
 #endif    // guard
