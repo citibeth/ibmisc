@@ -106,6 +106,9 @@ protected:
         blitz::Array<int,1> &indices1,        // Must be pre-allocated(nnz)
         blitz::Array<double,1> &values) const = 0;      // Must bepre-allocated(nnz)
 public:
+
+//    virtual void map(std::function<void(std::array<int,2>, double)> const &fn) const = 0;
+
     /** @return The sparse matrix in uncompressed, easily convertible form. */
     void to_coo(
         blitz::Array<int,1> &indices0,        // Must be pre-allocated(nnz)
