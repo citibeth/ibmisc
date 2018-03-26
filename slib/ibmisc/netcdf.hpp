@@ -371,6 +371,8 @@ void get_or_put_var(netCDF::NcVar &ncvar, char rw,
 
 extern netCDF::NcVarAtt get_att(netCDF::NcVar &ncvar, std::string const &name);
 
+extern netCDF::NcGroupAtt get_att(netCDF::NcGroup &ncvar, std::string const &name);
+
 template<class NcVarT, class AttrT>
 void get_or_put_att(
     NcVarT &ncvar, char rw,
@@ -395,7 +397,7 @@ void get_or_put_att(
             }
         } break;
         case 'r': {
-            netCDF::NcVarAtt att(get_att(ncvar, name));
+            auto att(get_att(ncvar, name));
             if (att.getAttLength() != len) {
                 (*ibmisc_error)(-1,
                     "Trying to read attribute %s of length %ld into C++ "
@@ -453,7 +455,7 @@ void get_or_put_att(
             ncvar.putAtt(name, data);
         break;
         case 'r':
-            netCDF::NcVarAtt att(get_att(ncvar, name));
+            auto att(get_att(ncvar, name));
 
             if (required || !att.isNull())
                 att.getValues(data);

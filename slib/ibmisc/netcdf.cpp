@@ -572,6 +572,19 @@ netCDF::NcVarAtt get_att(netCDF::NcVar &ncvar, std::string const &name)
             ncvar.getName().c_str(), name.c_str());
     }
 }
+
+
+netCDF::NcGroupAtt get_att(netCDF::NcGroup &ncvar, std::string const &name)
+{
+    try {
+        return ncvar.getAtt(name);
+    } catch(netCDF::exceptions::NcException &e) {
+        (*ibmisc_error)(-1,
+            "Attribute %s:%s does not exist",
+            ncvar.getName().c_str(), name.c_str());
+    }
+}
+
 // ---------------------------------------------
 /** Do linewrap for strings that are intended to be used as comment attributes in NetCDF files.
        see: http://www.cplusplus.com/forum/beginner/19034/
