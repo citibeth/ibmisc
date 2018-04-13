@@ -121,6 +121,18 @@ PyObject *linear_Weighted_to_coo(linear::Weighted const &self)
 
 }
 
+PyObject *linear_Weighted_get_weights(linear::Weighted const &self, int idim)
+{
+    auto shape(self.shape());
+    std::array<int,1> dims {(int)shape[0]};
+
+    PyObject *W_np = PyArray_FromDims(
+        1, &dims[0], np_type_num<double>());
+    auto W(np_to_blitz<double,1>(W_np, "W", dims));
+
+    self.get_weights(idim, W);
+    return W_np;
+}
 
 }}    // namespace
 

@@ -146,6 +146,9 @@ cdef class linear_Weighted:
         (data,shape) = cibmisc_cython.linear_Weighted_to_coo(self.cself[0])
         return scipy.sparse.coo_matrix(data, shape)
 
+    def get_weights(self, int idim):
+        return cibmisc_cython.linear_Weighted_get_weights(self.cself[0], idim)
+
     def ncio(self, NcIO ncio, vname):
         self.cself.ncio(ncio.cself[0], vname.encode())
 

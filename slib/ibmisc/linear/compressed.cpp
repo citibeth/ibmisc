@@ -11,6 +11,17 @@ static double const nan = std::numeric_limits<double>::quiet_NaN();
 
 namespace linear {
 
+void Weighted_Compressed::set_shape(std::array<long,2> _shape)
+{
+    M.accum().set_shape(_shape);
+}
+
+std::array<long,2> Weighted_Compressed::shape() const
+{
+    return M.shape();
+}
+
+
 void Weighted_Compressed::apply_weight(
     int dim,    // 0=B, 1=A
     blitz::Array<double,2> const &As,    // As(nvec, nA)
@@ -137,6 +148,15 @@ void Weighted_Compressed::_to_coo(
         indices1(j) = ii->index(1);
         values(j) = ii->value();
         ++j;
+    }
+}
+
+void Weighted_Compressed::_get_weights(
+    int idim,    // 0=wM, 1=Mw
+    blitz::Array<double,1> &w) const
+{
+    for (auto ii(weights[idim].generator()); ++ii; ) {
+        w(ii->index(0)) += ii->value();
     }
 }
 

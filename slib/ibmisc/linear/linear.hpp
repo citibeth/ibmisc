@@ -105,6 +105,12 @@ protected:
         blitz::Array<int,1> &indices0,        // Must be pre-allocated(nnz)
         blitz::Array<int,1> &indices1,        // Must be pre-allocated(nnz)
         blitz::Array<double,1> &values) const = 0;      // Must bepre-allocated(nnz)
+
+
+    virtual void _get_weights(
+        int idim,    // 0=wM, 1=Mw
+        blitz::Array<double,1> &w) const = 0;
+
 public:
 
 //    virtual void map(std::function<void(std::array<int,2>, double)> const &fn) const = 0;
@@ -114,6 +120,10 @@ public:
         blitz::Array<int,1> &indices0,        // Must be pre-allocated(nnz)
         blitz::Array<int,1> &indices1,        // Must be pre-allocated(nnz)
         blitz::Array<double,1> &values) const;
+
+    void get_weights(
+        int idim,    // 0=wM, 1=Mw
+        blitz::Array<double,1> &w) const;
 
     /** I/O */
     virtual void ncio(NcIO &ncio, std::string const &vname); 

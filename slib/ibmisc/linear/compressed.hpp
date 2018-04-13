@@ -21,9 +21,11 @@ public:
 public:
     Weighted_Compressed() : Weighted(LinearType::COMPRESSED) {}
 
+    void set_shape(std::array<long,2> _shape);
+
     // ================= Implements Weighted
     /** Sparse shape of the matrix */
-    std::array<long,2> shape() const { return M.shape(); }
+    std::array<long,2> shape() const;
 
     /** Computes out = As * weights[dim] */
     void apply_weight(
@@ -48,6 +50,10 @@ protected:
         blitz::Array<int,1> &indices0,        // Must be pre-allocated(nnz)
         blitz::Array<int,1> &indices1,        // Must be pre-allocated(nnz)
         blitz::Array<double,1> &values) const;      // Must bepre-allocated(nnz)
+
+    void _get_weights(
+        int idim,    // 0=wM, 1=Mw
+        blitz::Array<double,1> &w) const;
 };
 
 extern Weighted_Compressed compress(Weighted_Eigen &eigen);

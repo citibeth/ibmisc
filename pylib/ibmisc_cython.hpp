@@ -27,5 +27,7 @@ extern PyObject *linear_Weighted_apply_M(
 
 extern PyObject *linear_Weighted_to_coo(linear::Weighted const &self);
 
+extern PyObject *linear_Weighted_get_weights(linear::Weighted const &self, int idim);
+
 }}    // namespace
 #endif    // guard

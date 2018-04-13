@@ -31,6 +31,23 @@ void Weighted::to_coo(
 }
 
 
+void Weighted::get_weights(
+    int idim,    // 0=wM, 1=Mw
+    blitz::Array<double,1> &w) const
+{
+    auto shape(this->shape());
+    if (!w.data()) {
+        w.reference(blitz::Array<double,1>(shape[idim]));
+        w = 0;
+    }
+
+    if (w.extent(0) != shape[idim]) (*ibmisc_error)(-1,
+        "weight%d[%d] must have dimnension [%d]",
+        idim, w.extent(0), shape[idim]);
+
+    _get_weights(idim, w);
+}
+
 void Weighted::ncio(NcIO &ncio, std::string const &vname)
 {
     auto info_v = get_or_add_var(ncio, vname + ".info", "int", {});

@@ -292,5 +292,15 @@ void Weighted_Eigen::_to_coo(
     }
 }
 
+void Weighted_Eigen::_get_weights(
+    int idim,    // 0=wM, 1=Mw
+    blitz::Array<double,1> &w) const
+{
+    auto &weights(idim == 0 ? wM : Mw);
+    for (int j_d=0; j_d < dims[idim]->dense_extent(); ++j_d) {
+        int const j_s = dims[idim]->to_sparse(j_d);
+        w(j_s) += weights(j_d);
+    }
+}
 
 }}    // namespace
