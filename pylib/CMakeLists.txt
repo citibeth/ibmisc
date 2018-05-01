@@ -15,7 +15,7 @@ execute_process(COMMAND chmod a+x ${CMAKE_CURRENT_BINARY_DIR}/env)
 
 # -------------------------------------------------------------
 
-include_directories(${PYTHON_INCLUDES} ${NUMPY_INCLUDE_DIRS})
+#include_directories(${PYTHON_INCLUDES} ${NUMPY_INCLUDE_DIRS})
 list(APPEND EXTERNAL_LIBS ${PYTHON_LIBRARY})
 # Compile everything (including Cython extension) as a single
 # "compilation unit" for Numpy.  See:
@@ -39,6 +39,7 @@ foreach (CYTHON_MODULE ibmisc)
             -o ${CYTHON_MODULE}.cpp)
 
     ADD_LIBRARY(${CYTHON_MODULE}_so MODULE ${CYTHON_MODULE}.cpp ${PYLIB_SOURCES} ${EVERYTRACE_REFADDR})
+    target_include_directories(${CYTHON_MODULE}_so PRIVATE ${PYTHON_INCLUDES} ${NUMPY_INCLUDE_DIRS})
 
     target_link_libraries(${CYTHON_MODULE}_so ibmisc ${PYTHON_LIBRARY})
 
