@@ -96,8 +96,8 @@ endif()
 
 include (setup_rpath)
 
-# Include all the transitive dependencies determined by EasyBuild.
-# If we're not running with EasyBuild, this does nothing...
+# Include all the transitive dependencies determined by Spack.
+# If we're not building with Spack, this does nothing...
 include_directories($ENV{SPACK_TRANSITIVE_INCLUDE_PATH})
 
 
