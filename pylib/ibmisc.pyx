@@ -109,6 +109,14 @@ cdef class linear_Weighted:
         return cibmisc_cython.linear_Weighted_shape(self.cself[0])
 
     def apply_weight(self, int dim, A_s):
+        """Computes dot product of a weight vector with A_s.
+        dim:
+            0 = use weight vector for B (output) dimension
+            1 = use weight vector for A (input) dimension
+        A_s: Either:
+            - A single vector (1-D array) to be transformed.
+            - A 2-D array of row vectors to be transformed."""
+
         # Number of elements in sparse in put vector
         _,alen = self.shape
         leading_shape, new_shape = split_shape(A_s.shape, alen)
@@ -125,13 +133,16 @@ cdef class linear_Weighted:
 
 
     def apply_M(self, A_s, fill=np.nan, bool force_conservation=True):
-        """Applies the regrid matrix to A_s.  Smoothes and conserves, if those
-        options were specified in RegridMatrices.matrix().
+        """Applies the regrid matrix to A_s.
         A_s: Either:
             - A single vector (1-D array) to be transformed.
             - A 2-D array of row vectors to be transformed.
         fill:
-            Un-set indices in output array will get this value."""
+            Un-set indices in output array will get this value.
+        force_conservation: bool
+            If M is not conservative, apply a conservation correction
+            at the end"""
+
 
         # Number of elements in sparse in put vector
         _,alen = self.shape
