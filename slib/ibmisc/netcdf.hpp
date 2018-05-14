@@ -103,9 +103,10 @@ class NcIO {
 
     std::unique_ptr<netCDF::NcFile> _mync;  // NcFile lacks proper move constructor
 
-    static void default_configure_var(netCDF::NcVar ncvar);
-
 public:
+    static void default_configure_var(netCDF::NcVar ncvar);
+    static void no_compress(netCDF::NcVar ncvar);
+
     TmpAlloc tmp;    // Data kept around for the write phase
     netCDF::NcGroup * const nc;
 

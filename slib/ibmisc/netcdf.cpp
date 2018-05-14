@@ -364,7 +364,15 @@ void NcIO::default_configure_var(netCDF::NcVar ncvar)
     // ncvar.setChecksum(netCDF::NcVar::nc_FLETCHER32);
 }
 
-inline std::unique_ptr<NcFile> open_netcdf(std::string const &filePath, char mode, std::string const &sformat = "nc4")
+void NcIO::no_compress(netCDF::NcVar ncvar)
+{
+    ncvar.setCompression(true, true, 4);
+
+    // For some reason, this causes an HDF5 error
+    // ncvar.setChecksum(netCDF::NcVar::nc_FLETCHER32);
+}
+
+inline std::unique_ptr<NcFile> open_netcdf(std::string const &filePath, char mode, std::string const &sformat)
 {
     NcFile::FileMode fmode(_filemode_to_netcdf(mode));
     switch(fmode) {
@@ -381,9 +389,9 @@ inline std::unique_ptr<NcFile> open_netcdf(std::string const &filePath, char mod
 }
 
 NcIO::NcIO(std::string const &filePath, char mode,
-    std::string const &format,
+    std::string const &sformat,
     std::function<void(NcVar)> const &_configure_var) :
-    _mync(open_netcdf(filePath, mode)),
+    _mync(open_netcdf(filePath, mode, sformat)),
     nc(&*_mync),
     rw(_filemode_to_rw(mode)),
     define(rw == 'w'),
