@@ -312,6 +312,14 @@ _ncio_blitz::Info::Info(
 }
 
 // ===============================================
+
+static std::map<std::string, netCDF::NcFile::FileFormat> const _sformat_to_netcdf {
+    std::make_pair("classic", NcFile::FileFormat::classic),
+    std::make_pair("classic64", NcFile::FileFormat::classic64),
+    std::make_pair("nc4", NcFile::FileFormat::nc4),
+    std::make_pair("nc4classic", NcFile::FileFormat::nc4classic)
+};
+
 /*
 @param mode Can be (see https://docs.python.org/3/library/functions.html#open)
  'r' open for reading (default)
@@ -356,7 +364,7 @@ void NcIO::default_configure_var(netCDF::NcVar ncvar)
     // ncvar.setChecksum(netCDF::NcVar::nc_FLETCHER32);
 }
 
-inline std::unique_ptr<NcFile> open_netcdf(std::string const &filePath, char mode)
+inline std::unique_ptr<NcFile> open_netcdf(std::string const &filePath, char mode, std::string const &sformat = "nc4")
 {
     NcFile::FileMode fmode(_filemode_to_netcdf(mode));
     switch(fmode) {
@@ -366,10 +374,14 @@ inline std::unique_ptr<NcFile> open_netcdf(std::string const &filePath, char mod
                 "Trying to open file %s, which doesn't exist", filePath.c_str());
         break;
     }
-    return std::unique_ptr<NcFile>(new NcFile(filePath, fmode, NcFile::FileFormat::nc4));
+
+
+    netCDF::NcFile::FileFormat format = _sformat_to_netcdf.at(sformat);
+    return std::unique_ptr<NcFile>(new NcFile(filePath, fmode, format));
 }
 
 NcIO::NcIO(std::string const &filePath, char mode,
+    std::string const &format,
     std::function<void(NcVar)> const &_configure_var) :
     _mync(open_netcdf(filePath, mode)),
     nc(&*_mync),

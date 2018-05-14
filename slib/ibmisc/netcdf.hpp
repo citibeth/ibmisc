@@ -122,6 +122,7 @@ public:
     // 'x' 	open for exclusive creation, failing if the file already exists
     // 'a' 	open for writing, appending to the end of the file if it exists
     NcIO(std::string const &filePath, char mode = 'r',
+        std::string const &format = "nc4",
         std::function<void(netCDF::NcVar)> const &_configure_var =
             std::bind(NcIO::default_configure_var, std::placeholders::_1));
 
