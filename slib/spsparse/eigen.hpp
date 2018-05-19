@@ -49,7 +49,7 @@ template<class AccumT, class _Scalar, int _Options, class _StorageIndex>
 void spcopy(
     AccumT &&ret,
     Eigen::SparseMatrix<ARGS> const &M,
-    bool set_shape=true)
+    bool set_shape)
 {
     if (set_shape) ret.set_shape(std::array<long,2>{M.rows(), M.cols()});
 
@@ -356,7 +356,7 @@ blitz::Array<_Scalar,1> sum(
    1: sum rows, leaving columns (a row vector) */
 template<class _Scalar, int _Options, class _StorageIndex>
 blitz::Array<_Scalar,1> sum(
-    Eigen::SparseMatrix<ARGS> const &M, int dimi, char invert='+')
+    Eigen::SparseMatrix<ARGS> const &M, int dimi, char invert)
 {
     // Get our weight vector (in dense coordinate space)
     blitz::Array<_Scalar,1> ret;
@@ -381,7 +381,7 @@ std::array<blitz::Array<_Scalar,1>,2> sums(
 @param dimi 0: sum rows, 1: sum columns */
 template<class _Scalar, int _Options, class _StorageIndex>
 std::array<blitz::Array<_Scalar,1>,2> sums(
-    Eigen::SparseMatrix<ARGS> const &M, char invert='+')
+    Eigen::SparseMatrix<ARGS> const &M, char invert)
 {
     // Get our weight vector (in dense coordinate space)
     std::array<blitz::Array<_Scalar,1>,2> rets;

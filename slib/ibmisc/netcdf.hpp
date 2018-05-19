@@ -798,7 +798,7 @@ std::vector<NamedDim> named_dims(blitz::Array<TypeT, RANK> const &var,
     
 template<class TypeT, int RANK>
 std::vector<NamedDim> named_dims(blitz::Array<TypeT, RANK> const &var,
-    std::vector<std::string> const &sdims={})
+    std::vector<std::string> const &sdims)
 {
     std::vector<NamedDim> ret;
     ret.reserve(RANK);
@@ -1163,7 +1163,7 @@ netCDF::NcVar ncio_blitz_partial(
     std::vector<netCDF::NcDim> const &ncdims,
     std::vector<size_t> const &nc_start,    // Where to start each dimension in NetCDF
     std::vector<int> const &b2n,    // Where to slot each Blitz++ dimension
-    std::vector<std::string> const &arr_sdims = {})
+    std::vector<std::string> const &arr_sdims)
 {
     netCDF::NcVar ncvar = ncio.nc->getVar(vname);
     // By necessity, we must list dimensions in NetCDF order, so we know

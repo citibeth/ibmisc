@@ -478,8 +478,8 @@ ArrayBundle<TypeT,1> reshape1(
 template<class TypeT, int RANK>
 ArrayBundle<TypeT,1> reshape1(
     ArrayBundle<TypeT, RANK> &bundle,
-    int lbound = 0,
-    std::array<std::string,1> const &sdims = {""})
+    int lbound,
+    std::array<std::string,1> const &sdims)
 {
     ArrayBundle<TypeT,1> bundle1;
     for (size_t i=0; i<bundle.index.size(); ++i) {

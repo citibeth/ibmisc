@@ -412,7 +412,7 @@ blitz::Array<TypeT,1> reshape1(
 
 template<class TypeT, int RANK>
 blitz::Array<TypeT,1> reshape1(blitz::Array<TypeT, RANK> &arr,
-    int lbound = 0)
+    int lbound)
 {
     if (!(is_const_array(arr) || arr.isStorageContiguous())) (*ibmisc_error)(-1,
         "Array must be contiguous for reshape1().");
