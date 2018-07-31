@@ -69,7 +69,7 @@ public:
         { return _d2s.size(); }
 
     /** Helper function used by Sparsify to maintain encapsulation */
-    DenseT to_dense_ignore_missing(SparseT const &sparse_ix, DenseT &dense_ix)
+    bool to_dense_ignore_missing(SparseT const &sparse_ix, DenseT &dense_ix)
     {
         auto ii(_s2d.find(sparse_ix));
         if (ii == _s2d.end()) return false;    // An index was missing; ignore this element in the sparse matrix
