@@ -42,6 +42,13 @@ cdef class NcIO:
     def close(self):
         self.cself.close()
 
+    def __enter__(self):
+        pass
+
+    def __exit__(self, *args):
+        self.close()
+
+
 # blitz::Array --> Numpy Array
 # http://stackoverflow.com/questions/23872946/force-numpy-ndarray-to-take-ownership-of-its-memory-in-cython
 
