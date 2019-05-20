@@ -20,8 +20,11 @@
 #include <string>
 #include <vector>
 #include <cstdarg>
+#include <sstream>
 #include <iostream>
 #include <sstream>
+#include <boost/algorithm/string.hpp>
+
 
 namespace ibmisc {
 
@@ -70,5 +73,30 @@ inline std::string f_to_cpp(char *fstr, size_t len)
 /** Wrap a paragraph of text, splitting on word boundaries.
 https://www.rosettacode.org/wiki/Word_wrap#C.2B.2B */
 extern std::string wrap(std::string const &text, size_t line_length = 72);
+
+/** Split a string according to one or more delimeter characters; and
+then parse each sub-string into a datatype.
+@param scsv_str String to split and parse
+@param separator_chars List of possible separator characters (as a string) */
+template<class DestT>
+std::vector<DestT> split(std::string const &scsv_str, std::string const &separator_chars);
+
+template<class DestT>
+std::vector<DestT> split(std::string const &scsv_str, std::string const &separator_chars)
+{
+    // Parse to vector of strings
+    std::vector<std::string> scsv;
+    boost::algorithm::split(scsv,  scsv_str, boost::is_any_of(separator_chars));
+
+    std::vector<DestT> ret;
+    for (std::string &s : scsv) {
+        std::stringstream myString(s);
+        DestT val;
+        myString >> val;
+        ret.push_back(val);
+    }
+
+    return ret;
+}
 
 }
