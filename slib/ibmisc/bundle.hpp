@@ -37,7 +37,7 @@ public:
 #endif
 
         void allocate(bool check,
-            blitz::GeneralArrayStorage<RANK> const &storage)
+            blitz::GeneralArrayStorage<RANK> const &storage = blitz::GeneralArrayStorage<RANK>())
         {
             if (check && arr->data()) (*ibmisc_error)(-1,
                 "ArrayBundle variable %s already allocated", meta.name.c_str());
@@ -106,7 +106,7 @@ public:
 
     blitz::Array<TypeT,RANK> &add(
         std::string const &name,
-        std::initializer_list<std::string> const &vattr);
+        std::initializer_list<std::string> const &vattr = {});
 
     blitz::Array<TypeT,RANK> &add(
         std::string const &name,
