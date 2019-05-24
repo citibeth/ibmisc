@@ -61,5 +61,8 @@ extern Weighted_Compressed compress(Weighted_Eigen &eigen);
 
 
 
+
+
+
 }};    // namespace
 #endif    // guad

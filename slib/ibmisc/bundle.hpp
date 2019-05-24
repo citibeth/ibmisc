@@ -44,6 +44,14 @@ public:
             arr->reference(blitz::Array<TypeT,RANK>(ibmisc::to_tiny<int,int,RANK>(meta.shape), storage));
         }
 
+        void allocate(bool check, std::array<int,RANK> const &shape,
+            blitz::GeneralArrayStorage<RANK> const &storage)
+        {
+            if (check && arr->data()) (*ibmisc_error)(-1,
+                "ArrayBundle variable %s already allocated", meta.name.c_str());
+            arr->reference(blitz::Array<TypeT,RANK>(ibmisc::to_tiny<int,int,RANK>(shape), storage));
+        }
+
         std::vector<NamedDim> named_dims()
         {
             std::vector<NamedDim> ret;

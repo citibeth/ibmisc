@@ -40,6 +40,7 @@ void Weighted_Compressed::apply_weight(
     }
 }
 
+
 void Weighted_Compressed::apply_M(
     blitz::Array<double,2> const &As,    // As(nvec, nA)
     blitz::Array<double,2> &Bs,         // Bs(nvec, nB)
@@ -159,7 +160,6 @@ void Weighted_Compressed::_get_weights(
         w(ii->index(0)) += ii->value();
     }
 }
-
 
 
 }}    // namespace

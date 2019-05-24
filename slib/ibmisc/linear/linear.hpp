@@ -131,6 +131,7 @@ public:
 
 extern std::unique_ptr<Weighted> new_weighted(LinearType type);
 
+/** Read a Weighted matrix, either eigen OR compressed. */
 std::unique_ptr<Weighted> nc_read_weighted(netCDF::NcGroup *nc, std::string const &vname);
 
 
