@@ -33,6 +33,7 @@
 using namespace spsparse;
 using namespace ibmisc;
 using namespace std::placeholders;
+using namespace netCDF;
 
 // The fixture for testing class Foo.
 class SpSparseTest : public ::testing::Test {

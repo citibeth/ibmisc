@@ -27,7 +27,7 @@
 #include <spsparse/blitz.hpp>
 #include <ibmisc/bundle.hpp>
 
-using namespace netCDF;
+//using namespace netCDF;
 
 namespace spsparse {
 
@@ -45,7 +45,7 @@ public:
     typedef DenseT dense_type;
 
 
-    NcVar ncio(ibmisc::NcIO &ncio, std::string const &vname_prefix);
+    netCDF::NcVar ncio(ibmisc::NcIO &ncio, std::string const &vname_prefix);
 
     SparseSet() : _sparse_extent(-1) {}
     SparseSet(SparseT sparse_extent) : _sparse_extent(sparse_extent) {}
@@ -162,7 +162,7 @@ SparseSet<SparseT, DenseT>::SparseSet(SparseT sparse_extent, std::vector<SparseT
 
 
 template<class SparseT, class DenseT>
-NcVar SparseSet<SparseT, DenseT>::ncio(ibmisc::NcIO &ncio, std::string const &vname_prefix)
+netCDF::NcVar SparseSet<SparseT, DenseT>::ncio(ibmisc::NcIO &ncio, std::string const &vname_prefix)
 {
     std::string vname(vname_prefix + name);
 //printf("ncio %s: dense_extent=%d\n", vname.c_str(), dense_extent());
@@ -231,6 +231,48 @@ enum class SparsifyTransform {
 };
 
 
+template<class SparseT, class DenseT>
+class ConstUniverse {
+    std::vector<std::string> names;
+    std::vector<SparseSet<SparseT,DenseT> *> dims;
+    std::vector<int> extents;
+
+public:
+    ConstUniverse(
+        std::vector<std::string> &&_names,
+        std::vector<SparseSet<SparseT,DenseT> *> &&_dims);
+
+    ~ConstUniverse();
+};
+
+template<class SparseT, class DenseT>
+ConstUniverse<SparseT,DenseT>::ConstUniverse(
+    std::vector<std::string> &&_names,
+    std::vector<SparseSet<SparseT,DenseT> *> &&_dims) :
+    names(std::move(_names)), dims(std::move(_dims))
+{
+    if (names.size() != dims.size()) (*ibmisc::ibmisc_error)(-1,
+        "names.size() and dims.size() must match");
+
+    extents.reserve(dims.size());
+    for (size_t i=0; i<dims.size(); ++i)
+        extents.push_back(dims[i]->dense_extent());
+}
+
+template<class SparseT, class DenseT>
+ConstUniverse<SparseT,DenseT>::~ConstUniverse()
+{
+    bool err = false;
+    for (size_t i=0; i<dims.size(); ++i) {
+        if (extents[i] != dims[i]->dense_extent()) {
+            fprintf(stderr, "Dimension %s changed from %d to %d\n",
+                names[i].c_str(), extents[i], dims[i]->dense_extent());
+            err = true;
+        }
+    }
+    if (err) (*ibmisc::ibmisc_error)(-1,
+        "At least one dimension changed");
+}
 // =======================================================
 
 namespace accum {
@@ -478,10 +520,11 @@ struct SparseBundle {
     ibmisc::ArrayBundle<BundleT,RANK> bundle;
 
     SparseBundle(spsparse::SparseSet<SparseT, DenseT> &&_dim) : dim(std::move(_dim)) {}
-
-
-
 };
+
+// ---------------------------------------------------------------
+
+
 
 // ----------------------------------------------------------------
 
