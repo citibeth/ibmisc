@@ -13,8 +13,6 @@ namespace ibmisc {
 Should be pre-allocated before the generator is called. */
 template<class TypeT, int RANK>
 class ArrayBundle {
-    // Stores memory for arrays allocated as a multi-array
-    TmpAlloc tmp;
 public:
     struct Data {
         ArrayMeta<RANK> meta;
