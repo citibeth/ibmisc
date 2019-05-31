@@ -28,6 +28,11 @@ public:
             arr(new blitz::Array<TypeT,RANK>(_arr)) {}
 
 #if 0
+		// This breaks stuff, don't do it!!!
+        /** Copy but don't allocate any arrays */
+        Data(Data const &other);
+
+		// Not needed, this is already deleted.
         Data(Data const &other) = delete;
 
         // http://www.codingstandard.com/rule/12-5-4-declare-noexcept-the-move-constructor-and-move-assignment-operator/
@@ -101,6 +106,8 @@ public:
     ArrayBundle(std::vector<Data> const &_data) = delete;
     ArrayBundle(std::vector<Data> &_data) = delete;
 
+
+    blitz::Array<TypeT,RANK> &add(Data &&data);
 
     blitz::Array<TypeT,RANK> &add(
         std::string const &name,
@@ -251,6 +258,14 @@ ArrayBundle<TypeT,RANK>::ArrayBundle(std::vector<Data> &&_data) : data(std::move
 
 
 
+template<class TypeT, int RANK>
+blitz::Array<TypeT,RANK> &ArrayBundle<TypeT,RANK>::add(
+    ArrayBundle<TypeT,RANK>::Data &&d)
+{
+    data.push_back(std::move(d));
+    index.insert(data.back().meta.name);
+    return *data.back().arr;
+}
 
 template<class TypeT, int RANK>
 blitz::Array<TypeT,RANK> &ArrayBundle<TypeT,RANK>::add(
