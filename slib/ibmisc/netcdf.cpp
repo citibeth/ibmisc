@@ -229,8 +229,12 @@ _ncio_blitz::Info::Info(
                             name2n.insert(std::make_pair(netcdf[in].name, in));
                     }
                     for (int ib=0; ib<blitz_rank; ++ib) {
-                        int const in = name2n.at(blitz[ib].name);
-                        b2n.push_back(in);
+                        try {
+                            int const in = name2n.at(blitz[ib].name);
+                            b2n.push_back(in);
+                        } catch(std::out_of_range const &e) {
+                            (*ibmisc_error)(-1, "_ncio_blitz::Info(): Error looking up dimension name %s\n", blitz[ib].name.c_str());
+                        }
                     }
                 } break;
                 case 1:        // Names only for NetCDF
