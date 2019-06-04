@@ -164,6 +164,7 @@ cdef class linear_Weighted:
         (data,shape) = cibmisc_cython.linear_Weighted_to_coo(self.cself[0])
         return scipy.sparse.coo_matrix(data, shape)
 
+    # For now, this only works with linear_Weighted, not linear_Compressed
     def get_weights(self, int idim):
         return cibmisc_cython.linear_Weighted_get_weights(self.cself[0], idim)
 
