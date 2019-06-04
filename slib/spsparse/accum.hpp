@@ -177,6 +177,32 @@ template<class AccumT>
 Ref<AccumT> ref(AccumT &sub)
     { return Ref<AccumT>(sub); }
 // -----------------------------------------------------------
+/** Filter checks if value is zero, avoids adding to matrix if so. */
+template<class AccumT>
+class IncludeZero : public Filter<AccumT>
+{
+    typedef Filter<AccumT> super;
+public:
+    bool const include_zero;
+
+    IncludeZero(bool _include_zero, AccumT &&_sub)
+        : super(std::move(_sub)), include_zero(_include_zero) {}
+
+    void set_shape(std::array<long, super::rank> const &_shape)
+        { super::sub.set_shape(_shape); }
+
+    void add(
+        std::array<typename super::index_type, super::rank> const &index,
+        typename super::val_type const &val)
+    {
+        if (include_zero || val != 0) super::sub.add(index, val);
+    }
+};
+
+template<class AccumT>
+IncludeZero<AccumT> include_zero(bool _include_zero, AccumT &&sub)
+    { return IncludeZero<AccumT>(_include_zero, std::move(sub)); }
+// -----------------------------------------------------------
 /** @brief For transpose or project.
 
 Permutes/selects dimensions, storing in a sub-accumulator.  The

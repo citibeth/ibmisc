@@ -424,10 +424,12 @@ public:
     template<int RANK>
         using TupleListT = TupleList<_StorageIndex,_Scalar,RANK>;
 
-    typedef accum::Sparsify<
+    typedef
+        accum::Sparsify<
         accum::Permute<
+            accum::IncludeZero<
             accum::Ref<
-                TupleListT<2>>,
+                TupleListT<2>>>,
             2>,
         SparseSetT, typename SparseSetT::sparse_type> AccumT;
     typedef Eigen::SparseMatrix<_Scalar,_Options,_StorageIndex> EigenSparseMatrixT;
@@ -436,6 +438,7 @@ public:
     std::array<SparsifyTransform,2> const normalized_transform;
     std::array<SparseSetT *,2> const dims;
     std::array<int,2> const permute;    // {1,0} for transpse=='T'
+    bool const include_zero;    // Include zero elements in the matrix?  (Or filter out...)
 
     /** Constructs and returns the accumulator appropriate for this
         matrix generator. */
@@ -446,7 +449,8 @@ public:
                 accum::in_index_type<typename SparseSetT::sparse_type>(),
                 dims,
             accum::permute(accum::in_rank<2>(), permute,
-            accum::ref(M)));
+            accum::include_zero(include_zero,
+            accum::ref(M))));
     }
 
     /** @param transpose Use '.' for regular, 'T' for transpose.  If transposing
@@ -456,14 +460,16 @@ public:
     MakeDenseEigen(
         std::vector<SparsifyTransform> const &_sparsify_transform,
         std::array<SparseSetT *,2> const &_dims,
-        char transpose = '.');    // '.' or 'T
+        char transpose = '.',    // '.' or 'T
+        bool _include_zero=true);
 
     MakeDenseEigen(
         std::function<void (AccumT &&)> const &fn,
         std::vector<SparsifyTransform> const &_sparsify_transform,
         std::array<SparseSetT *,2> const &_dims,
-        char transpose = '.')    // '.' or 'T
-    : MakeDenseEigen(_sparsify_transform, _dims, transpose)
+        char transpose = '.',    // '.' or 'T
+        bool _include_zero=true)
+    : MakeDenseEigen(_sparsify_transform, _dims, transpose, _include_zero)
     {
         fn(accum());
     }
@@ -491,9 +497,11 @@ template<class SparseIndexT, class _Scalar, int _Options, class _StorageIndex>
 MakeDenseEigen<SparseIndexT,_Scalar,_Options,_StorageIndex>::MakeDenseEigen(
     std::vector<SparsifyTransform> const &_sparsify_transform,
     std::array<SparseSetT *,2> const &_dims,
-    char transpose)    // '.' or 'T
+    char transpose,    // '.' or 'T
+    bool _include_zero)
 : normalized_transform(spsparse::accum::sparsify_normalize_transforms(_sparsify_transform, _dims)),
     dims(_dims),
+    include_zero(_include_zero),
     permute((transpose == 'T') ? ibmisc::make_array(1,0) : ibmisc::make_array(0,1))
 {}
 
