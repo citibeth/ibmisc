@@ -483,9 +483,12 @@ public:
             case SparsifyTransform::ADD_DENSE :
             case SparsifyTransform::TO_DENSE_IGNORE_MISSING :
             case SparsifyTransform::TO_DENSE :
+            case SparsifyTransform::KEEP_DENSE :
                 return dims[i]->dense_extent();
             case SparsifyTransform::TO_SPARSE :
+            case SparsifyTransform::KEEP_SPARSE :
                 return dims[i]->sparse_extent();
+
         }
     }
 

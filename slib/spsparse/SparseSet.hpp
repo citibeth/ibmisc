@@ -226,6 +226,8 @@ enum class SparsifyTransform {
     TO_DENSE,     // Convert sparse to dense indices
     TO_SPARSE,    // Convert dense to sparse indices
     ADD_DENSE,    // Convert sparse to dense, adding to the SparseSet if it's not already there.
+    KEEP_DENSE,    // No transformation, but we know it's a dense index
+    KEEP_SPARSE,    // No transformation but we know it's a sparse index
     ID           // No transformation
 
 };
@@ -364,6 +366,8 @@ public:
             int const i = process_order[ix];
             switch(transforms[i]) {
                 case SparsifyTransform::ID:
+                case SparsifyTransform::KEEP_DENSE:
+                case SparsifyTransform::KEEP_SPARSE:
                     // Use the shape given, no transform
                     shape2[i] = shape[i];
                     break;
@@ -395,6 +399,8 @@ public:
             int const i = process_order[ix];
             switch(transforms[i]) {
                 case SparsifyTransform::ID:
+                case SparsifyTransform::KEEP_DENSE:
+                case SparsifyTransform::KEEP_SPARSE:
                     // Use the index given, no transform
                     index2[i] = index[i];
                     break;
