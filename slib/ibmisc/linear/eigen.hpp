@@ -99,10 +99,15 @@ struct Weighted_Eigen : public Weighted {
     /** Sparse shape of the matrix */
     std::array<long,2> shape() const;
 
-    /** Compute M * As */
+    /** Compute M * As (sparse indexing) */
     void apply_M(
         blitz::Array<double,2> const &As,
-        blitz::Array<double,2> &out,
+        blitz::Array<double,2> &out,        // May be the same as As
+        AccumType accum_type=AccumType::REPLACE,
+        bool force_conservation=true) const;
+
+    void apply_M_inplace(
+        blitz::Array<double,2> const &As,
         AccumType accum_type=AccumType::REPLACE,
         bool force_conservation=true) const;
 

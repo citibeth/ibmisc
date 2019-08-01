@@ -471,6 +471,7 @@ netCDF::NcDim get_or_add_dim(NcIO &ncio, std::string const &dim_name, size_t dim
         }
     }
 
+    // TODO: Should this also be checked if ncio.rw == 'r'?  I'm afraid to make that change...
     if (ncio.rw == 'w' && dim.getSize() != dim_size) {
         (*ibmisc_error)(-1, 
             "Attempt in get_or_add_dim(%s) to change size from %ld to %ld",

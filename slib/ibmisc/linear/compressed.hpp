@@ -34,7 +34,8 @@ public:
         blitz::Array<double,1> &out,
         bool zero_out=true) const;
 
-    /** Computes out = M * As */
+    /** Computes out = M * As
+    NOTE: As and out cannot be the same! */
     void apply_M(
         blitz::Array<double,2> const &As,
         blitz::Array<double,2> &out,

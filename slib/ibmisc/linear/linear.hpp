@@ -11,6 +11,7 @@ namespace linear {
 BOOST_ENUM_VALUES(LinearType, int,
     (EIGEN) (0)
     (COMPRESSED) (1)
+    (TUPLE) (2)
 )
 
 // What do do with output values in the active space
@@ -67,8 +68,12 @@ public:
     regridding between the IceBin and ModelE ice sheets. */
     bool conservative;    // Is this matrix conservative?
 
+    /** True if this matrix is scaled */ 
+    bool const scaled;
+
 protected:
-    Weighted(LinearType _type, bool _conservative=true) : type(_type), conservative(_conservative) {}
+    Weighted(LinearType _type, bool scaled, bool _conservative=true)
+        : type(_type), scaled(_scaled), conservative(_conservative) {}
 
 public:
     virtual ~Weighted() {}
@@ -88,13 +93,24 @@ public:
         blitz::Array<double,1> &out,
         bool zero_out=true) const = 0;
 
-    /** Compute M * As.
-    Does not touch the nullspace of M. */
+    /** Compute M * As.  (Sparse indexing)
+    Does not touch the nullspace of M.
+    NOTE: For in-place multiplication, see apply_M_inplace(). */
     virtual void apply_M(
         blitz::Array<double,2> const &As,
         blitz::Array<double,2> &out,
         AccumType accum_type=AccumType::REPLACE,
         bool force_conservation=true) const = 0;
+
+    /** Computes As = M * As, result put in place. */
+    virtual void apply_M_inplace(
+        blitz::Array<double,2> const &As,
+        AccumType accum_type=AccumType::REPLACE,
+        bool force_conservation=true) const
+    {
+        (*ibmisc_error)(-1,
+            "apply_M_inplace() not implemented for this linear::Weighted type!");
+    }
 
 
     /** @return {weights[0].nnz, M.nnz, weights[1].nnz} */

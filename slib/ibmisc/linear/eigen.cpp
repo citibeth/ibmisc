@@ -80,11 +80,11 @@ Weighted_Eigen::EigenDenseMatrixT Weighted_Eigen::apply_e(
     std::cout << "    |output|   = " << TB << std::endl;
     std::cout << "    correction = " << Factor << std::endl;
 
-    EigenDenseMatrixT ret(B0 * Factor.matrix().asDiagonal());    // ret{in}
+    EigenDenseMatrixT B1(B0 * Factor.matrix().asDiagonal());    // ret{in}
     // Remove cells not in the sparse matrix
-    mask_result(B0, BvA.wM, fill);
+    mask_result(B1, BvA.wM, fill);
 
-    return ret;
+    return B1;
 }
 
 blitz::Array<double,2> Weighted_Eigen::apply(
@@ -230,9 +230,9 @@ void Weighted_Eigen::apply_M(
     auto &bdim(*dims[0]);
     auto &adim(*dims[1]);
     int n_n = A_s.extent(0);
+    blitz::Array<double,2> A_d(n_n, adim.dense_extent());
 
     // Densify the A matrix
-    blitz::Array<double,2> A_d(n_n, adim.dense_extent());
     for (int j_d=0; j_d < adim.dense_extent(); ++j_d) {
         int const j_s = adim.to_sparse(j_d);
         for (int n=0; n < n_n; ++n) {
@@ -270,6 +270,15 @@ void Weighted_Eigen::apply_M(
             }
         break;
     }
+}
+
+void Weighted_Eigen::apply_M_inplace(
+    blitz::Array<double,2> const &As,
+    AccumType accum_type,
+    bool force_conservation) const
+{
+    // Weighted_Eigen::apply_M() works fine for inplace multiply.
+    apply_M(As, As, accum_type, force_conservation);
 }
 
 long Weighted_Eigen::nnz() const

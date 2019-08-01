@@ -51,7 +51,7 @@ void Weighted_Compressed::apply_M(
     auto const nA(As.extent(1));
     auto const nB(Bs.extent(1));
 
-    // Prepare ActiveSpace, ased on accum_type
+    // Prepare ActiveSpace, based on accum_type
     switch(accum_type.index()) {
         case AccumType::REPLACE :
             for (auto ii(weights[0].generator()); ++ii; ) {

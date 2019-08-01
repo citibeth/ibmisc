@@ -12,6 +12,7 @@ namespace ibmisc {
 
 // ======================================================================
 
+/** Output is flushed once the ZArray_Accum object is destroyed. */
 template<class IndexT, class ValueT, int RANK>
 class ZArray_Accum {
 public:

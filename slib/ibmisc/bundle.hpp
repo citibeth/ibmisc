@@ -77,6 +77,13 @@ public:
         { return *data[index.at(name)].arr; }
 
 
+    blitz::Array<TypeT, RANK> const &array(size_t ix) const
+        { return *data[index[ix]].arr; }
+
+    blitz::Array<TypeT, RANK> &array(size_t ix)
+        { return *data[index[ix]].arr; }
+
+
     Data const &at(std::string const &name) const
         { return data[index.at(name)]; }
 
