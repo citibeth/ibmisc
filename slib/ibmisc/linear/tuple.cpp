@@ -1,4 +1,7 @@
 #include <ibmisc/linear/tuple.hpp>
+#include <ibmisc/linear/eigen.hpp>
+
+using namespace spsparse;
 
 namespace ibmisc {
 namespace linear {
@@ -68,5 +71,31 @@ std::unique_ptr<linear::Weighted_Eigen> to_eigen(linear::Weighted_Tuple const &X
     // found in compressed.cpp
 }
 
+/** Code is same as compress(); see compressed.cpp */
+Weighted_Tuple to_tuple(Weighted_Eigen const &eigen)
+{
+    Weighted_Tuple ret;
+    ret.scaled = eigen.scaled;
+    ret.conservative = eigen.conservative;
+
+    spsparse::spcopy(
+        spsparse::accum::to_sparse(
+            std::array<Weighted_Eigen::SparseSetT *,1>{eigen.dims[0]},
+            accum::ref(ret.wM)),
+        eigen.wM);
+
+    spsparse::spcopy(
+        spsparse::accum::to_sparse(eigen.dims,
+            accum::ref(ret.M)),
+        *eigen.M);
+
+    spsparse::spcopy(
+        spsparse::accum::to_sparse(
+            std::array<Weighted_Eigen::SparseSetT *,1>{eigen.dims[1]},
+            accum::ref(ret.Mw)),
+        eigen.Mw);
+
+    return ret;
+}
 
 }}    // namespace

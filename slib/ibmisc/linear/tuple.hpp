@@ -80,7 +80,9 @@ protected:
 public:
 };
 
-std::unique_ptr<linear::Weighted_Eigen> to_eigen(linear::Weighted_Tuple const &X);
+std::unique_ptr<Weighted_Eigen> to_eigen(Weighted_Tuple const &X);
+
+Weighted_Tuple to_tuple(Weighted_Eigen const &X);
 
 }}    // namespace
 #endif

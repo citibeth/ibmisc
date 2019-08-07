@@ -57,7 +57,7 @@ protected:
         blitz::Array<double,1> &w) const;
 };
 
-extern Weighted_Compressed compress(Weighted_Eigen &eigen);
+extern Weighted_Compressed compress(Weighted_Eigen const &eigen);
 
 
 
