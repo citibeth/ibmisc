@@ -19,7 +19,7 @@ public:
     ZArray<int,double,2> M;
 
 public:
-    Weighted_Compressed() : Weighted(LinearType::COMPRESSED) {}
+    Weighted_Compressed(bool scaled) : Weighted(LinearType::COMPRESSED, scaled) {}
 
     void set_shape(std::array<long,2> _shape);
 

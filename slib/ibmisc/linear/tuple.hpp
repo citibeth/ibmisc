@@ -2,12 +2,16 @@
 #define IBMISC_LINEAR_TUPLE_HPP
 
 #include <memory>
-#include <Tuple/SparseCore>
+#include <Eigen/SparseCore>
 #include <spsparse/SparseSet.hpp>
 #include <ibmisc/linear/linear.hpp>
+#include <spsparse/eigen.hpp>
+
+using namespace spsparse;
 
 namespace ibmisc {
 namespace linear {
+
 
 /** Return value of a sparse matrix */
 struct Weighted_Tuple : public Weighted {
@@ -15,8 +19,8 @@ struct Weighted_Tuple : public Weighted {
     template<int RANK>
         using TupleListLT = spsparse::TupleList<long,double,RANK>;
 
-    TupelListLT<1> wM;
-    TupelListLT<2> M;
+    TupleListLT<1> wM;
+    TupleListLT<2> M;
     TupleListLT<1> Mw;
 
 
@@ -52,7 +56,7 @@ struct Weighted_Tuple : public Weighted {
 
     /** Computes As = M * As, result put in place. */
     virtual void apply_M_inplace(
-        blitz::Array<double,2> const &As,
+        blitz::Array<double,2> &As,
         AccumType accum_type=AccumType::REPLACE,
         bool force_conservation=true) const;
 

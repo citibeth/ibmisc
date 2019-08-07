@@ -72,7 +72,7 @@ public:
     bool const scaled;
 
 protected:
-    Weighted(LinearType _type, bool scaled, bool _conservative=true)
+    Weighted(LinearType _type, bool _scaled, bool _conservative=true)
         : type(_type), scaled(_scaled), conservative(_conservative) {}
 
 public:

@@ -26,6 +26,7 @@
 #include <spsparse/accum.hpp>
 #include <spsparse/blitz.hpp>
 #include <spsparse/SparseSet.hpp>
+#include <spsparse/tuplelist.hpp>
 
 namespace spsparse {
 
@@ -84,164 +85,6 @@ void spcopy(
 // --------------------------------------------------------------
 
 // --------------------------------------------------------------
-/** An N-dimensional generalization of Eigen::Triplet */
-template<class IndexT, class ValT, int RANK>
-class Tuple {
-    std::array<IndexT, RANK> _index;
-    ValT _value;
-public:
-    template<class ArchiveT>
-    void serialize(ArchiveT &ar, const unsigned int file_version)
-    {
-        ar & _index;
-        ar & _value;
-    }
-
-
-    IndexT &index(int i)
-        { return _index[i]; }
-    IndexT const &index(int i) const
-        { return _index[i]; }
-
-    std::array<IndexT, RANK> &index()
-        { return _index; }
-    std::array<IndexT, RANK> const &index() const
-        { return _index; }
-
-    ValT &value()
-        { return _value; }
-    ValT const &value() const
-        { return _value; }
-
-    Tuple() {}    // WARNING: Uninitialized.  It's here for boost serialization
-
-    Tuple(std::array<IndexT, RANK> const &index,
-        ValT const &value)
-        : _index(index), _value(value) {}
-
-    // ----- For Eigen::SparseMatrix::setFromTriplets()
-    ValT row() const
-        { return index(0); }
-    ValT col() const
-        { return index(1); }
-
-    bool operator<(Tuple<IndexT,ValT,RANK> const &other) const
-        { return _index < other._index; }
-
-    bool operator==(Tuple<IndexT,ValT,RANK> const &other) const
-    {
-        for (int i=0; i<RANK; ++i) if (_index[i] != other._index[i]) return false;
-        return (_value == other._value);
-    }
-
-};
-
-/** Serves as accumulator and iterable storage */
-template<class IndexT, class ValT, int RANK>
-class TupleList
-{
-public:
-    // https://stackoverflow.com/questions/4353203/thou-shalt-not-inherit-from-stdvector
-    typedef std::vector<Tuple<IndexT,ValT,RANK>> VectorT;
-    VectorT tuples;
-
-    // Stuff to make it an accumulator
-    static const int rank = RANK;
-    typedef IndexT index_type;
-    typedef ValT val_type;
-    
-    std::array<long, rank> _shape;
-
-public:
-    template<class ArchiveT>
-    void serialize(ArchiveT &ar, const unsigned int file_version)
-    {
-        ar & tuples;
-        ar & _shape;
-    }
-
-    // -----------------------------------------------------
-    // https://stackoverflow.com/questions/7758580/writing-your-own-stl-container/7759622#7759622
-
-    // These iterators work for Spsparse accumulators; but not for all STL stuff (eg std::sort).
-    // For those, use TupleList.tuples.begin(), etc.
-    struct iterator : public VectorT::iterator {
-        static const int rank = RANK;
-        typedef IndexT index_type;
-        typedef ValT val_type;
-
-        iterator() {}
-        iterator(typename VectorT::iterator &&ii) : VectorT::iterator(std::move(ii)) {}
-        iterator(const typename VectorT::iterator &ii) : VectorT::iterator(ii) {}
-
-    };
-    iterator begin()
-        { return iterator(tuples.begin()); }
-    iterator end()
-        { return iterator(tuples.end()); }
-    // -------------------------------------------------
-    struct const_iterator : public VectorT::const_iterator {
-        static const int rank = RANK;
-        typedef IndexT index_type;
-        typedef ValT val_type;
-
-        const_iterator(typename VectorT::const_iterator &&ii) : VectorT::const_iterator(std::move(ii)) {}
-    };
-    const_iterator begin() const
-        { return const_iterator(tuples.begin()); }
-    const_iterator end() const
-        { return const_iterator(tuples.end()); }
-
-    // -------------------------------------------------
-
-    TupleList()
-        { _shape.fill(-1); }    // -1 means unlimited dimension
-
-    TupleList(std::array<long,RANK> shape) : _shape(shape) {}
-
-    // So this can serve as a Spsparse Accumulator
-    void set_shape(std::array<long, rank> shape)
-        { _shape = shape; }
-
-    std::array<long,rank> const &shape() const
-        { return _shape; }
-    long shape(int i) const
-        { return _shape[i]; }
-
-    void add(std::array<index_type,rank> const &index, ValT const &value);
-
-    // Forward methods to std::vector
-    size_t size() const { return tuples.size(); }
-    void clear() { tuples.clear(); }
-    void reserve(size_t n) { tuples.reserve(n); }
-    Tuple<IndexT,ValT,RANK> &operator[](int ix) { return tuples[ix]; }
-    Tuple<IndexT,ValT,RANK> const &operator[](int ix) const { return tuples[ix]; }
-};
-
-template<class IndexT, class ValT, int RANK>
-void TupleList<IndexT,ValT,RANK>::add(std::array<index_type,rank> const &index, ValT const &value)
-{
-    // Check bounds
-    for (int i=0; i<RANK; ++i) {
-        if (_shape[i] >= 0 && (index[i] < 0 || index[i] >= _shape[i])) {
-            std::ostringstream buf;
-            buf << "Sparse index out of bounds: index=(";
-            for (int j=0; j<RANK; ++j) {
-                buf << index[j];
-                buf << " ";
-            }
-            buf << ") vs. shape=(";
-            for (int j=0; j<RANK; ++j) {
-                buf << _shape[j];
-                buf << " ";
-            }
-            buf << ")";
-            (*ibmisc::ibmisc_error)(-1, buf.str().c_str());
-        }
-    }
-
-    tuples.push_back(Tuple<IndexT,ValT,RANK>(index, value));
-}
 
 // --------------------------------------------------------
 template<class AccumT, class IndexT, class ValT, int RANK>
@@ -626,7 +469,6 @@ void ncio_eigen(
 {
     std::vector<std::string> const dim_names({vname + ".nnz", vname + ".rank"});
     std::vector<netCDF::NcDim> dims;        // Dimensions in NetCDF
-    std::vector<size_t> dim_sizes;          // Length of our two dimensions.
 
     // Count the number of elements in the sparse matrix.
     // NOTE: This can/does give a diffrent answer from A.nonZeros().

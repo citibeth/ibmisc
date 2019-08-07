@@ -552,14 +552,17 @@ void get_or_put_att(
     const std::string &name, std::string const &sntype,
     std::array<AttrT,LEN> &data)
 {
-    if (rw == 'r') (*ibmisc_error)(-1,
-        "get_or_put_att on array does not work for reading");
+    if (rw == 'w') {
+        auto data_v(to_vector(data));
+        get_or_put_att(ncvar, rw, name, sntype, data_v);
+    } else {
+        std::vector<AttrT> data_v;
+        get_or_put_att(ncvar, rw, name, sntype, data_v);
+        if (data_v.size() != LEN) (*ibmisc_error)(-1,
+            "Attribute %s has wrong length: %d instead of %d",
+            name.c_str(), (int)data_v.size(), (int)LEN);
 
-    // TODO: This doesn't seem to work for AttrT==std::string
-    auto data_v(to_vector(data));
-    return get_or_put_att(ncvar, rw, name, sntype, data_v);
-    if (rw == 'r') {
-        for (size_t i=0; i<LEN; ++i) data[i] = data_v[i];
+        for (int i=0; i<LEN; ++i) data[i] = data_v[i];
     }
 }
 // ---------------------------------------

@@ -58,13 +58,13 @@ void Weighted::ncio(NcIO &ncio, std::string const &vname)
     get_or_put_att(info_v, ncio.rw, "conservative", conservative);
 }
 
-std::unique_ptr<Weighted> new_weighted(LinearType type)
+std::unique_ptr<Weighted> new_weighted(LinearType type, bool scaled)
 {
     switch(type.index()) {
         case LinearType::EIGEN :
-            return std::unique_ptr<Weighted>(new Weighted_Eigen);
+            return std::unique_ptr<Weighted>(new Weighted_Eigen(scaled));
         case LinearType::COMPRESSED :
-            return std::unique_ptr<Weighted>(new Weighted_Compressed);
+            return std::unique_ptr<Weighted>(new Weighted_Compressed(scaled));
         default:
             (*ibmisc_error)(-1,
                 "Unrecognized LinearType = %d", type.index());
@@ -79,8 +79,10 @@ std::unique_ptr<Weighted> nc_read_weighted(netCDF::NcGroup *nc, std::string cons
     auto info_v = get_or_add_var(ncio, vn, "int", {});
 
     LinearType type;
+    bool weighted;
     get_or_put_att_enum(info_v, ncio.rw, "type", type);
-    auto ret(new_weighted(type));
+    get_or_put_att(info_v, ncio.rw, "weighted", weighted);
+    auto ret(new_weighted(type, weighted));
     ret->ncio(ncio, vname);
     return ret;
 }

@@ -16,7 +16,8 @@ set(IBMISC_SOURCE
     ibmisc/ncbulk.cpp
     ibmisc/linear/linear.cpp
     ibmisc/linear/compressed.cpp
-    ibmisc/linear/eigen.cpp)
+    ibmisc/linear/eigen.cpp
+    ibmisc/linear/tuple.cpp)
 
 
 if (USE_PROJ4)

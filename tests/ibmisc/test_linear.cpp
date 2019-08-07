@@ -210,7 +210,7 @@ TEST_F(LinearTest, overlap)
     }
 
     // =========== BvA3: Read it back
-    linear::Weighted_Compressed BvA3;
+    linear::Weighted_Compressed BvA3(false);
     {NcIO ncio(fname3, 'r');
         BvA3.ncio(ncio, "BvA");
     }
@@ -326,6 +326,33 @@ for (auto ii(BvA3.M.generator()); ++ii; ) {
 
     // NOT TESTED:
     //    Other AccumTypes
+
+}
+
+TEST_F(LinearTest, tuple_list)
+{
+    TupleList<long,double,2> tl;
+    tl.add({1,2}, 1.0);
+    tl.add({2,4}, 2.0);
+    tl.add({3,6}, 3.0);
+    tl.set_shape({17,34});
+
+    std::string fname4("__linear4.nc");
+    tmpfiles.push_back(fname4);
+    ::remove(fname4.c_str());
+    {NcIO ncio(fname4, 'w');
+        tl.ncio(ncio, "tl");
+    }
+
+    TupleList<long,double,2> tl2;
+    {NcIO ncio(fname4, 'r');
+        tl2.ncio(ncio, "tl");
+    }
+
+    for (size_t i=0; i<tl.size(); ++i) {
+        EXPECT_TRUE(tl.tuples[i] == tl2.tuples[i]);
+    }
+
 
 }
 

@@ -273,7 +273,7 @@ void Weighted_Eigen::apply_M(
 }
 
 void Weighted_Eigen::apply_M_inplace(
-    blitz::Array<double,2> const &As,
+    blitz::Array<double,2> &As,
     AccumType accum_type,
     bool force_conservation) const
 {
