@@ -60,4 +60,13 @@ void Weighted_Tuple::ncio(NcIO &ncio, std::string const &vname)
 
 }
 
+std::unique_ptr<linear::Weighted_Eigen> to_eigen(linear::Weighted_Tuple const &X)
+{
+    (*ibmisc_error)(-1, "to_eigen() converting linear::Weighted_Tuple -> linear::Weighted_Eigen not yet implemented!");
+    // This should follow:
+    //     Weighted_Compressed compress(Weighted_Eigen &eigen)
+    // found in compressed.cpp
+}
+
+
 }}    // namespace

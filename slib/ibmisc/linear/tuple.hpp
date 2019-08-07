@@ -12,6 +12,7 @@ using namespace spsparse;
 namespace ibmisc {
 namespace linear {
 
+class Weighted_Eigen;
 
 /** Return value of a sparse matrix */
 struct Weighted_Tuple : public Weighted {
@@ -79,6 +80,7 @@ protected:
 public:
 };
 
+std::unique_ptr<linear::Weighted_Eigen> to_eigen(linear::Weighted_Tuple const &X);
 
 }}    // namespace
 #endif
