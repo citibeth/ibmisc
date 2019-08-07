@@ -28,6 +28,7 @@ struct Weighted_Tuple : public Weighted {
     Weighted_Tuple(bool conservative=true)
         : Weighted(LinearType::TUPLE, conservative) {}
 
+    void set_shape(std::array<long,2> _shape);
 
     /** Sparse shape of the matrix */
     std::array<long,2> shape() const

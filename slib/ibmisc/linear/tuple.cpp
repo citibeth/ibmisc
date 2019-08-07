@@ -3,6 +3,13 @@
 namespace ibmisc {
 namespace linear {
 
+void Weighted_Tuple::set_shape(std::array<long,2> _shape)
+{
+    wM.set_shape({_shape[0]});
+    M.set_shape(_shape);
+    Mw.set_shape({_shape[1]});
+}
+
 void Weighted_Tuple::apply_weight(
     int dim,    // 0=B, 1=A
     blitz::Array<double,2> const &As,    // As(nvec, ndim)
@@ -47,6 +54,10 @@ void Weighted_Tuple::_get_weights(
 /** I/O */
 void Weighted_Tuple::ncio(NcIO &ncio, std::string const &vname)
 {
+    wM.ncio(ncio, vname+".wM");
+    M.ncio(ncio, vname+".M");
+    Mw.ncio(ncio, vname+".Mw");
+
 }
 
 }}    // namespace
