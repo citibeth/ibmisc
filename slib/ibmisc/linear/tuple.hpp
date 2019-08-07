@@ -12,7 +12,8 @@ namespace linear {
 /** Return value of a sparse matrix */
 struct Weighted_Tuple : public Weighted {
 
-    using TupleListLT = spsparse::TupleList<long,double,RANK>;
+    template<int RANK>
+        using TupleListLT = spsparse::TupleList<long,double,RANK>;
 
     TupelListLT<1> wM;
     TupelListLT<2> M;
@@ -25,7 +26,8 @@ struct Weighted_Tuple : public Weighted {
 
 
     /** Sparse shape of the matrix */
-    std::array<long,2> shape() const;
+    std::array<long,2> shape() const
+        { return M.shape(); }
 
     /** Takes inner product between a weight vector and the input(s) As.
     @param dim 0=B (output) weight, 1=A (intput) weight.
@@ -48,8 +50,13 @@ struct Weighted_Tuple : public Weighted {
         AccumType accum_type=AccumType::REPLACE,
         bool force_conservation=true) const;
 
-    /** @return {weights[0].nnz, M.nnz, weights[1].nnz} */
-    long nnz() const;
+    /** Computes As = M * As, result put in place. */
+    virtual void apply_M_inplace(
+        blitz::Array<double,2> const &As,
+        AccumType accum_type=AccumType::REPLACE,
+        bool force_conservation=true) const;
+
+    long nnz() const { return M.size(); }
 
 protected:
     virtual void _to_coo(
