@@ -31,8 +31,8 @@ struct Weighted_Eigen : public Weighted {
     blitz::Array<double,1> Mw;
 
     /** Construct with shared dimensions from elsewhere */
-    Weighted_Eigen(std::array<SparseSetT *,2> _dims, bool scaled, bool conservative=true)
-        : Weighted(LinearType::EIGEN, scaled, conservative), dims(_dims) {}
+    Weighted_Eigen(std::array<SparseSetT *,2> _dims, bool conservative=true)
+        : Weighted(LinearType::EIGEN, conservative), dims(_dims) {}
 
     /** Construct with internal dimensions.
     @param dim_names Starting with a dot means, add vname in ncio().  Only used for writing.

@@ -210,7 +210,7 @@ TEST_F(LinearTest, overlap)
     }
 
     // =========== BvA3: Read it back
-    linear::Weighted_Compressed BvA3(false);
+    linear::Weighted_Compressed BvA3;
     {NcIO ncio(fname3, 'r');
         BvA3.ncio(ncio, "BvA");
     }

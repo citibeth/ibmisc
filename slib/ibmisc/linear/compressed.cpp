@@ -111,7 +111,8 @@ void Weighted_Compressed::ncio(NcIO &ncio, std::string const &vname)
 // ======================================================
 Weighted_Compressed compress(Weighted_Eigen &eigen)
 {
-    Weighted_Compressed ret(eigen.scaled);
+    Weighted_Compressed ret;
+    ret.scaled = eigen.scaled;
     ret.conservative = eigen.conservative;
 
     spsparse::spcopy(

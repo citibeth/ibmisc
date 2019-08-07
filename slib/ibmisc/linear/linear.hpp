@@ -69,11 +69,11 @@ public:
     bool conservative;    // Is this matrix conservative?
 
     /** True if this matrix is scaled */ 
-    bool const scaled;
+    bool scaled;
 
 protected:
-    Weighted(LinearType _type, bool _scaled, bool _conservative=true)
-        : type(_type), scaled(_scaled), conservative(_conservative) {}
+    Weighted(LinearType _type, bool _conservative=true, bool _scaled=false)
+        : type(_type), conservative(_conservative), scaled(_scaled) {}
 
 public:
     virtual ~Weighted() {}
