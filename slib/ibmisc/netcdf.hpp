@@ -692,7 +692,7 @@ public:
         bool check = true)
     {
         if (check && shape[0] >= 0) (*ibmisc_error)(-1,
-            "ArrayBundle variable %s shape already set", name.c_str());
+            "Bundle variable %s shape already set", name.c_str());
         shape = _shape;
         sdims = _sdims;
     }
@@ -704,7 +704,7 @@ public:
         bool check = true)
     {
         if (check && shape[0] >= 0) (*ibmisc_error)(-1,
-            "ArrayBundle variable %s shape already set", name.c_str());
+            "Bundle variable %s shape already set", name.c_str());
 
         for (int i=0; i<RANK; ++i) shape[i] = arr.extent(i);
         sdims = _sdims;
