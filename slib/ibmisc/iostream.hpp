@@ -5,11 +5,21 @@
 
 /** Write std::array to ostream. */
 template <class T, std::size_t N>
-ostream& operator<<(ostream& o, const std::array<T, N>& arr)
+std::ostream& operator<<(std::ostream& o, const std::array<T, N>& arr)
 {
     o << "[";
-    copy(arr.cbegin(), arr.cend(), ostream_iterator<T>(o, " "));
-    0 << "]";
+    copy(arr.cbegin(), arr.cend(), std::ostream_iterator<T>(o, " "));
+    o << "]";
+    return o;
+}
+
+/** Write std::vector to ostream. */
+template <class T>
+std::ostream& operator<<(std::ostream& o, const std::vector<T>& arr)
+{
+    o << "[";
+    copy(arr.cbegin(), arr.cend(), std::ostream_iterator<T>(o, " "));
+    o << "]";
     return o;
 }
 
