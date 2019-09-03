@@ -48,7 +48,7 @@ public:
         }
 
         void allocate(bool check, std::array<int,RANK> const &shape,
-            blitz::GeneralArrayStorage<RANK> const &storage)
+            blitz::GeneralArrayStorage<RANK> const &storage = blitz::GeneralArrayStorage<RANK>())
         {
             if (check && arr->data()) (*ibmisc_error)(-1,
                 "ArrayBundle variable %s already allocated", meta.name.c_str());

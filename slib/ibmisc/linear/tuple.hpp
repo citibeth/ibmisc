@@ -29,6 +29,8 @@ struct Weighted_Tuple : public Weighted {
     Weighted_Tuple(bool conservative=true)
         : Weighted(LinearType::TUPLE, conservative) {}
 
+    void clear();
+
     void set_shape(std::array<long,2> _shape);
 
     /** Sparse shape of the matrix */
@@ -63,9 +65,6 @@ struct Weighted_Tuple : public Weighted {
         bool force_conservation=true) const;
 
     long nnz() const { return M.size(); }
-
-    /** If this is unscaled, returns a scaled version of this->M */
-    TupleListLT<2> M_scaled();
 
 protected:
     virtual void _to_coo(

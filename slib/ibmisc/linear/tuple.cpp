@@ -6,6 +6,13 @@ using namespace spsparse;
 namespace ibmisc {
 namespace linear {
 
+void Weighted_Tuple::clear()
+{
+    wM.clear();
+    M.clear();
+    Mw.clear();
+}
+
 void Weighted_Tuple::set_shape(std::array<long,2> _shape)
 {
     wM.set_shape({_shape[0]});
