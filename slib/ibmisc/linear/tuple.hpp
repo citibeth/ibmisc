@@ -64,6 +64,9 @@ struct Weighted_Tuple : public Weighted {
 
     long nnz() const { return M.size(); }
 
+    /** If this is unscaled, returns a scaled version of this->M */
+    TupleListLT<2> M_scaled();
+
 protected:
     virtual void _to_coo(
         blitz::Array<int,1> &indices0,        // Must be pre-allocated(nnz)
@@ -75,9 +78,9 @@ protected:
         int idim,    // 0=wM, 1=Mw
         blitz::Array<double,1> &w) const;
 
+public:
     /** I/O */
     virtual void ncio(NcIO &ncio, std::string const &vname); 
-public:
 };
 
 std::unique_ptr<Weighted_Eigen> to_eigen(Weighted_Tuple const &X);

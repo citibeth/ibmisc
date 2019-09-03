@@ -61,7 +61,7 @@ matrices. */
 class Weighted {
 public:
     // TmpAlloc tmp;    // Sometimes, hold the things we're wrapping.
-    LinearType const type;
+    LinearType type;
 
     /** True if this regridding matrix is conservative.  Matrices could be
     non-conservative, for example, in the face of smoothing on I.  Or when
