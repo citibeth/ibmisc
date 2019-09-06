@@ -80,6 +80,15 @@ protected:
 public:
     /** I/O */
     virtual void ncio(NcIO &ncio, std::string const &vname); 
+
+    template<class ArchiveT>
+    void serialize(ArchiveT &ar, const unsigned int file_version)
+    {
+        ar & wM;
+        ar & M;
+        ar & Mw;
+    }
+
 };
 
 std::unique_ptr<Weighted_Eigen> to_eigen(Weighted_Tuple const &X);
