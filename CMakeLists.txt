@@ -44,13 +44,13 @@ if (NOT DEFINED USE_NETCDF)
     set(USE_NETCDF YES)
 endif()
 if (USE_NETCDF)
-#   find_package(NetCDF4_C REQUIRED)
+   find_package(NetCDF4_C REQUIRED)
     find_package(NetCDF4_CXX REQUIRED)
     add_definitions(-DUSE_NETCDF)
     include_directories(
-#       ${NETCDF4_C_INCLUDE_DIR}
+        ${NETCDF4_C_INCLUDE_DIR}
         ${NETCDF4_CXX_INCLUDE_DIR})
-#   list(APPEND EXTERNAL_LIBS ${NETCDF4_C_LIBRARY} ${NETCDF4_CXX_LIBRARY})
+    list(APPEND EXTERNAL_LIBS ${NETCDF4_C_LIBRARY} ${NETCDF4_CXX_LIBRARY})
     list(APPEND EXTERNAL_LIBS ${NETCDF4_CXX_LIBRARY})
 endif()
 # -----------------------------------------------------
