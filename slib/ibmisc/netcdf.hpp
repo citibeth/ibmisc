@@ -107,6 +107,9 @@ public:
     static void default_configure_var(netCDF::NcVar ncvar);
     static void no_compress(netCDF::NcVar ncvar);
 
+    // Original filename opened; for error messages
+    std::string const fname;
+
     TmpAlloc tmp;    // Data kept around for the write phase
     netCDF::NcGroup * const nc;
 

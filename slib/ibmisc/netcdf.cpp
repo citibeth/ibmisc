@@ -396,6 +396,7 @@ NcIO::NcIO(std::string const &filePath, char mode,
     std::string const &sformat,
     std::function<void(NcVar)> const &_configure_var) :
     _mync(open_netcdf(filePath, mode, sformat)),
+    fname(filePath),
     nc(&*_mync),
     rw(_filemode_to_rw(mode)),
     define(rw == 'w'),
@@ -437,7 +438,7 @@ netCDF::NcDim get_or_add_dim(NcIO &ncio, std::string const &dim_name)
         // The dim does NOT exist!
         if (ncio.rw == 'r') {
             (*ibmisc_error)(-1,
-                "Dimension %s(unlimited) needs to exist when reading", dim_name.c_str());
+                "Dimension %s(unlimited) needs to exist when reading (file %s)", dim_name.c_str(), ncio.fname.c_str());
         } else {
             // We're in write mode; make this dimension.
             return ncio.nc->addDim(dim_name);
@@ -447,8 +448,8 @@ netCDF::NcDim get_or_add_dim(NcIO &ncio, std::string const &dim_name)
     // Make sure existing dimension is unlimited
     if (!dim.isUnlimited()) {
         (*ibmisc_error)(-1, 
-            "Attempt in get_or_add_dim(%s) to change size from %d to unlimited",
-            dim_name.c_str(), dim.getSize());
+            "Attempt in get_or_add_dim(%s) to change size from %d to unlimited (file %s)",
+            dim_name.c_str(), dim.getSize(), ncio.fname.c_str());
     }
 
     return dim;
@@ -464,7 +465,7 @@ netCDF::NcDim get_or_add_dim(NcIO &ncio, std::string const &dim_name, size_t dim
         // The dim does NOT exist!
         if (ncio.rw == 'r') {
             (*ibmisc_error)(-1,
-                "Dimension %s(%s) needs to exist when reading", dim_name.c_str(), dim_size);
+                "Dimension %s(%s) needs to exist when reading (file %s)", dim_name.c_str(), dim_size, ncio.fname.c_str());
         } else {
             // We're in write mode; make this dimension.
             return ncio.nc->addDim(dim_name, dim_size);
@@ -474,8 +475,8 @@ netCDF::NcDim get_or_add_dim(NcIO &ncio, std::string const &dim_name, size_t dim
     // TODO: Should this also be checked if ncio.rw == 'r'?  I'm afraid to make that change...
     if (ncio.rw == 'w' && dim.getSize() != dim_size) {
         (*ibmisc_error)(-1, 
-            "Attempt in get_or_add_dim(%s) to change size from %ld to %ld",
-            dim_name.c_str(), dim.getSize(), dim_size);
+            "Attempt in get_or_add_dim(%s) to change size from %ld to %ld (file %s)",
+            dim_name.c_str(), dim.getSize(), dim_size, ncio.fname.c_str());
     }
 
     return dim;
@@ -491,7 +492,7 @@ std::vector<netCDF::NcDim> get_dims(
         ret[k] = ncio.nc->getDim(sdims[k]);
         if (ret[k].isNull()) {
             (*ibmisc_error)(-1,
-                "Dimension %s does not exist!", sdims[k].c_str());
+                "Dimension %s does not exist! (file %s)", sdims[k].c_str(), ncio.fname.c_str());
         }
     }
     return ret;
@@ -515,8 +516,8 @@ std::vector<netCDF::NcDim> get_or_add_dims(
 {
     if (dim_names.size() != dim_sizes.size()) {
         (*ibmisc_error)(-1,
-            "get_or_add_dims() requires dim_names[%ld] and dim_sizes[%ld] be of same length.",
-            dim_names.size(), dim_sizes.size());
+            "get_or_add_dims() requires dim_names[%ld] and dim_sizes[%ld] be of same length (file %s).",
+            dim_names.size(), dim_sizes.size(), ncio.fname.c_str());
     }
 
     size_t RANK = dim_names.size();
@@ -553,18 +554,18 @@ netCDF::NcVar get_or_add_var(
             if (ncvar.getDimCount() != dims.size()) {
                 (*ibmisc_error)(-1,
                     "NetCDF variable %s(%d dims) has wrong number of "
-                    "dimensions, %d expected",
-                    vname.c_str(), ncvar.getDimCount(), dims.size());
+                    "dimensions, %d expected (file %s)",
+                    vname.c_str(), ncvar.getDimCount(), dims.size(), ncio.fname.c_str());
             }
             for (int i=0; i<ncvar.getDimCount(); ++i) {
                 NcDim ncdim = ncvar.getDim(i);
                 if (ncdim != dims[i]) {
                     (*ibmisc_error)(-1,
                         "Trying to change dimension %d of "
-                        "NetCDF variable %s from %s=%ld to %s=%ld",
+                        "NetCDF variable %s from %s=%ld to %s=%ld (file %s)",
                         i, ncvar.getName().c_str(),
                         ncdim.getName().c_str(), ncdim.getSize(),
-                        dims[i].getName().c_str(), dims[i].getSize());
+                        dims[i].getName().c_str(), dims[i].getSize(), ncio.fname.c_str());
                 }
             }
         }
@@ -572,16 +573,16 @@ netCDF::NcVar get_or_add_var(
         ncvar = ncio.nc->getVar(vname);
         if (ncvar.isNull()) {
             (*ibmisc_error)(-1,
-                "Variable %s required but not found", vname.c_str());
+                "Variable %s required but not found (file %s)", vname.c_str(), ncio.fname.c_str());
         }
 
         // Check that types match
         NcType spec_type(nc_type(ncvar, snc_type));
         NcType real_type(ncvar.getType());
         if (spec_type != real_type) (*ibmisc_error)(-1,
-            "On-disk type of variable %s = %s does not match specified type %s (%s)",
+            "On-disk type of variable %s = %s does not match specified type %s (%s) (file %s)",
             vname.c_str(), real_type.getName().c_str(),
-            snc_type.c_str(), spec_type.getName().c_str());
+            snc_type.c_str(), spec_type.getName().c_str(), ncio.fname.c_str());
     }
     return ncvar;
 }
