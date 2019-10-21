@@ -40,6 +40,7 @@ bool Indexing::operator==(Indexing const &other) {
 
 long Indexing::extent() const
 {
+    if (data.size() == 0) return 0;
     long ret = data[0].extent;
     for (int k=1; k<rank(); ++k) ret *= data[k].extent;
     return ret;
