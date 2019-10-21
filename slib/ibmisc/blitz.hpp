@@ -282,7 +282,7 @@ template<class T, int rank>
 blitz::Array<T, rank> f_to_c(blitz::Array<T, rank> &arr);
 
 template<class TypeT, int RANK>
-inline blitz::Array<TypeT, RANK> f_to_c2(blitz::Array<TypeT, RANK> &arr)
+inline blitz::Array<TypeT, RANK> f_to_c(blitz::Array<TypeT, RANK> &arr)
 {
     // Set up shape and strides
     blitz::TinyVector<int,RANK> shape;
