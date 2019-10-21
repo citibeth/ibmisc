@@ -282,7 +282,7 @@ template<class T, int rank>
 blitz::Array<T, rank> f_to_c(blitz::Array<T, rank> &arr);
 
 template<class TypeT, int RANK>
-blitz::Array<TypeT, RANK> f_to_c(blitz::Array<TypeT, RANK> &arr)
+inline blitz::Array<TypeT, RANK> f_to_c2(blitz::Array<TypeT, RANK> &arr)
 {
     // Set up shape and strides
     blitz::TinyVector<int,RANK> shape;
@@ -294,7 +294,7 @@ blitz::Array<TypeT, RANK> f_to_c(blitz::Array<TypeT, RANK> &arr)
         shape[i] = arr.extent(j);
         // Python/Numpy strides are in bytes, Blitz++ in sizeof(T) units.
         strides[i] = arr.stride(j);
-        storage.base()[i] = 0;
+        storage.base()[i] = arr.lbound(j)-1;
         // Ordering is not needed because we're using stride
         // storage.ordering()[i] = i;      // Fortran ordering, blitz++ manual p31
     }
