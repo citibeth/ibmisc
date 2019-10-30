@@ -101,13 +101,15 @@ public:
     }
 
 
-    size_t at(KeyT const &key) const
+    size_t at(KeyT const &key, bool raise_error=true) const
     {
         auto ii(_key_to_ix.find(key));
         if (ii == _key_to_ix.end()) {
-            std::stringstream buf;
-            buf << "Cannot find key: " << key;
-            (*ibmisc_error)(-1, "%s", buf.str().c_str());
+            if (raise_error) {
+                std::stringstream buf;
+                buf << "Cannot find key: " << key;
+                (*ibmisc_error)(-1, "%s", buf.str().c_str());
+            } else return -1;
         }
         return ii->second;
     }
