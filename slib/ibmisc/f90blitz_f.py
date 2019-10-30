@@ -46,8 +46,8 @@ c_loc_tpl = string.Template('''
 get_spec_per_dim_tpl = string.Template('''
 
         ! ------- Dimension $dim
-        spec%lbounds($dim) = low$dim
-        spec%ubounds($dim) = low$dim + ubound(arr,$dim) - 1
+        spec%lbounds($dim) = lows($dim)
+        spec%ubounds($dim) = lows($dim) + ubound(arr,$dim) - 1
         if (spec%lbounds($dim) < spec%ubounds($dim)) then
             spec%deltas($dim) = c_loc_$ctype(arr($deltas))
         else
@@ -59,16 +59,16 @@ def get_spec_per_dim_body(ctype, rank) :
     for dim in range(1,rank+1) :
         deltas = ['lbound(arr,%d)%s' % (d, '+1' if d == dim else '')
             for d in range(1,rank+1)]
-        deltas = string.join(deltas, ',')
+        deltas = ','.join(deltas)
         out.append(get_spec_per_dim_tpl.substitute(ctype=ctype,
             dim=str(dim), deltas=deltas))
-    return string.join(out, '')
+    return ''.join(out)
 # ---------------------------------------------------
 get_spec_tpl = string.Template('''
-    subroutine get_spec_${ctype}_$rank(arr, $lows, spec)
+    subroutine get_spec_${ctype}_$rank(arr, lows, spec)
     implicit none
     $ftype, dimension($colons), target :: arr
-    integer :: $lows
+    integer, intent(IN) :: lows($rank)
     type(arr_spec_$rank) :: spec
 
         spec%base = c_loc_$ctype( arr($lbounds) )
@@ -78,10 +78,10 @@ get_spec_tpl = string.Template('''
 
 def get_spec(ftype,ctype,rank) :
     d = {'ftype' : ftype, 'ctype' : ctype, 'rank' : str(rank)}
-    d['lbounds'] = string.join(['lbound(arr,%d)' % i for i in range(1,rank+1)], ',')
-    d['lows'] = string.join(['low%d' % i for i in range(1,rank+1)], ',')
+    d['lbounds'] = ','.join(['lbound(arr,%d)' % i for i in range(1,rank+1)])
+    d['lows'] = ','.join(['lows(%d)' % i for i in range(1,rank+1)])
     d['body'] = get_spec_per_dim_body(ctype, rank)
-    d['colons'] = string.join([':' for i in range(1,rank+1)], ',')
+    d['colons'] = ','.join([':' for i in range(1,rank+1)])
     return get_spec_tpl.substitute(d)
 
 # ---------------------------------------------------
@@ -110,7 +110,7 @@ implicit none
 
     out.append('\nend module %s\n' % module_name)
 
-    return string.join(out, '')
+    return ''.join(out)
 # ---------------------------------------------------
 # ======================================================
 get_spec_macro_tpl = string.Template('#define GET_SPEC_${uctype}_$rank(arr, spec) get_spec_${ctype}_$rank(arr, $lbounds, spec)')
@@ -121,9 +121,10 @@ def get_macros(fctypes, ranks) :
     for (ftype,ctype) in fctypes :
         for rank in ranks :
 
-            lbounds = string.join(['lbound(arr,%d)' % i for i in range(1,rank+1)], ',')
-            out.append(get_spec_macro_tpl.substitute(ctype=ctype,uctype=string.upper(ctype),rank=str(rank),lbounds=lbounds))
-    return string.join(out,'\n')
+            #lbounds = ','.join(['lbound(arr,%d)' % i for i in range(1,rank+1)])
+            lbounds = 'lbound(arr)'
+            out.append(get_spec_macro_tpl.substitute(ctype=ctype,uctype=ctype.upper(),rank=str(rank),lbounds=lbounds))
+    return '\n'.join(out)
 # ---------------------------------------------------
 
 if len(sys.argv) < 4 :
