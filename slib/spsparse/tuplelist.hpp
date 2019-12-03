@@ -48,9 +48,11 @@ public:
     ValT col() const
         { return index(1); }
 
+    /** Used to sort */
     bool operator<(Tuple<IndexT,ValT,RANK> const &other) const
         { return _index < other._index; }
 
+    /** Used to compare */
     bool operator==(Tuple<IndexT,ValT,RANK> const &other) const
     {
         for (int i=0; i<RANK; ++i) if (_index[i] != other._index[i]) return false;
@@ -61,8 +63,7 @@ public:
 
 /** Serves as accumulator and iterable storage */
 template<class IndexT, class ValT, int RANK>
-class TupleList
-{
+class TupleList {
 public:
     // https://stackoverflow.com/questions/4353203/thou-shalt-not-inherit-from-stdvector
     typedef std::vector<Tuple<IndexT,ValT,RANK>> VectorT;
