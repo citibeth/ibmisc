@@ -131,9 +131,18 @@ void Weighted_Eigen::ncio(ibmisc::NcIO &ncio, std::string const &vname,
     }
 
     // Matches dimension name created by SparseSet.
-    auto ncdims(ibmisc::get_or_add_dims(ncio,
-        {dim_names[0] + ".dense_extent", dim_names[1] + ".dense_extent"},
-        {dims[0]->dense_extent(), dims[1]->dense_extent()}));
+    std::vector<long> dim_extent;
+    std::vector<std::string> dim_extent_name;
+    for (int i=0; i<2; ++i) {
+        if (dims[i] == nullptr) {
+            dim_extent.push_back((i == 0 ? M->rows() : M->cols()));
+            dim_extent_name.push_back(dim_names[i]+".sparse_extent");
+        } else {
+            dim_extent.push_back(dims[i]->dense_extent());
+            dim_extent_name.push_back(dim_names[i]+".dense_extent");
+        }
+    }
+    auto ncdims(ibmisc::get_or_add_dims(ncio, dim_extent_name, dim_extent));
 
     // --------- M
     if (ncio.rw == 'r') M.reset(new EigenSparseMatrixT);
