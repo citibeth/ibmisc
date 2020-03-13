@@ -18,7 +18,7 @@ void ncio_timespan(NcIO &ncio, std::array<double,2> &timespan, ibmisc::TimeUnit 
 {
     auto &timespan_b(ncio.tmp.take(to_blitz<double,2>(timespan)));    // Copy the input
     ncio_blitz<double,1>(ncio, timespan_b, vname, "double",
-        get_or_add_dims(ncio, {vname + ".length"}, {timespan.size()}));
+        get_or_add_dims(ncio, {vname + ".length"}, {(long)timespan.size()}));
 
     if (ncio.rw == 'w') {
         // Write human-readable form of the timestamps
@@ -33,7 +33,7 @@ void ncio_timespan(NcIO &ncio, std::array<double,2> &timespan, ibmisc::TimeUnit 
         ncio_blitz<char,2>(ncio, timespan_c, vname+".txt", "char",
             get_or_add_dims(ncio,
                 {vname + ".length", "iso8601.length"},
-                {timespan.size(), iso8601_length}));
+                {(long)timespan.size(), iso8601_length}));
 
         // Add attributes
         NcVar timespan_var(ncio.nc->getVar(vname));

@@ -233,7 +233,7 @@ void TupleList<IndexT,ValT,RANK>::ncio(ibmisc::NcIO &ncio, std::string const &vn
 
     dims = ibmisc::get_or_add_dims(ncio,
         {vname + ".nnz", vname + ".rank"},
-        {size(),         RANK});    // length ign
+        {(long)size(),   RANK});    // length ign
 
     auto info_v = get_or_add_var(ncio, vname + ".info", "int64", {});
     ibmisc::get_or_put_att(info_v, ncio.rw, "shape", "int64", _shape);
