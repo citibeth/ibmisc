@@ -114,7 +114,7 @@ void ncio_spsparse(
 
     // Allocate the output, if we're reading
     if (ncio.rw == 'w') {
-        dims = ibmisc::get_or_add_dims(ncio, dim_names, {A.size(), A.rank});
+        dims = ibmisc::get_or_add_dims(ncio, dim_names, {(long)A.size(), A.rank});
 
         auto info_v = get_or_add_var(ncio, vname + ".info", "int", {});
         auto shape(A.shape());
