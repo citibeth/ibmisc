@@ -527,10 +527,21 @@ void get_or_put_att(
 {
     auto string_t(nc_type(ncvar, "string"));
     switch(rw) {
-        case 'w':
-            ncvar.putAtt(name, string_t, data.size(), &data[0]);
-        break;
-        case 'r':
+        case 'w': {
+            std::vector<char const *> dataValues;
+            dataValues.reserve(data.size());
+
+            // This is OK:
+            // https://stackoverflow.com/questions/6456359/what-is-stdstringc-str-lifetime
+            // The c_str() result becomes invalid if the std::string
+            // is destroyed or if a non-const member function of the
+            // string is called.
+            for (auto const &val : data) dataValues.push_back(val.c_str());
+
+            // Use NcVar::putAtt(const std::string &name, size_t len, const char **dataValues) const
+            ncvar.putAtt(name, string_t, data.size(), &dataValues[0]);
+        } break;
+        case 'r': {
             // String arrays are inexplicably returned as arrays
             // of char * that must be manually freed.  Convert
             // to civilized std::vector<std::string>
@@ -544,7 +555,7 @@ void get_or_put_att(
                 data.push_back(std::string(cstrs[i]));
                 free(cstrs[i]);
             }
-        break;
+        } break;
     }
 }
 
