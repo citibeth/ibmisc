@@ -22,6 +22,7 @@
 #include <functional>
 #include <memory>
 #include <typeinfo>
+#include <vector>
 #include <boost/variant.hpp>
 
 namespace ibmisc {
